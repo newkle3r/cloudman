@@ -1,0 +1,20 @@
+{
+  "name": "cloudman",
+  "version": "0.1.1",
+  "description": "Nextcloud VM instance manager cli by Hansson IT",
+  "main": "index.js",
+  "type":"module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "newkleer",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "chalk-animation": "^2.0.3",
+    "figlet": "^1.7.0",
+    "gradient-string": "^2.0.2",
+    "inquirer": "^10.2.2",
+    "nanospinner": "^1.1.0"
+  }
+}
