@@ -35,7 +35,7 @@ async function managePHP() {
                 'Upgrade PHP',
                 'Repair Nextcloud PHP',
                 'Tail PHP logs',
-                'Print PHP logs',
+                'Remove PHP',
                 'Go Back'
             ],
         }
@@ -50,8 +50,8 @@ async function managePHP() {
             return repairPHP();
         case 'Tail PHP logs':
             return tailPHPlogs();
-        case 'Print PHP logs':
-            return printPHPlogs();
+        case 'removePHP':
+            return removePHP();
         case 'Go Back':
             return mainMenu();
     }
@@ -210,3 +210,79 @@ async function repairPHP() {
 }
 
 export { repairPHP };
+
+function removePHP() {
+    const spinner = createSpinner('Starting PHP removal process...').start();
+
+    try {
+        // Step 1: Enter maintenance mode in Nextcloud
+        spinner.update({ text: `${ICYAN('Entering maintenance mode...')}` });
+        execSync('sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --on');
+
+        // Step 2: Stop Apache2
+        spinner.update({ text: `${ICYAN('Stopping Apache2...')}` });
+        execSync('sudo systemctl stop apache2.service');
+
+        // Step 3: Remove PHP-related packages, but keep Apache2
+        spinner.update({ text: `${ICYAN('Removing PHP and related packages...')}` });
+        execSync('sudo apt-get purge php* -y && sudo apt-get autoremove -y && sudo rm -Rf /etc/php');
+
+        // Step 4: Start Apache2 again
+        spinner.update({ text: `${ICYAN('Starting Apache2...')}` });
+        execSync('sudo systemctl start apache2.service');
+
+        // Step 5: Exit maintenance mode
+        spinner.update({ text: `${ICYAN('Exiting maintenance mode...')}` });
+        execSync('sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --off');
+
+        // Success message
+        spinner.success({ text: `${GREEN('PHP has been successfully removed, Apache is retained!')}` });
+
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to remove PHP.')}` });
+        console.error(error);
+    }
+}
+
+export { removePHP };
+
+
+/**
+ * Tails the PHP logs in real-time.
+ */
+function tailPHPlogs() {
+    const spinner = createSpinner('Tailing PHP logs...').start();
+
+    try {
+        // Define the path to the PHP log file (this might vary based on configuration)
+        const phpLogFile = '/var/log/php7.4-fpm.log';  // Adjust this path for your PHP version
+
+        // Start tailing the log file
+        console.log(`${ICYAN('Tailing PHP logs from:')} ${phpLogFile}`);
+        
+        const tailProcess = exec(`tail -f ${phpLogFile}`);
+
+        // Capture the output from the tail command and print it to the console
+        tailProcess.stdout.on('data', (data) => {
+            console.log(`${GREEN(data.toString())}`);
+        });
+
+        // Capture any errors from the tail command
+        tailProcess.stderr.on('data', (data) => {
+            console.error(`${RED('Error tailing logs:')} ${data.toString()}`);
+        });
+
+        // Handle the tail process exit event
+        tailProcess.on('exit', (code) => {
+            if (code !== 0) {
+                console.error(`${RED('tail process exited with code:')} ${code}`);
+            }
+        });
+
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to tail PHP logs.')}` });
+        console.error(error);
+    }
+}
+
+export { tailPHPlogs };

@@ -85,7 +85,7 @@ async function mainMenu() {
                 'Manage LDAP',
                 'Manage Nextcloud Apps',
                 'Manage Docker',
-                'Manage Nix',
+                'Manage Redis',
                 'Exit'
             ],
         }
