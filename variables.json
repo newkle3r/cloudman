@@ -10,6 +10,7 @@
     "BACKUP": "/mnt/NCBACKUP",
     "NC_APPS_PATH": "/var/www/nextcloud/apps",
     "VMLOGS": "/var/log/nextcloud",
+    "PHP":"8.3",
   
     "DISTRO": "20.04",
     "CODENAME": "focal",

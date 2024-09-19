@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "description": "Nextcloud VM instance manager cli by Hansson IT",
   "main": "index.js",
-  "type":"module",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,5 +16,19 @@
     "gradient-string": "^2.0.2",
     "inquirer": "^10.2.2",
     "nanospinner": "^1.1.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/newkle3r/cloudman.git"
+  },
+  "keywords": [
+    "nextcloud",
+    "cli",
+    "nodejs",
+    "javascript"
+  ],
+  "bugs": {
+    "url": "https://github.com/newkle3r/cloudman/issues"
+  },
+  "homepage": "https://github.com/newkle3r/cloudman#readme"
 }
