@@ -61,7 +61,7 @@ async function welcome() {
     
     console.log(`${GREEN('Welcome to Nextcloud Manager!')}`);
 }
-
+let activeMenu = null;
 /**
  * Clear any active prompts or actions before going back to the main menu
  */
@@ -71,7 +71,7 @@ function resetActiveMenu() {
 
 async function mainMenu() {
 
-    let activeMenu = null;
+    
     
     
 
@@ -162,7 +162,7 @@ async function mainMenu() {
  * Make sure to reset the active menu before exiting or transitioning
  */
 function exitProgram() {
-    VARS.saveVariables();
+    VARS.saveVariables('./variables.json');
     resetActiveMenu();  // Clear any active states before exiting
     console.log(chalk.green('Goodbye!'));
     process.exit(0);
