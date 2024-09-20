@@ -1,9 +1,8 @@
-import { RED,GREEN } from './color.js';
+import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
-
 
 
 /**
@@ -15,7 +14,7 @@ class ncDocker {
     /**
      * Displays the menu for Docker management.
      */
-    async manageDocker(mainMenu) {
+    async manageDocker() {
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -50,10 +49,7 @@ class ncDocker {
             case 'View Networks':
                 return this.viewNetworks();
             case 'Go Back':
-                mainMenu();
-                break;
-                
-                // return mainMenu();
+                return;  // Implement the logic for going back to the main menu
         }
     }
 
