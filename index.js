@@ -10,6 +10,7 @@ import ncUPDATE from './ncUPDATE.js';
 import ncBAK from './ncBAK.js';
 import ncLDAP from './ncLDAP.js';
 import ncREDIS from './ncREDIS.js';
+import { ncTERMINATE } from './ncTERMINATE.js';
 
 
 import chalk from 'chalk';
@@ -19,6 +20,7 @@ import chalkAnimation from 'chalk-animation';
 import figlet from 'figlet';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
+import ncTERMINATE from './ncTERMINATE.js';
 
 
 
@@ -121,7 +123,8 @@ async function mainMenu() {
         
         case 'Exit':
             VARS.saveVariables();
-            const applicationTerminate = 
+            ncTERMINATE();
+
         
             return exitProgram();
     }

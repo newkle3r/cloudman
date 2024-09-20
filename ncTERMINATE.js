@@ -45,8 +45,8 @@ async function promptShutdown() {
     }
 }
 
-// ncTerminate function
-async function ncTerminate() {
+// ncTERMINATE function
+async function ncTERMINATE() {
     console.log(chalk.green('Checking for running processes...'));
 
     const processesRunning = checkRunningProcesses();
@@ -61,9 +61,9 @@ async function ncTerminate() {
 }
 
 // Exporting the function
-export default ncTerminate;
+export { ncTERMINATE }
 
 // Main entry point to trigger termination check and shutdown
 (async () => {
-    await ncTerminate();
+    await ncTERMINATE();
 })();
