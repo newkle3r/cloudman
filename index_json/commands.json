@@ -1,0 +1,71 @@
+{
+    "commands": [
+      {
+        "command": "bash ${this.SCRIPTS_PATH}/repair.sh",
+        "description": "Executes the auto-repair bash script.",
+        "variables": {
+          "SCRIPTS_PATH": "/var/scripts"
+        }
+      },
+      {
+        "command": "whoami",
+        "description": "Checks the current user to ensure the script is running as root.",
+        "variables": {}
+      },
+      {
+        "command": "dpkg-query -W -f='${dep}' 2>/dev/null | grep -c 'ok installed'",
+        "description": "Checks if a dependency is installed on the system.",
+        "variables": {
+          "dep": "Dependency package name to check (e.g., curl, whiptail, etc.)"
+        }
+      },
+      {
+        "command": "apt-get install ${dep} -y",
+        "description": "Installs a dependency if it's not already installed.",
+        "variables": {
+          "dep": "Dependency package name to install (e.g., curl, whiptail, etc.)"
+        }
+      },
+      {
+        "command": "dpkg-query -W -f='curl' 2>/dev/null | grep -c 'ok installed'",
+        "description": "Checks if the 'curl' package is installed on the system.",
+        "variables": {}
+      },
+      {
+        "command": "dpkg-query -W -f='whiptail' 2>/dev/null | grep -c 'ok installed'",
+        "description": "Checks if the 'whiptail' package is installed on the system.",
+        "variables": {}
+      },
+      {
+        "command": "apt-get install curl -y",
+        "description": "Installs 'curl' package if it is not installed.",
+        "variables": {}
+      },
+      {
+        "command": "apt-get install whiptail -y",
+        "description": "Installs 'whiptail' package if it is not installed.",
+        "variables": {}
+      },
+      {
+        "command": "apt-get install lshw -y",
+        "description": "Installs 'lshw' package if it is not installed.",
+        "variables": {}
+      },
+      {
+        "command": "apt-get install net-tools -y",
+        "description": "Installs 'net-tools' package if it is not installed.",
+        "variables": {}
+      },
+      {
+        "command": "apt-get install bash-completion -y",
+        "description": "Installs 'bash-completion' package if it is not installed.",
+        "variables": {}
+      },
+      {
+        "command": "apt-get install cron -y",
+        "description": "Installs 'cron' package if it is not installed.",
+        "variables": {}
+      }
+    ]
+  }
+  

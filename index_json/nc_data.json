@@ -1,0 +1,92 @@
+{
+    "ncREPAIR": {
+      "class": {
+        "description": "A class responsible for performing various repair tasks on the Nextcloud server. It provides methods for auto-repairing the system, updating JSON configurations, and running manual repair steps via a menu."
+      },
+      "methods": {
+        "runCommand": {
+          "description": "Executes a shell command and returns the output as a string.",
+          "params": [
+            {
+              "name": "command",
+              "type": "string",
+              "description": "The command to execute."
+            }
+          ],
+          "returns": {
+            "type": "string",
+            "description": "The command's output as a string."
+          }
+        },
+        "autoRepair": {
+          "description": "Runs a provided bash script for auto repair processes.",
+          "returns": null
+        },
+        "checkIfRoot": {
+          "description": "Checks if the script is running as root. If not, the script will exit.",
+          "returns": null
+        },
+        "updateVariablesJson": {
+          "description": "Updates variables.json file with necessary configurations. Merges the changes with existing data.",
+          "params": [
+            {
+              "name": "newData",
+              "type": "object",
+              "description": "New data to update in variables.json."
+            }
+          ],
+          "returns": null
+        },
+        "updateIndexJson": {
+          "description": "Updates index_json/nc_data.json with new configuration values. Merges the new data with existing entries.",
+          "params": [
+            {
+              "name": "newData",
+              "type": "object",
+              "description": "New data to update in nc_data.json."
+            }
+          ],
+          "returns": null
+        },
+        "installDependencies": {
+          "description": "Installs required dependencies if not present, including curl, whiptail, and other essentials.",
+          "returns": null
+        },
+        "runAutoRepair": {
+          "description": "Main function to run auto-repair, install dependencies, and update JSON configurations.",
+          "params": [
+            {
+              "name": "variableUpdates",
+              "type": "object",
+              "description": "New data for variables.json."
+            },
+            {
+              "name": "indexUpdates",
+              "type": "object",
+              "description": "New data for index_json/nc_data.json."
+            }
+          ],
+          "returns": null
+        },
+        "displayMenu": {
+          "description": "Displays a menu allowing users to manually select repair options, including auto-repair, updating variables, installing dependencies, or exiting.",
+          "returns": null
+        },
+        "collectData": {
+          "description": "Collects and parses input data from the user for JSON updates.",
+          "params": [
+            {
+              "name": "prompt",
+              "type": "string",
+              "description": "The prompt message to display to the user."
+            }
+          ],
+          "returns": {
+            "type": "object",
+            "description": "Parsed JSON object from user input."
+          }
+        }
+      }
+    }
+  }
+  

@@ -1,11 +1,9 @@
+import { RED,GREEN,YELLOW } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 
-const GREEN = chalk.green;
-const RED = chalk.redBright;
-const YELLOW = chalk.yellow;
 
 /**
  * Class for managing DNS, FQDN, and ports using CLI commands.

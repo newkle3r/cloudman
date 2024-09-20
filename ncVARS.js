@@ -42,7 +42,7 @@ class ncVARS {
 
         // Let's encrypt - TLS cert
         
-
+/*
         "DEDYNDOMAIN": "The domain name used for TLS activation.",
         "TLSDOMAIN": "The domain to be set for the Nextcloud TLS configuration.",
         "TLS_CONF": "TLS configuration file.",
@@ -53,7 +53,7 @@ class ncVARS {
         "SETENVPROXY": "SetEnv proxy-sendcl variable for specific Ubuntu versions.",
         "DEDYNPORT": "Custom port for public access if the user decides to change it."
 
-
+*/
 
 
         // DNS and ports

@@ -78,6 +78,7 @@
   "REDIS_PASS": "Password for Redis configuration",
   "TEST_MAIL": "Message template for sending test emails",
   "LOG_FILE": "/var/log/msmtp",
+  "SCRIPTS_PATH": "/var/scripts",
 
   
 
