@@ -16,6 +16,10 @@ import ncSQL from './ncSQL.js';
 import nextcloud from './nextcloud.js';
 import ncDocker from './ncDocker.js';
 import NextcloudManager from './nextcloud.js';
+import ncLDAP from './ncLDAP.js';
+import ncREDIS from './ncREDIS.js';
+import ncDocker from './ncDocker.js';
+
 
 const nextcloudManager = new NextcloudManager();
 // nextcloudManager.installNextcloud();
@@ -41,22 +45,11 @@ const DOCKER = new ncDocker();
 
 VARS.loadVariables('variables.json');
 
-console.log(RED('chalk.redBright            -   RED'));
-console.log(BLUE('chalk.blue                -   BLUE'));
-console.log(GREEN('chalk.green              -   GREEN'));
-console.log(YELLOW('chalk.yellow            -   YELLOW')); 
-console.log(PURPLE('chalk.magenta           -   PURPLE'));
-console.log(GRAY('chalk.gray                -   GRAY'));
-console.log(GRAYLI('chalk.bgGrey            -   GRAYLI'));
-console.log(YELLOWLI('chalk.bgYellowBright  -   YELLOWLI'));
-
-
-
 const sleep = (ms = 2000) => new Promise((r) => setTimeout(r, ms));
 
 async function welcome() {
     const rainbowTitle = chalkAnimation.rainbow(
-        'Nextcloud instance manager by Hansson IT \n'
+        'Nextcloud instance manager by T&M Hansson IT \n'
     );
 
     await sleep();
@@ -107,25 +100,28 @@ async function mainMenu() {
             const sqlManager = new ncSQL();         // Create an instance of the ncSQL class
             return sqlManager.managePostgreSQL();   // Call the managePostgreSQL method
         case 'Manage PHP':
-            return managePHP();
+            const phpManager = new ncPHP(); 
+            return phpManager.managePHP();
 
         case 'Manage DNS/FQDN':
             const dnsManager = new ncFQDN();
             return dnsManager.manageFQDN();
 
         case 'Manage LDAP':
-            return manageLDAP();
+            const ldapManager = new ncLDAP();
+            return ldapManager.manageLDAP();
             
         case 'Manage Nextcloud Apps':
             const appsManager = new ncAPPS();  // Create an instance of ncAPPS class
             return appsManager.manageApps();   // Call the manageApps method
 
         case 'Manage Docker':
-            const ncDocker = DOCKER;
-            return ncDocker.manageDocker();
+            const dockerManager = new ncDocker();
+            return dockerManager.manageDocker();
      
         case 'Manage Redis':
-            return manageRedis();
+            const redisManager = new ncREDIS();
+            return redisManager.manageRedis();
 
             
         

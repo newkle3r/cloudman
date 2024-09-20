@@ -174,6 +174,7 @@ userPassword: ${password}
         await this.manageLDAP();
     }
 }
+export default ncLDAP;
 
 // Main entry point
 (async () => {
