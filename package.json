@@ -16,7 +16,8 @@
     "gradient-string": "^2.0.2",
     "inquirer": "^10.2.2",
     "nanospinner": "^1.1.0",
-    "openai": "^4.63.0"
+    "openai": "^4.63.0",
+    "readline-sync": "^1.4.10"
   },
   "repository": {
     "type": "git",

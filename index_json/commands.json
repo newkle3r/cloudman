@@ -9,8 +9,7 @@
       },
       {
         "command": "whoami",
-        "description": "Checks the current user to ensure the script is running as root.",
-        "variables": {}
+        "description": "Checks the current user to ensure the script is running as root."
       },
       {
         "command": "dpkg-query -W -f='${dep}' 2>/dev/null | grep -c 'ok installed'",
@@ -27,44 +26,205 @@
         }
       },
       {
-        "command": "dpkg-query -W -f='curl' 2>/dev/null | grep -c 'ok installed'",
-        "description": "Checks if the 'curl' package is installed on the system.",
-        "variables": {}
+        "command": "sudo -u www-data php ${this.NCPATH}/occ status | grep 'versionstring' | awk '{print $3}'",
+        "description": "Fetches the current version of Nextcloud",
+        "variables": {
+          "NCPATH": "/var/www/nextcloud"
+        }
       },
       {
-        "command": "dpkg-query -W -f='whiptail' 2>/dev/null | grep -c 'ok installed'",
-        "description": "Checks if the 'whiptail' package is installed on the system.",
-        "variables": {}
+        "command": "lsb_release -sr",
+        "description": "Fetches the Linux distribution version."
       },
       {
-        "command": "apt-get install curl -y",
-        "description": "Installs 'curl' package if it is not installed.",
-        "variables": {}
+        "command": "pgrep apt",
+        "description": "Checks if the apt process is running."
       },
       {
-        "command": "apt-get install whiptail -y",
-        "description": "Installs 'whiptail' package if it is not installed.",
-        "variables": {}
+        "command": "pgrep dpkg",
+        "description": "Checks if the dpkg process is running."
       },
       {
-        "command": "apt-get install lshw -y",
-        "description": "Installs 'lshw' package if it is not installed.",
-        "variables": {}
+        "command": "sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on",
+        "description": "Enables maintenance mode in Nextcloud.",
+        "variables": {
+          "NCPATH": "/var/www/nextcloud"
+        }
       },
       {
-        "command": "apt-get install net-tools -y",
-        "description": "Installs 'net-tools' package if it is not installed.",
-        "variables": {}
+        "command": "sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off",
+        "description": "Disables maintenance mode in Nextcloud.",
+        "variables": {
+          "NCPATH": "/var/www/nextcloud"
+        }
       },
       {
-        "command": "apt-get install bash-completion -y",
-        "description": "Installs 'bash-completion' package if it is not installed.",
-        "variables": {}
+        "command": "df -h | grep -m 1 '/' | awk '{print $4}'",
+        "description": "Checks the free disk space."
       },
       {
-        "command": "apt-get install cron -y",
-        "description": "Installs 'cron' package if it is not installed.",
-        "variables": {}
+        "command": "rsync -Aax ${this.NCPATH}/config ${this.BACKUP}",
+        "description": "Creates a backup of Nextcloud's config directory.",
+        "variables": {
+          "NCPATH": "/var/www/nextcloud",
+          "BACKUP": "/mnt/NCBACKUP/"
+        }
+      },
+      {
+        "command": "rsync -Aax ${this.NCPATH}/apps ${this.BACKUP}",
+        "description": "Creates a backup of Nextcloud's apps directory.",
+        "variables": {
+          "NCPATH": "/var/www/nextcloud",
+          "BACKUP": "/mnt/NCBACKUP/"
+        }
+      },
+      {
+        "command": "curl -o nextcloud-latest.zip https://download.nextcloud.com/server/releases/latest.zip",
+        "description": "Downloads the latest Nextcloud release."
+      },
+      {
+        "command": "unzip nextcloud-latest.zip -d /var/www",
+        "description": "Extracts the downloaded Nextcloud package."
+      },
+      {
+        "command": "sudo -u www-data php ${this.NCPATH}/occ upgrade",
+        "description": "Runs the Nextcloud upgrade.",
+        "variables": {
+          "NCPATH": "/var/www/nextcloud"
+        }
+      },
+      {
+        "command": "php -v",
+        "description": "Fetches the current PHP version installed on the system."
+      },
+      {
+        "command": "which redis-server",
+        "description": "Checks if Redis is already installed on the system."
+      },
+      {
+        "command": "sudo apt-get update && sudo apt-get install -y redis-server",
+        "description": "Installs Redis server using apt package manager."
+      },
+      {
+        "command": "sudo systemctl enable redis-server",
+        "description": "Enables Redis server to start on boot."
+      },
+      {
+        "command": "sudo systemctl start redis-server",
+        "description": "Starts the Redis server."
+      },
+      {
+        "command": "sudo apt-get install -y php${this.getPHPVersion()}-dev",
+        "description": "Installs the PHP development package for the detected PHP version.",
+        "variables": {
+          "PHPVersion": "${this.getPHPVersion()}"
+        }
+      },
+      {
+        "command": "sudo pecl channel-update pecl.php.net",
+        "description": "Updates the PECL channel."
+      },
+      {
+        "command": "yes no | sudo pecl install -Z redis",
+        "description": "Installs the Redis extension for PHP using PECL."
+      },
+      {
+        "command": "echo '# PECL redis' | sudo tee ${this.phpModsDir}/redis.ini",
+        "description": "Adds the PECL Redis extension comment to the Redis ini file in PHP mods-available directory.",
+        "variables": {
+          "phpModsDir": "${this.phpModsDir}"
+        }
+      },
+      {
+        "command": "echo 'extension=redis.so' | sudo tee -a ${this.phpModsDir}/redis.ini",
+        "description": "Enables the Redis extension for PHP in the Redis ini file in PHP mods-available directory.",
+        "variables": {
+          "phpModsDir": "${this.phpModsDir}"
+        }
+      },
+      {
+        "command": "sudo phpenmod -v ALL redis",
+        "description": "Enables the Redis module for all versions of PHP."
+      },
+      {
+        "command": "sudo apt-get purge -y redis-server",
+        "description": "Removes Redis server from the system using apt."
+      },
+      {
+        "command": "sudo apt-get autoremove -y",
+        "description": "Removes unused dependencies after uninstalling Redis."
+      },
+      {
+        "command": "sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.local --value='\\OC\\Memcache\\Redis'",
+        "description": "Configures Redis as the Nextcloud local cache backend."
+      },
+      {
+        "command": "sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.locking --value='\\OC\\Memcache\\Redis'",
+        "description": "Configures Redis as the Nextcloud locking cache backend."
+      },
+      {
+        "command": "sudo -u www-data php /var/www/nextcloud/occ config:system:set redis --value='{\"host\":\"${this.redisSock}\",\"port\":0,\"timeout\":0.5}'",
+        "description": "Configures Redis socket for Nextcloud.",
+        "variables": {
+          "redisSock": "${this.redisSock}"
+        }
+      },
+      {
+        "command": "grep -q 'vm.overcommit_memory = 1' /etc/sysctl.conf || echo 'vm.overcommit_memory = 1' | sudo tee -a /etc/sysctl.conf",
+        "description": "Enables memory overcommit in the sysctl configuration."
+      },
+      {
+        "command": "grep -q 'never' /sys/kernel/mm/transparent_hugepage/enabled || echo 'never' | sudo tee /sys/kernel/mm/transparent_hugepage/enabled",
+        "description": "Disables Transparent Huge Pages (THP) to improve Redis performance."
+      },
+      {
+        "command": "sudo sed -i 's|# unixsocket .*|unixsocket ${this.redisSock}|g' ${this.redisConf}",
+        "description": "Configures the Redis socket in the Redis configuration file.",
+        "variables": {
+          "redisSock": "${this.redisSock}",
+          "redisConf": "${this.redisConf}"
+        }
+      },
+      {
+        "command": "sudo sed -i 's|# unixsocketperm .*|unixsocketperm 777|g' ${this.redisConf}",
+        "description": "Sets permissions for the Redis socket in the Redis configuration file.",
+        "variables": {
+          "redisConf": "${this.redisConf}"
+        }
+      },
+      {
+        "command": "sudo sed -i 's|^port.*|port 0|' ${this.redisConf}",
+        "description": "Disables TCP port for Redis in the Redis configuration file.",
+        "variables": {
+          "redisConf": "${this.redisConf}"
+        }
+      },
+      {
+        "command": "sudo sed -i 's|# rename-command CONFIG \"\"|rename-command CONFIG \"\"|' ${this.redisConf}",
+        "description": "Disables the CONFIG command in Redis for security reasons.",
+        "variables": {
+          "redisConf": "${this.redisConf}"
+        }
+      },
+      {
+        "command": "sudo systemctl restart redis-server",
+        "description": "Restarts the Redis server."
+      },
+      {
+        "command": "sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.local",
+        "description": "Removes the local cache configuration for Redis from Nextcloud."
+      },
+      {
+        "command": "sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.locking",
+        "description": "Removes the locking cache configuration for Redis from Nextcloud."
+      },
+      {
+        "command": "sudo -u www-data php /var/www/nextcloud/occ config:system:delete redis",
+        "description": "Removes the Redis configuration from Nextcloud."
+      },
+      {
+        "command": "sudo systemctl status redis-server",
+        "description": "Checks the status of the Redis server."
       }
     ]
   }
