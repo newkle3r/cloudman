@@ -1,10 +1,9 @@
+import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 
-const GREEN = chalk.green;
-const RED = chalk.redBright;
 
 /**
  * Class for managing PostgreSQL-related tasks such as backup, restore, and status check.

@@ -1,3 +1,4 @@
+import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 import chalk from 'chalk';

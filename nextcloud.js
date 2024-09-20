@@ -15,7 +15,7 @@ const GRAY = chalk.gray;
 const YELLOWLI = chalk.bgYellowBright;
 const PURPLE = chalk.magenta;
 
-class NextcloudManager {
+class noVMNC {
     async installNextcloud() {
         const spinner = createSpinner('Installing Nextcloud...').start();
         
@@ -53,4 +53,4 @@ class NextcloudManager {
     }
 }
 
-export default NextcloudManager;
+export default noVMNC;

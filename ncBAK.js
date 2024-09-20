@@ -1,3 +1,4 @@
+import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -10,7 +11,7 @@ function getTimestamp() {
 }
 
 // Backup class
-class BackupManager {
+class ncBAK {
     constructor() {
         this.backupDir = '/mnt/backups'; // Backup directory path
         this.timestamp = getTimestamp();
@@ -109,6 +110,8 @@ class BackupManager {
 
 // Main entry point
 (async () => {
-    const backupManager = new BackupManager();
-    await backupManager.runBackups();
+    const ncBAK = new ncBAK();
+    await ncBAK.runBackups();
 })();
+
+export default ncBAK;

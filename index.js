@@ -1,4 +1,16 @@
 #!/usr/bin/env node
+import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
+import ncVars from './ncVARS.js';
+import ncAPPS from './ncAPPS.js';
+import ncFQDN from './ncFQDN.js';
+import ncPHP from './ncPHP.js';
+import ncSQL from './ncSQL.js';
+import ncDocker from './ncDocker.js';
+import ncUPDATE from './ncUPDATE.js';
+import ncBAK from './ncBAK.js';
+import ncLDAP from './ncLDAP.js';
+import ncREDIS from './ncREDIS.js';
+
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -6,42 +18,19 @@ import gradient from 'gradient-string';
 import chalkAnimation from 'chalk-animation';
 import figlet from 'figlet';
 import { createSpinner } from 'nanospinner';
-import { execSync } from 'child_process';  // For executing shell commands
-
-import ncVars from './ncVARS.js';
-import ncAPPS from './ncAPPS.js';
-import ncFQDN from './ncFQDN.js';
-import ncPHP from './ncPHP.js';
-import ncSQL from './ncSQL.js';
-import nextcloud from './nextcloud.js';
-import ncDocker from './ncDocker.js';
-import NextcloudManager from './nextcloud.js';
-import ncLDAP from './ncLDAP.js';
-import ncREDIS from './ncREDIS.js';
-import ncDocker from './ncDocker.js';
-
-
-const nextcloudManager = new NextcloudManager();
-// nextcloudManager.installNextcloud();
+import { execSync } from 'child_process';
 
 
 
 
 
-console.log(chalk.redBright('Nextcloud Manager - Cloudman'));
 
-const RED = chalk.redBright;
-const BLUE = chalk.blue;
-const GREEN = chalk.green;
-const YELLOW = chalk.yellow;
-const GRAYLI = chalk.bgGrey;
-const GRAY = chalk.gray;
-const YELLOWLI = chalk.bgYellowBright;
-const PURPLE = chalk.magenta;
+// console.log(chalk.redBright('Nextcloud Manager - Cloudman'));
+
 
 const VARS = new ncVars();
-const SQL = new ncSQL();
-const DOCKER = new ncDocker();
+
+
 
 VARS.loadVariables('variables.json');
 
@@ -74,7 +63,6 @@ async function mainMenu() {
             name: 'action',
             message: 'What would you like to do?',
             choices: [
-                'Install Nextcloud',
                 'Update Nextcloud',
                 'Repair Nextcloud',
                 'Manage PostgreSQL',
@@ -90,11 +78,12 @@ async function mainMenu() {
     ]);
 
     switch (answers.action) {
-        case 'Install Nextcloud':
-            return installNextcloud();
+
         case 'Update Nextcloud':
-            return updateNextcloud();
+            const updateManager = new ncUPDATE();
+            return updateManager.mainMenu();
         case 'Repair Nextcloud':
+            
             return repairNextcloud();
         case 'Manage PostgreSQL':
             const sqlManager = new ncSQL();         // Create an instance of the ncSQL class
