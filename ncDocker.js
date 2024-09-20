@@ -1,10 +1,10 @@
+import { RED,GREEN } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 
-const GREEN = chalk.green;
-const RED = chalk.redBright;
+
 
 /**
  * Class to manage Docker containers and images using Docker CLI.
@@ -15,7 +15,7 @@ class ncDocker {
     /**
      * Displays the menu for Docker management.
      */
-    async manageDocker() {
+    async manageDocker(mainMenu) {
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -50,7 +50,10 @@ class ncDocker {
             case 'View Networks':
                 return this.viewNetworks();
             case 'Go Back':
-                return mainMenu();
+                mainMenu();
+                break;
+                
+                // return mainMenu();
         }
     }
 

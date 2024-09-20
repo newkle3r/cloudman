@@ -1,10 +1,10 @@
+import { GREEN,RED } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 
-const GREEN = chalk.green;
-const RED = chalk.redBright;
+
 
 /**
  * Class to manage Nextcloud apps using the occ CLI.
@@ -17,7 +17,7 @@ class ncAPPS {
     /**
      * Displays the menu for Nextcloud app management.
      */
-    async manageApps() {
+    async manageApps(mainMenu) {
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -43,7 +43,9 @@ class ncAPPS {
             case 'Remove App':
                 return this.removeApp();
             case 'Go Back':
-                return;  // Implement the logic for going back to the main menu
+                mainMenu();
+                break;
+                
         }
     }
 

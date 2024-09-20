@@ -96,7 +96,7 @@ class ncBAK {
         }
     }
 
-    // Run backups with menu
+    // Run backups
     async runBackups() {
         const choices = [
             { name: 'Backup PostgreSQL', value: 'postgres' },

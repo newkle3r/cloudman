@@ -48,7 +48,8 @@ class ncPHP {
             case 'Remove PHP':
                 return this.removePHP();
             case 'Go Back':
-                return mainMenu(); // Go back to main menu
+                mainMenu(); // Go back to main menu
+                break;
         }
     }
 

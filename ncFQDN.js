@@ -16,7 +16,7 @@ class ncFQDN {
     /**
      * Displays the menu for DNS and FQDN management tasks.
      */
-    async manageFQDN() {
+    async manageFQDN(mainMenu) {
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -46,7 +46,9 @@ class ncFQDN {
             case 'Check/Forward Ports':
                 return this.forwardPorts();
             case 'Go Back':
-                return;  // You can implement a return to the main menu here
+                mainMenu();
+                break;
+                
         }
     }
 

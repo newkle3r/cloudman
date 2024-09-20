@@ -16,7 +16,7 @@ class ncLDAP {
     /**
      * Displays the menu for LDAP-related tasks.
      */
-    async manageLDAP() {
+    async manageLDAP(mainMenu) {
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -45,7 +45,8 @@ class ncLDAP {
             case 'Test LDAP Connection for Nextcloud':
                 return this.testNextcloudLDAP();
             case 'Go Back':
-                return;  // Exit or go back to the main menu
+                mainMenu();
+                break;
         }
     }
 
@@ -74,7 +75,7 @@ class ncLDAP {
             console.error(error);
         }
 
-        await this.manageLDAP();
+        await this.manageLDAP(mainMenu);
     }
 
     /**
@@ -107,7 +108,7 @@ userPassword: ${password}
             console.error(error);
         }
 
-        await this.manageLDAP();
+        await this.manageLDAP(mainMenu);
     }
 
     /**
@@ -129,7 +130,7 @@ userPassword: ${password}
             console.error(error);
         }
 
-        await this.manageLDAP();
+        await this.manageLDAP(mainMenu);
     }
 
     /**
@@ -151,7 +152,7 @@ userPassword: ${password}
             console.error(error);
         }
 
-        await this.manageLDAP();
+        await this.manageLDAP(mainMenu);
     }
 
     /**
@@ -169,13 +170,16 @@ userPassword: ${password}
             console.error(error);
         }
 
-        await this.manageLDAP();
+        await this.manageLDAP(mainMenu);
     }
 }
 export default ncLDAP;
 
+
+/*
 // Main entry point
 (async () => {
     const ldapManager = new ncLDAP();
     await ldapManager.manageLDAP();
 })();
+*/
