@@ -1,9 +1,10 @@
-import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
+import { RED, BLUE, GRAY, GRAYLI, GREEN, YELLOW, YELLOWLI, PURPLE } from './color.js';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { createSpinner } from 'nanospinner';
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 
 // Helper function to create a timestamp for backup files
 function getTimestamp() {
@@ -95,16 +96,45 @@ class ncBAK {
         }
     }
 
-    // Run all backups
+    // Run backups with menu
     async runBackups() {
-        console.log(chalk.blue('Starting the backup process...'));
+        const choices = [
+            { name: 'Backup PostgreSQL', value: 'postgres' },
+            { name: 'Backup Nextcloud', value: 'nextcloud' },
+            { name: 'Backup Redis', value: 'redis' },
+            { name: 'Backup Apache', value: 'apache' },
+            { name: 'Backup PHP', value: 'php' },
+        ];
+
+        const answers = await inquirer.prompt([
+            {
+                type: 'checkbox',
+                name: 'backupOptions',
+                message: 'Select the components you want to backup:',
+                choices
+            }
+        ]);
+
+        console.log(chalk.blue('Starting the selected backups...'));
         this.ensureBackupDir();
-        this.backupPostgreSQL();
-        this.backupNextcloud();
-        this.backupRedis();
-        this.backupApache();
-        this.backupPHP();
-        console.log(chalk.green('All backups completed!'));
+
+        if (answers.backupOptions.includes('postgres')) {
+            this.backupPostgreSQL();
+        }
+        if (answers.backupOptions.includes('nextcloud')) {
+            this.backupNextcloud();
+        }
+        if (answers.backupOptions.includes('redis')) {
+            this.backupRedis();
+        }
+        if (answers.backupOptions.includes('apache')) {
+            this.backupApache();
+        }
+        if (answers.backupOptions.includes('php')) {
+            this.backupPHP();
+        }
+
+        console.log(chalk.green('Selected backups completed!'));
     }
 }
 

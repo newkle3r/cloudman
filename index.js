@@ -72,6 +72,7 @@ async function mainMenu() {
                 'Manage Nextcloud Apps',
                 'Manage Docker',
                 'Manage Redis',
+                'Backup',
                 'Exit'
             ],
         }
@@ -86,8 +87,8 @@ async function mainMenu() {
             
             return repairNextcloud();
         case 'Manage PostgreSQL':
-            const sqlManager = new ncSQL();         // Create an instance of the ncSQL class
-            return sqlManager.managePostgreSQL();   // Call the managePostgreSQL method
+            const sqlManager = new ncSQL();         
+            return sqlManager.managePostgreSQL();  
         case 'Manage PHP':
             const phpManager = new ncPHP(); 
             return phpManager.managePHP();
@@ -101,8 +102,8 @@ async function mainMenu() {
             return ldapManager.manageLDAP();
             
         case 'Manage Nextcloud Apps':
-            const appsManager = new ncAPPS();  // Create an instance of ncAPPS class
-            return appsManager.manageApps();   // Call the manageApps method
+            const appsManager = new ncAPPS();  
+            return appsManager.manageApps();   
 
         case 'Manage Docker':
             const dockerManager = new ncDocker();
@@ -111,11 +112,16 @@ async function mainMenu() {
         case 'Manage Redis':
             const redisManager = new ncREDIS();
             return redisManager.manageRedis();
+        
+        case 'Backup':
+            const backupManager =new ncBAK();
+            return backupManager.runBackups();
 
             
         
         case 'Exit':
-            vars.saveVariables();
+            VARS.saveVariables();
+            const applicationTerminate = 
         
             return exitProgram();
     }
