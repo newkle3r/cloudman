@@ -103,6 +103,10 @@ class ncUPDATE {
       case 'Enable Maintenance Mode':
         this.enableMaintenanceMode();
         break;
+      case 'Go Back':
+        this.mainMenu();
+        break;
+        
       case 'Exit':
         console.log('Goodbye!');
         process.exit(0);

@@ -1,28 +1,21 @@
-import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
+import { RED, BLUE, GREEN, YELLOW } from './color.js';
+import { spawn } from 'child_process';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import gradient from 'gradient-string';
-import chalkAnimation from 'chalk-animation';
-import figlet from 'figlet';
 import { createSpinner } from 'nanospinner';
-import { spawn, execSync } from 'child_process';
 import fs from 'fs';
 
-
-/**
- * ncPHP class that encapsulates all PHP management tasks, including version identification,
- * downgrading, upgrading, repairing Nextcloud PHP, and log management.
- */
 class ncPHP {
     constructor() {
         this.phpVersion = null;
+        this.phpLogProcess = null; // Store the tail process
     }
 
     /**
      * Displays a menu for PHP management tasks.
      * @returns {Promise<void>}
      */
-    async managePHP() {
+    async managePHP(mainMenu) {
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -34,6 +27,7 @@ class ncPHP {
                     'Upgrade PHP',
                     'Repair Nextcloud PHP',
                     'Tail PHP logs',
+                    'Stop PHP log tailing',  // New option to stop tailing logs
                     'Remove PHP',
                     'Go Back'
                 ],
@@ -49,10 +43,12 @@ class ncPHP {
                 return this.repairPHP();
             case 'Tail PHP logs':
                 return this.tailPHPlogs();
+            case 'Stop PHP log tailing':
+                return this.stopTailPHPlogs(); // Stop tailing logs
             case 'Remove PHP':
                 return this.removePHP();
             case 'Go Back':
-                return; // Placeholder for a main menu function
+                return mainMenu(); // Go back to main menu
         }
     }
 
@@ -165,31 +161,50 @@ class ncPHP {
      * Tails the PHP logs in real-time.
      */
     tailPHPlogs() {
-        const spinner = createSpinner('Tailing PHP logs...').start();
-    
-        try {
-            const phpLogFile = '/var/log/php7.4-fpm.log';  // Adjust for your version
-            console.log(`${YELLOW('Tailing PHP logs from:')} ${phpLogFile}`);
-            
-            const tailProcess = spawn('tail', ['-f', phpLogFile]);
-    
-            tailProcess.stdout.on('data', (data) => {
-                console.log(`${GREEN(data.toString())}`);
-            });
-    
-            tailProcess.stderr.on('data', (data) => {
-                console.error(`${RED('Error tailing logs:')} ${data.toString()}`);
-            });
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to tail PHP logs.')}` });
-            console.error(error);
+        const phpLogFile = '/var/log/php7.4-fpm.log';  // Adjust for your version
+
+        if (this.phpLogProcess) {
+            console.log(chalk.yellow('PHP log tailing is already running.'));
+            return;
+        }
+
+        console.log(`${YELLOW('Tailing PHP logs from:')} ${phpLogFile}`);
+
+        this.phpLogProcess = spawn('tail', ['-f', phpLogFile]);
+
+        this.phpLogProcess.stdout.on('data', (data) => {
+            console.log(`${GREEN(data.toString())}`);
+        });
+
+        this.phpLogProcess.stderr.on('data', (data) => {
+            console.error(`${RED('Error tailing logs:')} ${data.toString()}`);
+        });
+
+        this.phpLogProcess.on('close', () => {
+            console.log(chalk.green('PHP log tailing stopped.'));
+            this.phpLogProcess = null;  // Clear the process once stopped
+        });
+    }
+
+    /**
+     * Stops the tailing of PHP logs.
+     */
+    stopTailPHPlogs() {
+        if (this.phpLogProcess) {
+            console.log(chalk.yellow('Stopping PHP log tailing...'));
+            this.phpLogProcess.kill();  // Kill the log tailing process
+            this.phpLogProcess = null;
+        } else {
+            console.log(chalk.red('No PHP log tailing process is running.'));
         }
     }
 }
-
+/*
 // Main entry point
 (async () => {
     const phpManager = new ncPHP();
     await phpManager.managePHP();
 })();
+
+*/
 export default ncPHP;

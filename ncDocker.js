@@ -50,7 +50,7 @@ class ncDocker {
             case 'View Networks':
                 return this.viewNetworks();
             case 'Go Back':
-                return;  // Implement the logic for going back to the main menu
+                return mainMenu();
         }
     }
 

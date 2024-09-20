@@ -1,64 +1,14 @@
-#!/usr/bin/env node
-import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import ncVars from './ncVARS.js';
-import ncAPPS from './ncAPPS.js';
-import ncFQDN from './ncFQDN.js';
-import ncPHP from './ncPHP.js';
-import ncSQL from './ncSQL.js';
-import ncDocker from './ncDocker.js';
-import ncUPDATE from './ncUPDATE.js';
-import ncBAK from './ncBAK.js';
-import ncLDAP from './ncLDAP.js';
-import ncREDIS from './ncREDIS.js';
-import { ncTERMINATE } from './ncTERMINATE.js';
 
-
-import chalk from 'chalk';
-import inquirer from 'inquirer';
-import gradient from 'gradient-string';
-import chalkAnimation from 'chalk-animation';
-import figlet from 'figlet';
-import { createSpinner } from 'nanospinner';
-import { execSync } from 'child_process';
-import ncTERMINATE from './ncTERMINATE.js';
-
-
-
-
-
-
-// console.log(chalk.redBright('Nextcloud Manager - Cloudman'));
-
-
-const VARS = new ncVars();
-
-
-
-VARS.loadVariables('variables.json');
-
-const sleep = (ms = 2000) => new Promise((r) => setTimeout(r, ms));
-
-async function welcome() {
-    const rainbowTitle = chalkAnimation.rainbow(
-        'Nextcloud instance manager by T&M Hansson IT \n'
-    );
-
-    await sleep();
-    rainbowTitle.stop();
-
-    console.log(
-        gradient.pastel.multiline(
-            figlet.textSync('Cloudman', { horizontalLayout: 'full' })
-        )
-    );
-
-    
-    
-    console.log(`${GREEN('Welcome to Nextcloud Manager!')}`);
+/**
+ * Clear any active prompts or actions before going back to the main menu
+ */
+function resetActiveMenu() {
+    activeMenu = null;
 }
 
-
 async function mainMenu() {
+    resetActiveMenu();  // Clear any active menus when returning to the main menu
+
     const answers = await inquirer.prompt([
         {
             type: 'list',
@@ -81,68 +31,59 @@ async function mainMenu() {
     ]);
 
     switch (answers.action) {
-
         case 'Update Nextcloud':
             const updateManager = new ncUPDATE();
             return updateManager.mainMenu();
         case 'Repair Nextcloud':
-            
             return repairNextcloud();
         case 'Manage PostgreSQL':
-            const sqlManager = new ncSQL();         
-            return sqlManager.managePostgreSQL();  
+            const sqlManager = new ncSQL();
+            return sqlManager.managePostgreSQL(mainMenu);
         case 'Manage PHP':
-            const phpManager = new ncPHP(); 
-            return phpManager.managePHP();
-
+            const phpManager = new ncPHP();
+            return phpManager.managePHP(mainMenu);
         case 'Manage DNS/FQDN':
             const dnsManager = new ncFQDN();
-            return dnsManager.manageFQDN();
-
+            return dnsManager.manageFQDN(mainMenu);
         case 'Manage LDAP':
             const ldapManager = new ncLDAP();
-            return ldapManager.manageLDAP();
-            
+            if (activeMenu === 'ldap') {
+                console.log('Already managing LDAP. Returning to main menu...');
+                return;
+            }
+            activeMenu = 'ldap';
+            return ldapManager.manageLDAP(mainMenu);
         case 'Manage Nextcloud Apps':
-            const appsManager = new ncAPPS();  
-            return appsManager.manageApps();   
-
+            const appsManager = new ncAPPS();
+            return appsManager.manageApps(mainMenu);
         case 'Manage Docker':
             const dockerManager = new ncDocker();
-            return dockerManager.manageDocker();
-     
+            return dockerManager.manageDocker(mainMenu);
         case 'Manage Redis':
             const redisManager = new ncREDIS();
-            return redisManager.manageRedis();
-        
+            if (activeMenu === 'redis') {
+                console.log('Already managing Redis. Returning to main menu...');
+                return;
+            }
+            activeMenu = 'redis';
+            await redisManager.manageRedis(mainMenu);
+            break;
         case 'Backup':
-            const backupManager =new ncBAK();
-            return backupManager.runBackups();
-
-            
-        
+            const backupManager = new ncBAK();
+            return backupManager.runBackups(mainMenu);
         case 'Exit':
             VARS.saveVariables();
-            ncTERMINATE();
-
-        
-            return exitProgram();
+            console.log(chalk.green('Goodbye!'));
+            process.exit(0);
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-async function exitProgram() {
-    console.log(GREEN('Goodbye!'));
+/**
+ * Make sure to reset the active menu before exiting or transitioning
+ */
+function exitProgram() {
+    resetActiveMenu();  // Clear any active states before exiting
+    console.log(chalk.green('Goodbye!'));
     process.exit(0);
 }
 

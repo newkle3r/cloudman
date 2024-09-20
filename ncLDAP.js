@@ -4,9 +4,6 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { createSpinner } from 'nanospinner';
 
-const GREEN = chalk.green;
-const RED = chalk.redBright;
-const YELLOW = chalk.yellow;
 
 /**
  * Class to manage LDAP configurations and tasks for both Ubuntu and Nextcloud.

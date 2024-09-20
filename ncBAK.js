@@ -137,11 +137,11 @@ class ncBAK {
         console.log(chalk.green('Selected backups completed!'));
     }
 }
-
+/*
 // Main entry point
 (async () => {
     const ncBAK = new ncBAK();
     await ncBAK.runBackups();
 })();
-
+*/
 export default ncBAK;

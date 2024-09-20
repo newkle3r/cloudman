@@ -7,7 +7,7 @@ import { execSync } from 'child_process';
  * Class to manage Nextcloud configuration variables.
  * Provides functionality to load, save, and access system variables.
  */
-class NCVars {
+class ncVARS {
     constructor() {
         // Directories and paths
         this.SCRIPTS = '/var/scripts';
@@ -230,4 +230,4 @@ class NCVars {
     }
 }
 
-export default NCVars;
+export default ncVARS;
