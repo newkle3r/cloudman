@@ -41,15 +41,17 @@ class noVMNC {
         }
     }
 
-    async repairNextcloud() {
+    async repairNextcloud(mainMenu) {
         const spinner = createSpinner('Repairing Nextcloud...').start();
         
         try {
             execSync('sudo nextcloud.occ maintenance:repair');
             spinner.success({ text: `${GREEN('Nextcloud has been repaired!')}` });
+            mainMenu();
         } catch (error) {
             spinner.error({ text: `${RED('Failed to repair Nextcloud')}` });
             console.error(error);
+            mainMenu();
         }
     }
 }

@@ -4,11 +4,14 @@ import fs from 'fs';
 import path from 'path';
 import inquirer from 'inquirer';
 
+
+
 class ncUPDATE {
   constructor() {
     this.scriptsDir = '/var/scripts'; // Adjust as per your environment
     this.ncPath = '/var/www/nextcloud'; // Path to the Nextcloud installation
     this.libUrl = 'https://raw.githubusercontent.com/nextcloud/vm/master/lib.sh';
+    
   }
 
   // Load the remote script containing helper functions
@@ -75,8 +78,10 @@ class ncUPDATE {
     }
   }
 
+  
+
   // Display a simple menu using Inquirer for interaction
-  async mainMenu() {
+  async updateMenu(mainMenu) {
     const choices = [
       'Update Nextcloud',
       'Check for Updates',
@@ -104,7 +109,7 @@ class ncUPDATE {
         this.enableMaintenanceMode();
         break;
       case 'Go Back':
-        this.mainMenu();
+        mainMenu();
         break;
         
       case 'Exit':
@@ -112,6 +117,20 @@ class ncUPDATE {
         process.exit(0);
     }
   }
+  
+  
 }
 
+/*
+async function repairNextcloud() {
+  console.log('Starting Nextcloud repair process...');
+  try {
+      execSync('sudo -u www-data php /var/www/nextcloud/occ maintenance:repair', { stdio: 'inherit' });
+      console.log('Nextcloud repair completed successfully.');
+  } catch (error) {
+      console.error('Failed to repair Nextcloud:', error);
+  }
+}
+
+*/
 export default ncUPDATE;

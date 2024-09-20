@@ -21,6 +21,7 @@ class ncVARS {
         this.BACKUP = '/mnt/NCBACKUP';
         this.NC_APPS_PATH = `${this.NCPATH}/apps`;
         this.VMLOGS = '/var/log/nextcloud';
+        this.PSQLVER = this.getCommandOutput('psql --version');
         
         
         // Ubuntu OS information

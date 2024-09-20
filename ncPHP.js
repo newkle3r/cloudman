@@ -161,7 +161,9 @@ class ncPHP {
      * Tails the PHP logs in real-time.
      */
     tailPHPlogs() {
-        const phpLogFile = '/var/log/php7.4-fpm.log';  // Adjust for your version
+        
+        const variables = JSON.parse(fs.readFileSync('variables.json', 'utf8'));
+        const phpLogFile = `/var/log/php${variables.PHP}-fpm.log`;
 
         if (this.phpLogProcess) {
             console.log(chalk.yellow('PHP log tailing is already running.'));

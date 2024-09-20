@@ -3,6 +3,14 @@ import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
+import fs from 'fs';
+
+const variablesPath = 'variables.json';
+    let variables = {};
+
+    if (fs.existsSync(variablesPath)) {
+        variables = JSON.parse(fs.readFileSync(variablesPath, 'utf8'));
+    }
 
 
 /**
@@ -12,12 +20,13 @@ class ncSQL {
     constructor() {
         // Add any necessary initialization if needed, e.g., paths or configurations
         this.backupPath = '/var/backups/postgresql_backup.sql'; // Default backup location
+        this.psqlVER = variables.PSQLVER;
     }
 
     /**
      * Displays the menu for PostgreSQL management tasks.
      */
-    async managePostgreSQL() {
+    async managePostgreSQL(mainMenu) {
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -40,7 +49,9 @@ class ncSQL {
             case 'View Database Status':
                 return this.viewDatabaseStatus();
             case 'Go Back':
-                return;  // Or call another function to navigate to the main menu
+                mainMenu();
+                break;
+                
         }
     }
 

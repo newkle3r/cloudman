@@ -124,7 +124,7 @@ class ncREDIS {
             { name: 'Remove Redis from Nextcloud', value: 'removeConfig' },
             { name: 'Restart Redis', value: 'restart' },
             { name: 'Check Redis Status', value: 'status' },
-            new inquirer.Separator(),
+            // new inquirer.Separator(),
             { name: 'Return to main menu', value: 'menu' }
         ];
 
@@ -158,7 +158,8 @@ class ncREDIS {
                 break;
             case 'menu':
                 console.log(chalk.yellow('Returning to main menu...'));
-                return mainMenu();  // Call the mainMenu callback
+                mainMenu();  // Call the mainMenu callback
+                break;
         }
 
         // After the action is complete, return to the Redis menu
