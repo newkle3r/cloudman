@@ -15,44 +15,42 @@ const GRAY = chalk.gray;
 const YELLOWLI = chalk.bgYellowBright;
 const PURPLE = chalk.magenta;
 
-async function installNextcloud() {
-    const spinner = createSpinner('Installing Nextcloud...').start();
-    
-    try {
-        execSync('sudo apt update && sudo apt install nextcloud -y');
-        spinner.success({ text: `${GREEN('Nextcloud has been installed!')}` });
-    } catch (error) {
-        spinner.error({ text: `${RED('Failed to install Nextcloud')}` });
-        console.error(error);
+class NextcloudManager {
+    async installNextcloud() {
+        const spinner = createSpinner('Installing Nextcloud...').start();
+        
+        try {
+            execSync('sudo apt update && sudo apt install nextcloud -y');
+            spinner.success({ text: `${GREEN('Nextcloud has been installed!')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to install Nextcloud')}` });
+            console.error(error);
+        }
     }
 
-    await mainMenu();
-}
-
-async function updateNextcloud() {
-    const spinner = createSpinner('Updating Nextcloud...').start();
-    
-    try {
-        execSync('sudo nextcloud upgrade');
-        spinner.success({ text: `${GREEN('Nextcloud has been updated!')}` });
-    } catch (error) {
-        spinner.error({ text: `${RED('Failed to update Nextcloud')}` });
-        console.error(error);
+    async updateNextcloud() {
+        const spinner = createSpinner('Updating Nextcloud...').start();
+        
+        try {
+            execSync('sudo nextcloud upgrade');
+            spinner.success({ text: `${GREEN('Nextcloud has been updated!')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to update Nextcloud')}` });
+            console.error(error);
+        }
     }
 
-    await mainMenu();
-}
-
-async function repairNextcloud() {
-    const spinner = createSpinner('Repairing Nextcloud...').start();
-    
-    try {
-        execSync('sudo nextcloud.occ maintenance:repair');
-        spinner.success({ text: `${GREEN('Nextcloud has been repaired!')}` });
-    } catch (error) {
-        spinner.error({ text: `${RED('Failed to repair Nextcloud')}` });
-        console.error(error);
+    async repairNextcloud() {
+        const spinner = createSpinner('Repairing Nextcloud...').start();
+        
+        try {
+            execSync('sudo nextcloud.occ maintenance:repair');
+            spinner.success({ text: `${GREEN('Nextcloud has been repaired!')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to repair Nextcloud')}` });
+            console.error(error);
+        }
     }
-
-    await mainMenu();
 }
+
+export default NextcloudManager;

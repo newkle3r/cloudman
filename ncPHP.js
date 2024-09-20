@@ -4,7 +4,7 @@ import gradient from 'gradient-string';
 import chalkAnimation from 'chalk-animation';
 import figlet from 'figlet';
 import { createSpinner } from 'nanospinner';
-import { execSync } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import fs from 'fs';
 
 const RED = chalk.redBright;
@@ -171,16 +171,17 @@ class ncPHP {
      */
     tailPHPlogs() {
         const spinner = createSpinner('Tailing PHP logs...').start();
-
+    
         try {
             const phpLogFile = '/var/log/php7.4-fpm.log';  // Adjust for your version
             console.log(`${YELLOW('Tailing PHP logs from:')} ${phpLogFile}`);
-            const tailProcess = execSync(`tail -f ${phpLogFile}`);
-
+            
+            const tailProcess = spawn('tail', ['-f', phpLogFile]);
+    
             tailProcess.stdout.on('data', (data) => {
                 console.log(`${GREEN(data.toString())}`);
             });
-
+    
             tailProcess.stderr.on('data', (data) => {
                 console.error(`${RED('Error tailing logs:')} ${data.toString()}`);
             });
@@ -196,3 +197,4 @@ class ncPHP {
     const phpManager = new ncPHP();
     await phpManager.managePHP();
 })();
+export default ncPHP;

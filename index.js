@@ -15,6 +15,11 @@ import ncPHP from './ncPHP.js';
 import ncSQL from './ncSQL.js';
 import nextcloud from './nextcloud.js';
 import ncDocker from './ncDocker.js';
+import NextcloudManager from './nextcloud.js';
+
+const nextcloudManager = new NextcloudManager();
+// nextcloudManager.installNextcloud();
+
 
 
 
