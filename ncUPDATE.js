@@ -8,8 +8,8 @@ import inquirer from 'inquirer';
 
 class ncUPDATE {
   constructor() {
-    this.scriptsDir = '/var/scripts'; // Adjust as per your environment
-    this.ncPath = '/var/www/nextcloud'; // Path to the Nextcloud installation
+    this.scriptsDir = '/var/scripts'; 
+    this.ncPath = '/var/www/nextcloud';
     this.libUrl = 'https://raw.githubusercontent.com/nextcloud/vm/master/lib.sh';
     
   }
@@ -81,7 +81,7 @@ class ncUPDATE {
   
 
   // Display a simple menu using Inquirer for interaction
-  async updateMenu(mainMenu) {
+  async updateMenu(mainMenu,exitProgram,VARS) {
     const choices = [
       'Update Nextcloud',
       'Check for Updates',
@@ -113,7 +113,9 @@ class ncUPDATE {
         break;
         
       case 'Exit':
+        
         console.log('Goodbye!');
+        exitProgram();
         process.exit(0);
     }
   }

@@ -99,7 +99,7 @@ async function mainMenu() {
     switch (answers.action) {
         case 'Update Nextcloud':
             const updateManager = new ncUPDATE();
-            return updateManager.updateMenu(mainMenu);
+            return updateManager.updateMenu(mainMenu,exitProgram,VARS);
 
         case 'Repair Nextcloud':
             const repairNC = new noVMNC();
@@ -121,7 +121,8 @@ async function mainMenu() {
             const ldapManager = new ncLDAP();
             if (activeMenu === 'ldap') {
                 console.log('Already managing LDAP. Returning to main menu...');
-                return mainMenu();
+                mainMenu();
+                break;
             }
             activeMenu = 'ldap';
             return ldapManager.manageLDAP(mainMenu);
@@ -150,7 +151,7 @@ async function mainMenu() {
             return backupManager.runBackups(mainMenu);
 
         case 'Exit':
-            VARS.saveVariables();
+            
             exitProgram();
             
             
@@ -161,6 +162,7 @@ async function mainMenu() {
  * Make sure to reset the active menu before exiting or transitioning
  */
 function exitProgram() {
+    VARS.saveVariables();
     resetActiveMenu();  // Clear any active states before exiting
     console.log(chalk.green('Goodbye!'));
     process.exit(0);
