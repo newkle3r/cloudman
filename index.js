@@ -11,9 +11,9 @@ import { execSync } from 'child_process';  // For executing shell commands
 import ncVars from './ncVARS.js';
 import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
-//import ncPHP from './ncPHP.js';
+import ncPHP from './ncPHP.js';
 import ncSQL from './ncSQL.js';
-//import nextcloud from './nextcloud.js';
+import nextcloud from './nextcloud.js';
 import ncDocker from './ncDocker.js';
 
 
@@ -102,14 +102,14 @@ async function mainMenu() {
             const sqlManager = new ncSQL();         // Create an instance of the ncSQL class
             return sqlManager.managePostgreSQL();   // Call the managePostgreSQL method
         case 'Manage PHP':
-            // return managePHP();
+            return managePHP();
 
         case 'Manage DNS/FQDN':
             const dnsManager = new ncFQDN();
             return dnsManager.manageFQDN();
 
         case 'Manage LDAP':
-            // return manageLDAP();
+            return manageLDAP();
             
         case 'Manage Nextcloud Apps':
             const appsManager = new ncAPPS();  // Create an instance of ncAPPS class
@@ -119,8 +119,8 @@ async function mainMenu() {
             const ncDocker = DOCKER;
             return ncDocker.manageDocker();
      
-        case 'Manage Nix':
-            //return manageNix();
+        case 'Manage Redis':
+            return manageRedis();
 
             
         
