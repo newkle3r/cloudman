@@ -1,0 +1,111 @@
+{
+    "ncSMTP": {
+      "class": {
+        "description": "A class to handle SMTP relay configuration for the Nextcloud server. It sets up an SMTP server used to send emails about failed cron jobs and other notifications."
+      },
+      "methods": {
+        "isRoot": {
+          "description": "Checks if the script is running as root.",
+          "throws": "Will throw an error if not running as root.",
+          "returns": null
+        },
+        "checkVariablesFile": {
+          "description": "Ensures that the variables.json file exists.",
+          "returns": {
+            "type": "object",
+            "description": "The parsed variables.json content."
+          }
+        },
+        "updateVariables": {
+          "description": "Updates important SMTP-related variables in variables.json.",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "description": "The key in variables.json to update."
+            },
+            {
+              "name": "value",
+              "type": "string",
+              "description": "The value to set for the specified key."
+            }
+          ],
+          "returns": null
+        },
+        "removeSMTPConfig": {
+          "description": "Removes existing SMTP configurations if msmtp is already installed.",
+          "returns": null
+        },
+        "installSMTP": {
+          "description": "Installs and configures SMTP relay for the Nextcloud server.",
+          "returns": null
+        },
+        "promptSMTPSettings": {
+          "description": "Prompts the user for SMTP settings such as server, port, and credentials.",
+          "returns": {
+            "type": "object",
+            "description": "The SMTP settings collected from the user."
+          }
+        },
+        "promptPort": {
+          "description": "Prompts for the SMTP port based on the chosen encryption protocol.",
+          "params": [
+            {
+              "name": "protocol",
+              "type": "string",
+              "description": "The encryption protocol chosen."
+            }
+          ],
+          "returns": {
+            "type": "string",
+            "description": "The SMTP port."
+          }
+        },
+        "promptUsername": {
+          "description": "Prompts for the SMTP username.",
+          "returns": {
+            "type": "string",
+            "description": "The SMTP username."
+          }
+        },
+        "promptPassword": {
+          "description": "Prompts for the SMTP password.",
+          "returns": {
+            "type": "string",
+            "description": "The SMTP password."
+          }
+        },
+        "promptRecipient": {
+          "description": "Prompts for the recipient email address.",
+          "returns": {
+            "type": "string",
+            "description": "The recipient email address."
+          }
+        },
+        "configureSMTP": {
+          "description": "Configures the SMTP relay by writing the configuration to /etc/msmtprc.",
+          "params": [
+            {
+              "name": "smtpSettings",
+              "type": "object",
+              "description": "The SMTP settings including server, port, username, password, and recipient."
+            }
+          ],
+          "returns": null
+        },
+        "sendTestEmail": {
+          "description": "Sends a test email to verify SMTP configuration.",
+          "params": [
+            {
+              "name": "recipient",
+              "type": "string",
+              "description": "The recipient email address to send the test email."
+            }
+          ],
+          "returns": null
+        }
+      }
+    }
+  }
+
+

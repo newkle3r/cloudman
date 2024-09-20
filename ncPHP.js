@@ -5,15 +5,28 @@ import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import fs from 'fs';
 
+/**
+ * Class responsible for managing PHP tasks in Nextcloud.
+ * Includes methods for identifying, upgrading, downgrading, repairing, and removing PHP.
+ * 
+ * @class ncPHP
+ * @remarks The order of upgrades is important!
+ * @remarks NC<25 => PHP7.4, NC>25 & Ubuntu<22 => PHP8.1, NC>28 & Ubuntu<24 => PHP8.3
+ */
 class ncPHP {
     constructor() {
         this.phpVersion = null;
-        this.phpLogProcess = null; // Store the tail process
+        this.phpLogProcess = null; // Process för att titta på PHP-loggar
     }
 
     /**
-     * Displays a menu for PHP management tasks.
-     * @returns {Promise<void>}
+     * @function managePHP 
+     * @description Visar en meny för att hantera PHP-relaterade uppgifter i Nextcloud.
+     * Får `mainMenu()` från `index.js > mainMenu` som används för att återgå till huvudmenyn.
+     * 
+     * @param {Function} mainMenu - Huvudmenyn från `index.js > mainMenu()` som anropas när användaren väljer att gå tillbaka.
+     * @see answers.action - Hanterar användarens val i menyn för PHP-hantering.
+     * @returns {Promise<void>} - Returnerar en Promise som avslutas när användarens val är bearbetat.
      */
     async managePHP(mainMenu) {
         const answers = await inquirer.prompt([
@@ -27,7 +40,7 @@ class ncPHP {
                     'Upgrade PHP',
                     'Repair Nextcloud PHP',
                     'Tail PHP logs',
-                    'Stop PHP log tailing',  // New option to stop tailing logs
+                    'Stop PHP log tailing', 
                     'Remove PHP',
                     'Go Back'
                 ],
@@ -44,18 +57,21 @@ class ncPHP {
             case 'Tail PHP logs':
                 return this.tailPHPlogs();
             case 'Stop PHP log tailing':
-                return this.stopTailPHPlogs(); // Stop tailing logs
+                return this.stopTailPHPlogs();
             case 'Remove PHP':
                 return this.removePHP();
             case 'Go Back':
-                mainMenu(); // Go back to main menu
+                mainMenu(); 
                 break;
         }
     }
 
     /**
-     * Identifies the currently installed PHP version and updates the variables.json file.
-     * @returns {Promise<void>}
+     * @function identifyPHP
+     * @description Identifierar den installerade PHP-versionen och uppdaterar filen variables.json.
+     * @file ./variables.json - Filen som uppdateras med den identifierade PHP-versionen.
+     * @var variables.PHP - Variabeln där PHP-versionen sparas.
+     * @returns {Promise<void>} - Returnerar en Promise som avslutas efter att versionen har identifierats och uppdaterats.
      */
     async identifyPHP() {
         const spinner = createSpinner('Identifying PHP version...').start();
@@ -87,8 +103,9 @@ class ncPHP {
     }
 
     /**
-     * Downgrades the currently installed PHP version to PHP 7.4.
-     * @returns {Promise<void>}
+     * @function downgradePHP74
+     * @description Nedgraderar den installerade PHP-versionen till PHP 7.4.
+     * @returns {Promise<void>} - Returnerar en Promise som avslutas när nedgraderingen är klar.
      */
     async downgradePHP74() {
         const spinner = createSpinner('Downgrading PHP to version 7.4...').start();
@@ -108,8 +125,9 @@ class ncPHP {
     }
 
     /**
-     * Repairs the PHP installation for Nextcloud.
-     * @returns {Promise<void>}
+     * @function repairPHP
+     * @description Reparerar PHP-installationen för Nextcloud.
+     * @returns {Promise<void>} - Returnerar en Promise som avslutas när PHP-installationen har reparerats.
      */
     async repairPHP() {
         const spinner = createSpinner('Repairing PHP installation...').start();
@@ -138,8 +156,10 @@ class ncPHP {
     }
 
     /**
-     * Removes the installed PHP and its associated packages.
-     * @returns {void}
+     * @function removePHP
+     * @description Tar bort den installerade PHP-versionen och dess tillhörande paket.
+     * @returns {void} - Utför borttagning av PHP utan att returnera ett värde.
+     * @remark OBS! PHP är helt avgörande för att kunna köra Nextcloud
      */
     removePHP() {
         const spinner = createSpinner('Starting PHP removal process...').start();
@@ -159,7 +179,8 @@ class ncPHP {
     }
 
     /**
-     * Tails the PHP logs in real-time.
+     * @function tailPHPlogs
+     * @description PHP loggar för felsökning
      */
     tailPHPlogs() {
         
@@ -185,17 +206,18 @@ class ncPHP {
 
         this.phpLogProcess.on('close', () => {
             console.log(chalk.green('PHP log tailing stopped.'));
-            this.phpLogProcess = null;  // Clear the process once stopped
+            this.phpLogProcess = null;  // Rensa processen när den stoppats
         });
     }
 
     /**
-     * Stops the tailing of PHP logs.
+     * @function stopTailPHPlogs
+     * @description Stoppar loggning av PHP-loggar i realtid.
      */
     stopTailPHPlogs() {
         if (this.phpLogProcess) {
             console.log(chalk.yellow('Stopping PHP log tailing...'));
-            this.phpLogProcess.kill();  // Kill the log tailing process
+            this.phpLogProcess.kill();  // Dödar processen som loggar
             this.phpLogProcess = null;
         } else {
             console.log(chalk.red('No PHP log tailing process is running.'));

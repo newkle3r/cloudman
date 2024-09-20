@@ -1,15 +1,17 @@
-// ncVARS.js
 import fs from 'fs';
 import os from 'os';
 import { execSync } from 'child_process';
 
 /**
  * Class to manage Nextcloud configuration variables.
- * Provides functionality to load, save, and access system variables.
+ * Provides functionality to load, save, and update system variables in variables.json.
  */
 class ncVARS {
-    constructor() {
-        // Directories and paths
+    constructor(filePath = './variables.json') {
+        this.filePath = filePath;
+        this.loadVariables(); // Load variables from file during initialization
+
+        // Default directories and paths
         this.SCRIPTS = '/var/scripts';
         this.HTML = '/var/www';
         this.NCPATH = `${this.HTML}/nextcloud`;
@@ -22,149 +24,46 @@ class ncVARS {
         this.NC_APPS_PATH = `${this.NCPATH}/apps`;
         this.VMLOGS = '/var/log/nextcloud';
         this.PSQLVER = this.getCommandOutput('psql --version');
-        
-        
-        // Ubuntu OS information
 
-        /**
-         * Retrieves the Ubuntu distribution version (e.g., "20.04" or "18.04").
-         * The `lsb_release -sr` command outputs the version number of the current OS.
-         *
-         * |- lsb_release
-         * L - -sr (release short)
-         *                  |{output}| -> e.g., "20.04"
-         */
+        // Ubuntu OS information
         this.DISTRO = this.getCommandOutput('lsb_release -sr');
-        
-        /**
-         * Retrieves the Ubuntu codename (e.g., "focal" for Ubuntu 20.04 or "bionic" for Ubuntu 18.04).
-         * The `lsb_release -sc` command outputs the codename of the current OS.
-         *
-         * |- lsb_release
-         * L - -sc (short codename)
-         *                  |{output}| -> e.g., "focal"
-         */
         this.CODENAME = this.getCommandOutput('lsb_release -sc');
-        
-        /**
-         * Retrieves the current keyboard layout (e.g., "us", "gb", or "se").
-         * The `localectl status` command outputs system locale and keyboard settings.
-         * The command is piped through `grep` to isolate the line containing the layout,
-         * and `awk '{print $3}'` extracts the third field, which is the keyboard layout.
-         *
-         * |- localectl
-         *    |- grep "Layout"
-         *        L - awk '{print $3}'
-         *                      |{$1: "VC"}|{$2: "Keymap"}|{$3: "us"}|
-         *                                             |output -> "us"|
-         */
         this.KEYBOARD_LAYOUT = this.getCommandOutput("localectl status | grep 'Layout' | awk '{print $3}'");
-        
+
         // System vendor and networking
-        
-        /**
-         * Retrieves the system vendor information.
-         * The `/sys/devices/virtual/dmi/id/sys_vendor` file contains the manufacturer of the system.
-         * 
-         * |- cat
-         *    L - /sys/devices/virtual/dmi/id/sys_vendor
-         *                |{output}| -> e.g., "Dell Inc.", "Hewlett-Packard"
-         */
         this.SYSVENDOR = this.getCommandOutput('cat /sys/devices/virtual/dmi/id/sys_vendor');
-        
-        /**
-         * Retrieves the primary network interface used for the default route.
-         * The `ip r` command lists routing table information.
-         * The `grep 'default via'` isolates the line containing the default route,
-         * and `awk '{print $5}'` extracts the fifth field, which is the network interface (e.g., "eth0").
-         *
-         * |- ip r
-         *    |- grep "default via"
-         *       L - awk '{print $5}'
-         *                      |{$1}|{$2}|{$3}|{$4}|{$5}|{$6}|
-         *                      |"default"|"via"|"192.168.1.1"|"dev"|"eth0"|
-         *                                             |output -> "eth0"|
-         */
         this.IFACE = this.getCommandOutput("ip r | grep 'default via' | awk '{print $5}'");
-        
-        /**
-         * Retrieves the secondary interface that is up and running.
-         * The `ip -o link show` command lists all network interfaces with their statuses.
-         * The command uses `awk` to print the second field (interface name) and ninth field (state),
-         * and `grep 'UP'` filters interfaces that are up. `cut -d ':' -f 1` isolates the interface name.
-         *
-         * |- ip -o link show
-         *    |- awk '{print $2, $9}' 
-         *        |- grep "UP"
-         *           |- cut -d ':' -f 1
-         *                         |output -> e.g., "eth1"|
-         */
         this.IFACE2 = this.getCommandOutput("ip -o link show | awk '{print $2,$9}' | grep 'UP' | cut -d ':' -f 1");
-        
-        /**
-         * Retrieves the first repository URL from the `/etc/apt/sources.list` file.
-         * The `grep '^deb '` command filters lines that start with "deb" (defining repositories),
-         * `grep http` ensures that the URL uses HTTP, and `awk '{print $2}'` extracts the second field (the URL).
-         * The `head -1` limits the result to the first match (e.g., "http://archive.ubuntu.com/ubuntu").
-         *
-         * |- grep '^deb ' /etc/apt/sources.list
-         *    |- grep 'http'
-         *       |- awk '{print $2}'
-         *          |- head -1
-         *                         |output -> e.g., "http://archive.ubuntu.com/ubuntu"|
-         */
         this.REPO = this.getCommandOutput("grep '^deb ' /etc/apt/sources.list | grep http | awk '{print $2}' | head -1");
-        
-        /**
-         * Retrieves the current local IP address of the machine.
-         * The `hostname -I` command outputs all IP addresses assigned to the machine.
-         * The `cut -d " " -f 1` extracts the first one, which is typically the main IP address (e.g., "192.168.1.100").
-         *
-         * |- hostname -I
-         *    |- cut -d ' ' -f 1
-         *                |output -> e.g., "192.168.1.100"|
-         */
         this.ADDRESS = this.getCommandOutput('hostname -I | cut -d " " -f 1');
-        
-        /**
-         * Retrieves the external public IPv4 address using the ipify API.
-         * The `curl -s -k -m 5 -4 https://api64.ipify.org` command makes a silent request to the ipify API
-         * to fetch the public IP address (e.g., "203.0.113.45").
-         *
-         * |- curl -s -k -m 5 -4
-         *    L - https://api64.ipify.org
-         *                |output -> e.g., "203.0.113.45"|
-         */
         this.WANIP4 = this.getCommandOutput('curl -s -k -m 5 -4 https://api64.ipify.org');
-        
-        /**
-         * Network interface configuration file path.
-         * This is a static path pointing to the Netplan configuration file used for the network configuration (e.g., `/etc/netplan/nextcloud.yaml`).
-         */
         this.INTERFACES = '/etc/netplan/nextcloud.yaml';
-        
-        /**
-         * Retrieves the default gateway IP address.
-         * The `ip route` command shows the routing table. 
-         * The `grep default` isolates the line that contains the default gateway, 
-         * and `awk '{print $3}'` extracts the third field, which is the gateway IP address (e.g., "192.168.1.1").
-         *
-         * |- ip route
-         *    |- grep 'default'
-         *       |- awk '{print $3}'
-         *                      |{$1}|{$2}|{$3}|{$4}|{$5}|
-         *                      |"default"|"via"|"192.168.1.1"|"dev"|"eth0"|
-         *                                             |output -> "192.168.1.1"|
-         */
         this.GATEWAY = this.getCommandOutput("ip route | grep default | awk '{print $3}'");
+
+        // Let's encrypt - TLS cert
         
+
+        "DEDYNDOMAIN": "The domain name used for TLS activation.",
+        "TLSDOMAIN": "The domain to be set for the Nextcloud TLS configuration.",
+        "TLS_CONF": "TLS configuration file.",
+        "HTTP_CONF": "HTTP configuration file.",
+        "PHPVER": "Current PHP version in use for Apache conf file.",
+        "CERTFILES": "Directory where SSL certificates are stored.",
+        "DHPARAMS_TLS": "DHParams file for TLS configuration.",
+        "SETENVPROXY": "SetEnv proxy-sendcl variable for specific Ubuntu versions.",
+        "DEDYNPORT": "Custom port for public access if the user decides to change it."
+
+
 
 
         // DNS and ports
         this.INTERNET_DNS = '9.9.9.9';
         this.DNS1 = '9.9.9.9';
         this.DNS2 = '149.112.112.112';
-        this.NONO_PORTS = [22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5179, 5432, 7867, 7983, 8983, 10000, 8081, 8443, 9443, 9000, 9980, 9090, 9200, 9600, 1234];
+        this.NONO_PORTS = [
+            22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5179,
+            5432, 7867, 7983, 8983, 10000, 8081, 8443, 9443, 9000, 9980, 9090, 9200, 9600, 1234
+        ];
     }
 
     /**
@@ -182,37 +81,78 @@ class ncVARS {
     }
 
     /**
-     * Save variables to a JSON file.
-     * @param {string} filePath - The path where the file should be saved.
+     * Save the current variables to the JSON file.
      */
-    saveVariables(filePath) {
-        const data = JSON.stringify(this, null, 2);
-        fs.writeFileSync(filePath, data, 'utf8');
-        console.log(`Variables saved to ${filePath}`);
+    saveVariables() {
+        try {
+            const data = JSON.stringify(this, null, 2);
+            fs.writeFileSync(this.filePath, data, 'utf8');
+            console.log(`Variables saved to ${this.filePath}`);
+        } catch (error) {
+            console.error(`Error saving variables to ${this.filePath}:`, error);
+        }
     }
 
     /**
-     * Load variables from a JSON file and update the class properties.
-     * @param {string} filePath - The path from which the file should be loaded.
+     * Load variables from the JSON file and update class properties.
      */
-    loadVariables(filePath) {
-        if (fs.existsSync(filePath)) {
-            const data = fs.readFileSync(filePath, 'utf8');
+    loadVariables() {
+        if (fs.existsSync(this.filePath)) {
+            const data = fs.readFileSync(this.filePath, 'utf8');
             const loadedVars = JSON.parse(data);
-
-            // Update the class with loaded variables
             Object.assign(this, loadedVars);
-            console.log(`Variables loaded from ${filePath}`);
+            console.log(`Variables loaded from ${this.filePath}`);
         } else {
-            console.error(`File not found: ${filePath}`);
+            console.error(`File not found: ${this.filePath}`);
         }
+    }
+
+    /**
+     * Update a specific variable in the JSON and class property.
+     * @param {string} key - The variable name to update.
+     * @param {any} value - The new value to set for the variable.
+     */
+    updateVariable(key, value) {
+        this[key] = value;
+        this.saveVariables();
+        console.log(`Updated ${key} to ${value}`);
     }
 
     /**
      * Print the current variables to the console.
      */
     printVariables() {
-        console.log('Nextcloud Variables:', this);
+        console.log('Current Nextcloud Variables:', this);
+    }
+
+    /**
+     * Update the SMTP configuration in variables.json.
+     * @param {string} mailServer - The SMTP server address.
+     * @param {string} protocol - The encryption protocol (SSL, STARTTLS, NO-ENCRYPTION).
+     * @param {string} smtpPort - The port used for the SMTP connection.
+     * @param {string} mailUsername - The username for the SMTP server.
+     * @param {string} mailPassword - The password for the SMTP server.
+     * @param {string} recipient - The recipient email address for sending emails.
+     */
+    updateSMTP(mailServer, protocol, smtpPort, mailUsername, mailPassword, recipient) {
+        this.updateVariable('MAIL_SERVER', mailServer);
+        this.updateVariable('PROTOCOL', protocol);
+        this.updateVariable('SMTP_PORT', smtpPort);
+        this.updateVariable('MAIL_USERNAME', mailUsername);
+        this.updateVariable('MAIL_PASSWORD', mailPassword);
+        this.updateVariable('RECIPIENT', recipient);
+    }
+
+    /**
+     * Update the Redis configuration in variables.json.
+     * @param {string} redisSock - The Redis Unix socket file location.
+     * @param {string} redisConf - The Redis configuration file location.
+     * @param {string} redisPass - The password for Redis.
+     */
+    updateRedis(redisSock, redisConf, redisPass) {
+        this.updateVariable('REDIS_SOCK', redisSock);
+        this.updateVariable('REDIS_CONF', redisConf);
+        this.updateVariable('REDIS_PASS', redisPass);
     }
 
     /**

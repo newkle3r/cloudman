@@ -1,0 +1,155 @@
+{
+    "ncTLS": {
+      "class": {
+        "description": "A class to manage TLS activation and configuration for Nextcloud. Provides functionality to set up, test, and manage TLS certificates."
+      },
+      "methods": {
+        "constructor": {
+          "description": "Initializes the TLS configuration properties, including paths for certificates, configuration files, and the current PHP version.",
+          "properties": {
+            "SCRIPTS": {
+              "type": "string",
+              "description": "Path to the scripts directory."
+            },
+            "HTML": {
+              "type": "string",
+              "description": "Path to the web root directory."
+            },
+            "NCPATH": {
+              "type": "string",
+              "description": "Path to the Nextcloud installation directory."
+            },
+            "CERTFILES": {
+              "type": "string",
+              "description": "Directory where Let's Encrypt certificates are stored."
+            },
+            "PHPVER": {
+              "type": "string",
+              "description": "Current PHP version in use, retrieved using 'php -v' command."
+            },
+            "TLSDOMAIN": {
+              "type": "string",
+              "description": "Domain name for which TLS is activated."
+            },
+            "TLS_CONF": {
+              "type": "string",
+              "description": "Path to the Apache TLS configuration file."
+            },
+            "DHPARAMS_TLS": {
+              "type": "string",
+              "description": "Path to the DHParams file for TLS configuration."
+            },
+            "LETS_ENCRYPT_CERT": {
+              "type": "string",
+              "description": "Path to the Let's Encrypt certificate, retrieved dynamically."
+            },
+            "LETS_ENCRYPT_STATUS": {
+              "type": "string",
+              "description": "Status of the Let's Encrypt certificate (Valid or Expired)."
+            },
+            "NONO_PORTS": {
+              "type": "array<number>",
+              "description": "List of ports that shouldn't be used for public access."
+            }
+          }
+        },
+        "getCommandOutput": {
+          "description": "Helper function to execute a shell command and return the output.",
+          "params": {
+            "command": {
+              "type": "string",
+              "description": "The shell command to run."
+            }
+          },
+          "returns": {
+            "type": "string",
+            "description": "Output from the executed command."
+          }
+        },
+        "getTLSConfigDomain": {
+          "description": "Retrieves the domain from the TLS configuration.",
+          "returns": {
+            "type": "string",
+            "description": "The domain used for the TLS configuration."
+          }
+        },
+        "getTLSConfPath": {
+          "description": "Retrieves the TLS configuration file path.",
+          "returns": {
+            "type": "string",
+            "description": "The file path of the TLS configuration."
+          }
+        },
+        "getCertStatus": {
+          "description": "Retrieves the status of the Let's Encrypt certificate (valid or expired).",
+          "returns": {
+            "type": "string",
+            "description": "The status of the certificate ('Valid' or 'Expired')."
+          }
+        },
+        "setTLSConfig": {
+          "description": "Sets the domain for TLS and updates the Nextcloud configuration. Writes the TLS configuration for Apache.",
+          "params": {
+            "domain": {
+              "type": "string",
+              "description": "The domain name to be used for TLS."
+            }
+          },
+          "example": "ncTLS.setTLSConfig('cloud.example.com');"
+        },
+        "generateDHParams": {
+          "description": "Generates a new DHParams file if it doesn't exist. DHParams are used to strengthen the security of the TLS handshake."
+        },
+        "installAndGenerateCert": {
+          "description": "Installs certbot and runs the certificate generation process for the domain using Let's Encrypt.",
+          "params": {
+            "domain": {
+              "type": "string",
+              "description": "The domain for which the certificate will be generated."
+            }
+          },
+          "example": "ncTLS.installAndGenerateCert('cloud.example.com');"
+        },
+        "checkDomainReachability": {
+          "description": "Checks if the domain is reachable and if ports 80 and 443 are open.",
+          "params": {
+            "domain": {
+              "type": "string",
+              "description": "The domain name to be checked."
+            }
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "True if the domain is reachable and ports are open, false otherwise."
+          },
+          "example": "ncTLS.checkDomainReachability('cloud.example.com');"
+        },
+        "checkPorts": {
+          "description": "Checks if the necessary ports (80 and 443) are open for the domain using nmap.",
+          "params": {
+            "domain": {
+              "type": "string",
+              "description": "The domain name to be checked."
+            }
+          },
+          "example": "ncTLS.checkPorts('cloud.example.com');"
+        },
+        "restartWebServer": {
+          "description": "Restarts the Apache server to apply the new TLS configuration.",
+          "example": "ncTLS.restartWebServer();"
+        },
+        "activateTLSConfig": {
+          "description": "Enables the new TLS configuration and disables the old one, then restarts the web server.",
+          "params": {
+            "oldConf": {
+              "type": "string",
+              "description": "The old configuration to disable.",
+              "default": "000-default.conf"
+            }
+          },
+          "example": "ncTLS.activateTLSConfig('old-config.conf');"
+        }
+      }
+    }
+  }
+  

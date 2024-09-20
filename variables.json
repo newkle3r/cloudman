@@ -51,5 +51,49 @@
     9600,
     1234
   ],
-  "PHP": "8.3"
+  "PHP": "8.3",
+  
+
+  "SCRIPT_NAME": "The name of the script (SMTP Relay with msmtp)",
+  "SCRIPT_EXPLAINER": "Explanation of the script function",
+  "DEBUG": "Used for debug mode (1 = ON, 0 = OFF)",
+  "MAIL_SERVER": "The SMTP server address",
+  "PROTOCOL": "The encryption protocol (SSL, STARTTLS, NO-ENCRYPTION)",
+  "SMTP_PORT": "The port used for the SMTP connection",
+  "NEEDS_CREDENTIALS": "Flag to determine if credentials are needed for SMTP",
+  "SMTP2GO": "Flag to indicate if SMTP2GO service is used",
+  "MAIL_USERNAME": "The username for the SMTP server",
+  "MAIL_PASSWORD": "The password for the SMTP server",
+  "RECIPIENT": "The recipient email address for sending emails",
+  "SELF_SIGNED_CERT": "Flag to indicate if the server uses self-signed certificates",
+  "MSMTP_ENCRYPTION1": "First part of encryption settings for msmtp",
+  "MSMTP_ENCRYPTION2": "Second part of encryption settings for msmtp",
+  "DEFAULT_PORT": "Default port based on the selected encryption",
+  "choice": "User's choice of mail provider or setup option",
+  "TITLE": "The title for whiptail menus",
+  "WT_HEIGHT": "Height for whiptail windows",
+  "WT_WIDTH": "Width for whiptail windows",
+  "REDIS_SOCK": "Redis Unix socket file location",
+  "REDIS_CONF": "Redis configuration file location",
+  "REDIS_PASS": "Password for Redis configuration",
+  "TEST_MAIL": "Message template for sending test emails",
+  "LOG_FILE": "/var/log/msmtp",
+
+  
+
+  "DEDYNDOMAIN": "The domain name used for TLS activation.",
+  "TLSDOMAIN": "The domain to be set for the Nextcloud TLS configuration.",
+  "TLS_CONF": "TLS configuration file.",
+  "HTTP_CONF": "HTTP configuration file.",
+  "PHPVER": "Current PHP version in use for Apache conf file.",
+  "CERTFILES": "Directory where SSL certificates are stored.",
+  "DHPARAMS_TLS": "DHParams file for TLS configuration.",
+  "SETENVPROXY": "SetEnv proxy-sendcl variable for specific Ubuntu versions.",
+  "DEDYNPORT": "Custom port for public access if the user decides to change it."
+
+
+
+
+
 }
+
