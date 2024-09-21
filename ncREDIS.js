@@ -65,35 +65,43 @@ class ncREDIS {
                 console.error(error);
                 return;
             }
-
-            // Install the PHP Redis extension
-            spinner.update({ text: `${YELLOW('Installing PHP Redis extension...')}` });
-            try {
-                execSync(`sudo apt-get install -y php${this.getPHPVersion()}-dev`, { stdio: 'inherit' });
-                execSync('sudo pecl channel-update pecl.php.net', { stdio: 'inherit' });
-                execSync('yes no | sudo pecl install -Z redis', { stdio: 'inherit' });
-                this.configurePHPRedisModule();
-                spinner.success({ text: `${GREEN('PHP Redis module installed.')}` });
-            } catch (error) {
-                spinner.error({ text: `${RED('Failed to install PHP Redis module.')}` });
-                console.error(error);
-            }
-
-            // Configure Redis performance tweaks
-            this.configureRedisPerformance();
         }
     }
+
+            async installRedisPhpModule() {
+                const spinner = createSpinner('Installing PHP Redis extension...').start();
+        
+                try {
+                    if (this.isRedisPhpModuleInstalled()) {
+                        spinner.success({ text: `${GREEN('PHP Redis module is already installed.')}` });
+                        return;
+                    }
+        
+                    // Install PHP Redis extension if not installed
+                    execSync('sudo pecl channel-update pecl.php.net', { stdio: 'inherit' });
+                    execSync('yes no | sudo pecl install -Z redis', { stdio: 'inherit' });
+        
+                    // Ensure the PHP Redis module is enabled
+                    this.configurePHPRedisModule();
+                    spinner.success({ text: `${GREEN('PHP Redis module installed successfully.')}` });
+                } catch (error) {
+                    spinner.error({ text: `${RED('Failed to install PHP Redis module.')}` });
+                    console.error(error);
+                }
+            }
 
     /**
      * Configure the PHP Redis module after installation.
      */
     configurePHPRedisModule() {
         try {
-            if (!execSync(`grep -qFx extension=redis.so ${this.phpModsDir}/redis.ini`).toString().trim()) {
-                execSync(`echo "# PECL redis" | sudo tee ${this.phpModsDir}/redis.ini`);
-                execSync(`echo "extension=redis.so" | sudo tee -a ${this.phpModsDir}/redis.ini`);
-                execSync(`sudo phpenmod -v ALL redis`);
+            const redisIniPath = `${this.phpModsDir}/redis.ini`;
+            if (!fs.existsSync(redisIniPath)) {
+                fs.writeFileSync(redisIniPath, 'extension=redis.so');
             }
+
+            // Enable the Redis PHP module
+            execSync(`sudo phpenmod -v ALL redis`);
         } catch (error) {
             console.error(RED('Failed to configure PHP Redis module.'), error);
         }
