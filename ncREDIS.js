@@ -180,16 +180,20 @@ class ncREDIS {
      */
     async checkRedisStatus() {
         const spinner = createSpinner('Checking Redis server status...').start();
-
+    
         try {
-            const status = execSync('sudo systemctl status redis-server', { stdio: 'inherit' }).toString();
-            console.log(status);
-            spinner.success({ text: `${GREEN('Redis server status displayed.')}` });
+            const status = execSync('sudo systemctl is-active redis-server', { stdio: 'pipe' }).toString().trim();
+            if (status === 'active') {
+                spinner.success({ text: `${GREEN('Redis is running.')}` });
+            } else {
+                spinner.error({ text: `${RED('Redis is not running.')}` });
+            }
         } catch (error) {
             spinner.error({ text: `${RED('Failed to check Redis server status.')}` });
             console.error(error);
         }
     }
+    
 
     /**
      * Display a menu for Redis management, allowing the user to select an action.
@@ -248,8 +252,7 @@ class ncREDIS {
                 
         }
 
-        // After the action is complete, return to the Redis menu
-        await this.manageRedis(mainMenu);
+
     }
     }
 }
