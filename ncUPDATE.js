@@ -1,14 +1,17 @@
+import { RED,GREEN } from './color.js';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import readlineSync from 'readline-sync';
+import inquirer from 'inquirer';
+
 
 /**
  * Class to handle the Nextcloud update process.
  * This script provides an option to run a full update or perform individual steps.
  * 
- * @class ncUpdate
+ * @class ncUPDATE
  */
-class ncUpdate {
+class ncUPDATE {
   constructor() {
     this.SCRIPTS = '/var/scripts';
     this.BACKUP = '/mnt/NCBACKUP/';
@@ -206,7 +209,9 @@ class ncUpdate {
 }
 
 // Start the update process
-const updater = new ncUpdate();
+const updater = new ncUPDATE();
 updater.manageUpdate(() => {
   console.log("Returned to main menu.");
 });
+
+export default ncUPDATE;

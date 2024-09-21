@@ -1,4 +1,5 @@
 {
+  "filePath": "./variables.json",
   "SCRIPTS": "/var/scripts",
   "HTML": "/var/www",
   "NCPATH": "/var/www/nextcloud",
@@ -52,8 +53,6 @@
     1234
   ],
   "PHP": "8.3",
-  
-
   "SCRIPT_NAME": "The name of the script (SMTP Relay with msmtp)",
   "SCRIPT_EXPLAINER": "Explanation of the script function",
   "DEBUG": "Used for debug mode (1 = ON, 0 = OFF)",
@@ -79,9 +78,6 @@
   "TEST_MAIL": "Message template for sending test emails",
   "LOG_FILE": "/var/log/msmtp",
   "SCRIPTS_PATH": "/var/scripts",
-
-  
-
   "DEDYNDOMAIN": "The domain name used for TLS activation.",
   "TLSDOMAIN": "The domain to be set for the Nextcloud TLS configuration.",
   "TLS_CONF": "TLS configuration file.",
@@ -91,10 +87,4 @@
   "DHPARAMS_TLS": "DHParams file for TLS configuration.",
   "SETENVPROXY": "SetEnv proxy-sendcl variable for specific Ubuntu versions.",
   "DEDYNPORT": "Custom port for public access if the user decides to change it."
-
-
-
-
-
 }
-
