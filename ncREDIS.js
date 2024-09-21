@@ -235,7 +235,8 @@ class ncREDIS {
                 break;
             case 'menu':
                 console.log(chalk.yellow('Returning to main menu...'));
-                mainMenu();  // Call the mainMenu callback
+                continueMenu = false;
+                mainMenu();  
                 break;
         }
 

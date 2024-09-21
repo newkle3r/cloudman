@@ -5,7 +5,7 @@ import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
 import ncPHP from './ncPHP.js';
 import ncSQL from './ncSQL.js';
-import ncDocker from './ncDocker.js';
+import ncDOCKER from './ncDOCKER.js';
 import ncUPDATE from './ncUPDATE.js';
 import ncBAK from './ncBAK.js';
 import ncLDAP from './ncLDAP.js';
@@ -132,7 +132,7 @@ async function mainMenu() {
             return appsManager.manageApps(mainMenu);
 
         case 'Manage Docker':
-            const dockerManager = new ncDocker();
+            const dockerManager = new ncDOCKER();
             return dockerManager.manageDocker(mainMenu);
 
         case 'Manage Redis':

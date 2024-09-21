@@ -8,7 +8,7 @@ import chalk from 'chalk';
 /**
  * Class to manage Docker containers and images using Docker CLI.
  */
-class ncDocker {
+class ncDOCKER {
     constructor() {}
 
     /**
@@ -208,4 +208,4 @@ class ncDocker {
     }
 }
 
-export default ncDocker;
+export default ncDOCKER;
