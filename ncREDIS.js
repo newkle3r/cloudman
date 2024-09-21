@@ -314,7 +314,7 @@ async configureRedisForNextcloud() {
         }
     }
 
-        /**
+    /**
      * Update the REDIS_PASS field in variables.json
      * @param {string} newRedisPassword - The new Redis password.
      */
@@ -334,7 +334,7 @@ async configureRedisForNextcloud() {
                 console.error(RED('Failed to update REDIS_PASS in variables.json'), error);
             }
         }
-    }
+    
     
 
     /**
