@@ -129,9 +129,10 @@ class ncREDIS {
         const spinner = createSpinner('Checking Nextcloud config.php...').start();
 
         try {
-            // Read the existing config.php
-            const configFileContent = fs.readFileSync(this.configFilePath, 'utf8');
-            
+            // Run all file access operations with sudo
+            // Read the existing config.php with sudo
+            const configFileContent = execSync(`sudo cat ${this.configFilePath}`).toString();
+
             // Look for Redis and Memcache settings in config.php
             const hasRedisConfig = configFileContent.includes("'redis' => array(");
             const hasMemcacheLocal = configFileContent.includes("'memcache.local' => '\\OC\\Memcache\\Redis'");
@@ -147,8 +148,8 @@ class ncREDIS {
             // If the configuration is incorrect, generate a new Redis password and rewrite the necessary parts of config.php
             const redisPass = this.generateRedisPassword();
 
-            // Backup the current config.php
-            fs.copyFileSync(this.configFilePath, this.backupConfigFilePath);
+            // Backup the current config.php using sudo
+            execSync(`sudo cp ${this.configFilePath} ${this.backupConfigFilePath}`);
             console.log(YELLOW('Backup of config.php created.'));
 
             // Prepare the updated configuration for Redis and Memcache
@@ -160,15 +161,19 @@ class ncREDIS {
                     'host' => '${this.redisSock}',
                     'port' => 0,
                     'timeout' => 0.5,
-                    'password' => '${redisPass}'
+                    'password' => '${redisPass}',
+                    'dbindex' => 0,
                 ),
             `;
 
             // Find where to insert or replace the Redis and Memcache configurations
             const newConfigFileContent = this.injectRedisConfig(configFileContent, updatedConfig);
 
-            // Write the updated configuration back to config.php
-            fs.writeFileSync(this.configFilePath, newConfigFileContent, 'utf8');
+            // Write the updated configuration back to config.php using sudo
+            const tmpConfigPath = `/tmp/config.php`;
+            fs.writeFileSync(tmpConfigPath, newConfigFileContent, 'utf8'); // Write the updated content to a temporary file
+            execSync(`sudo mv ${tmpConfigPath} ${this.configFilePath}`); // Move the updated file to the correct location with sudo
+
             spinner.success({ text: `${GREEN('Nextcloud config.php updated with Redis configuration.')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to validate or update config.php.')}` });
@@ -393,9 +398,9 @@ async configureRedisForNextcloud() {
                 await this.checkRedisStatus();
                 break;
             case 'rewrite':
-                await this.checkAndFixNextcloudConfig();
+                checkAndFixNextcloudConfig();
                 break;
-                
+
             case 'menu':
                 console.log(chalk.yellow('Returning to main menu...'));
                 continueMenu = false;
