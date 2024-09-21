@@ -12,6 +12,7 @@ class ncREDIS {
         this.phpModsDir = `/etc/php/${this.getPHPVersion()}/mods-available`;
         this.configFilePath = '/var/www/nextcloud/config/config.php';
         this.backupConfigFilePath = '/var/www/nextcloud/config/config.php.bak';
+        this.variablesFile = './variables.json';  
     }
 
     /**
@@ -310,6 +311,28 @@ async configureRedisForNextcloud() {
         } catch (error) {
             spinner.error({ text: `${RED('Failed to check Redis server status.')}` });
             console.error(error);
+        }
+    }
+
+        /**
+     * Update the REDIS_PASS field in variables.json
+     * @param {string} newRedisPassword - The new Redis password.
+     */
+        updateRedisPasswordInVariables(newRedisPassword) {
+            try {
+                // Read the existing variables.json
+                const variablesContent = fs.readFileSync(this.variablesFile, 'utf8');
+                const variables = JSON.parse(variablesContent);  // Parse the JSON
+    
+                // Update the REDIS_PASS field
+                variables.REDIS_PASS = newRedisPassword;
+    
+                // Write the updated content back to variables.json
+                fs.writeFileSync(this.variablesFile, JSON.stringify(variables, null, 2), 'utf8');
+                console.log(GREEN('REDIS_PASS has been updated in variables.json.'));
+            } catch (error) {
+                console.error(RED('Failed to update REDIS_PASS in variables.json'), error);
+            }
         }
     }
     
