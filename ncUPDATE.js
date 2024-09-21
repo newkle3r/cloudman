@@ -43,6 +43,11 @@ class ncUPDATE {
    * @returns {Promise<void>} - Resolves when the user action is completed.
    */
   async manageUpdate(mainMenu) {
+
+      let continueMenu = true;
+
+      while (continueMenu ===true) {
+
     const answers = await inquirer.prompt([
       {
         type: 'list',
@@ -89,18 +94,9 @@ class ncUPDATE {
         break;
     }
   }
+}
 
-  /**
-   * Checks if the script is running as root.
-   * Exits if not root.
-   */
-  isRoot() {
-    const user = this.runCommand('whoami');
-    if (user !== 'root') {
-      console.error('Script must be run as root.');
-      process.exit(1);
-    }
-  }
+
 
   /**
    * Checks if apt or dpkg processes are running.
