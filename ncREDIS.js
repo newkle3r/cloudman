@@ -205,6 +205,10 @@ class ncREDIS {
             { name: 'Return to main menu', value: 'menu' }
         ];
 
+        let continueMenu = true;
+
+        while (continueMenu === true) {
+
         const answer = await inquirer.prompt([
             {
                 type: 'list',
@@ -238,10 +242,15 @@ class ncREDIS {
                 continueMenu = false;
                 mainMenu();  
                 break;
+
+            default:
+                console.log('Invalid option, returning to redis menu');
+                
         }
 
         // After the action is complete, return to the Redis menu
         await this.manageRedis(mainMenu);
+    }
     }
 }
 
