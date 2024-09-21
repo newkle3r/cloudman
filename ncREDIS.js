@@ -356,6 +356,7 @@ async configureRedisForNextcloud() {
             { name: 'Remove Redis from Nextcloud', value: 'removeConfig' },
             { name: 'Restart Redis', value: 'restart' },
             { name: 'Check Redis Status', value: 'status' },
+            { name: 'Brute-force config', value: 'rewrite' },
             { name: 'Return to main menu', value: 'menu' }
         ];
 
@@ -391,6 +392,10 @@ async configureRedisForNextcloud() {
             case 'status':
                 await this.checkRedisStatus();
                 break;
+            case 'rewrite':
+                await this.checkAndFixNextcloudConfig();
+                break;
+                
             case 'menu':
                 console.log(chalk.yellow('Returning to main menu...'));
                 continueMenu = false;
