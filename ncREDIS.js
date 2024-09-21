@@ -10,6 +10,20 @@ class ncREDIS {
         this.redisConf = '/etc/redis/redis.conf';
         this.redisSock = '/var/run/redis/redis-server.sock';
         this.phpModsDir = `/etc/php/${this.getPHPVersion()}/mods-available`;
+        this.configFilePath = '/var/www/nextcloud/config/config.php';
+        this.backupConfigFilePath = '/var/www/nextcloud/config/config.php.bak';
+    }
+
+    /**
+     * Generate a strong random password for Redis.
+     */
+    generateRedisPassword(length = 16) {
+        const charset = 'a-zA-Z0-9@#*';
+        let password = '';
+        for (let i = 0; i < length; i++) {
+            password += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        return password;
     }
 
     /**
@@ -99,24 +113,118 @@ class ncREDIS {
             console.error(error);
         }
     }
-
     /**
-     * Configure Redis as the Nextcloud cache backend.
+     * Check and validate if config.php has the correct Redis and Memcache configuration.
      */
-    async configureRedisForNextcloud() {
-        const spinner = createSpinner('Configuring Redis for Nextcloud...').start();
+    checkAndFixNextcloudConfig() {
+        const spinner = createSpinner('Checking Nextcloud config.php...').start();
 
         try {
-            execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.local --value='\\OC\\Memcache\\Redis'`, { stdio: 'inherit' });
-            execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.locking --value='\\OC\\Memcache\\Redis'`, { stdio: 'inherit' });
-            execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set redis --value='{"host":"${this.redisSock}","port":0,"timeout":0.5}'`, { stdio: 'inherit' });
+            // Read the existing config.php
+            const configFileContent = fs.readFileSync(this.configFilePath, 'utf8');
+            
+            // Look for Redis and Memcache settings in config.php
+            const hasRedisConfig = configFileContent.includes("'redis' => array(");
+            const hasMemcacheLocal = configFileContent.includes("'memcache.local' => '\\OC\\Memcache\\Redis'");
+            const hasMemcacheLocking = configFileContent.includes("'memcache.locking' => '\\OC\\Memcache\\Redis'");
+            const hasMemcacheDistributed = configFileContent.includes("'memcache.distributed' => '\\OC\\Memcache\\Redis'");
 
-            spinner.success({ text: `${GREEN('Redis has been configured for Nextcloud.')}` });
+            // If all necessary configs are present, no need to modify
+            if (hasRedisConfig && hasMemcacheLocal && hasMemcacheLocking && hasMemcacheDistributed) {
+                spinner.success({ text: `${GREEN('Nextcloud config.php is correctly configured for Redis.')}` });
+                return;
+            }
+
+            // If the configuration is incorrect, generate a new Redis password and rewrite the necessary parts of config.php
+            const redisPass = this.generateRedisPassword();
+
+            // Backup the current config.php
+            fs.copyFileSync(this.configFilePath, this.backupConfigFilePath);
+            console.log(YELLOW('Backup of config.php created.'));
+
+            // Prepare the updated configuration for Redis and Memcache
+            const updatedConfig = `
+                'memcache.local' => '\\OC\\Memcache\\Redis',
+                'memcache.locking' => '\\OC\\Memcache\\Redis',
+                'memcache.distributed' => '\\OC\\Memcache\\Redis',
+                'redis' => array(
+                    'host' => '${this.redisSock}',
+                    'port' => 0,
+                    'timeout' => 0.5,
+                    'password' => '${redisPass}'
+                ),
+            `;
+
+            // Find where to insert or replace the Redis and Memcache configurations
+            const newConfigFileContent = this.injectRedisConfig(configFileContent, updatedConfig);
+
+            // Write the updated configuration back to config.php
+            fs.writeFileSync(this.configFilePath, newConfigFileContent, 'utf8');
+            spinner.success({ text: `${GREEN('Nextcloud config.php updated with Redis configuration.')}` });
         } catch (error) {
-            spinner.error({ text: `${RED('Failed to configure Redis for Nextcloud.')}` });
+            spinner.error({ text: `${RED('Failed to validate or update config.php.')}` });
             console.error(error);
         }
     }
+
+    /**
+     * Inject Redis and Memcache configuration into the config.php content.
+     * This preserves any existing customer customizations while updating the Redis/Memcache part.
+     * 
+     * @param {string} configFileContent - Original content of config.php.
+     * @param {string} updatedConfig - Redis and Memcache configuration to be injected.
+     * @returns {string} - Updated config.php content.
+     */
+    injectRedisConfig(configFileContent, updatedConfig) {
+        // Look for the last closing array bracket ');' in the config.php file and insert the updated config before it
+        const closingBracketPosition = configFileContent.lastIndexOf(');');
+        if (closingBracketPosition === -1) {
+            throw new Error('Invalid config.php format.');
+        }
+
+        // Insert the Redis configuration just before the closing array bracket
+        const newConfigFileContent = configFileContent.slice(0, closingBracketPosition) + updatedConfig + configFileContent.slice(closingBracketPosition);
+        return newConfigFileContent;
+    }
+
+    /**
+     * Configure Redis as the Nextcloud cache backend and secure Redis.
+     */
+async configureRedisForNextcloud() {
+    const spinner = createSpinner('Configuring Redis for Nextcloud...').start();
+    const redisPass = this.generatePassword();  // Generate a new Redis password
+
+    try {
+        // Set Redis configuration in Nextcloud
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set redis host --value="${this.redisSock}"`, { stdio: 'inherit' });
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set redis port --value=0`, { stdio: 'inherit' });
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set redis dbindex --value=0`, { stdio: 'inherit' });
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set redis timeout --value=0.5`, { stdio: 'inherit' });
+
+        // Set Redis password
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set redis password --value="${redisPass}"`, { stdio: 'inherit' });
+
+        // Configure Nextcloud caching
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.local --value='\\OC\\Memcache\\Redis'`, { stdio: 'inherit' });
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.locking --value='\\OC\\Memcache\\Redis'`, { stdio: 'inherit' });
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set memcache.distributed --value='\\OC\\Memcache\\Redis'`, { stdio: 'inherit' });
+
+        // Update the Redis configuration file with the password and secure permissions
+        execSync(`sudo sed -i "s|# requirepass .*|requirepass ${redisPass}|g" ${this.redisConf}`, { stdio: 'inherit' });
+        execSync('sudo chown redis:root /etc/redis/redis.conf && sudo chmod 600 /etc/redis/redis.conf', { stdio: 'inherit' });
+
+        // Update variables.json with the new Redis password
+        this.updateRedisPasswordInVariables(redisPass);
+
+        // Restart Redis to apply the changes
+        execSync('sudo systemctl restart redis-server', { stdio: 'inherit' });
+
+        spinner.success({ text: `${GREEN('Redis has been configured and secured for Nextcloud.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to configure and secure Redis for Nextcloud.')}` });
+        console.error(error);
+    }
+}
 
     /**
      * Configure Redis performance tweaks based on sysctl settings.
@@ -135,6 +243,9 @@ class ncREDIS {
             execSync(`sudo sed -i "s|^port.*|port 0|" ${this.redisConf}`);
             execSync(`sudo sed -i 's|# rename-command CONFIG ""|rename-command CONFIG ""|' ${this.redisConf}`);
 
+            
+            
+
             // Restart Redis server
             execSync('sudo systemctl restart redis-server');
             console.log(GREEN('Redis performance tweaks applied.'));
@@ -148,12 +259,20 @@ class ncREDIS {
      */
     async removeRedisConfigFromNextcloud() {
         const spinner = createSpinner('Removing Redis configuration from Nextcloud...').start();
-
+    
         try {
+            // Remove Redis settings
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete redis', { stdio: 'inherit' });
+    
+            // Remove Memcache configurations
             execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.local', { stdio: 'inherit' });
             execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.locking', { stdio: 'inherit' });
-            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete redis', { stdio: 'inherit' });
-            spinner.success({ text: `${GREEN('Redis configuration has been removed from Nextcloud.')}` });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.distributed', { stdio: 'inherit' });
+    
+            // Optionally, ensure file locking is disabled after removing Redis
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:set filelocking.enabled --value=false', { stdio: 'inherit' });
+    
+            spinner.success({ text: `${GREEN('Redis and Memcache configuration has been removed from Nextcloud.')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to remove Redis configuration.')}` });
             console.error(error);
