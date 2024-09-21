@@ -207,11 +207,12 @@ class ncUPDATE {
     console.log('Nextcloud update completed successfully.');
   }
 }
-
+/*
 // Start the update process
 const updater = new ncUPDATE();
 updater.manageUpdate(() => {
   console.log("Returned to main menu.");
 });
+*/
 
 export default ncUPDATE;
