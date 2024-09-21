@@ -192,7 +192,7 @@ class ncREDIS {
      */
 async configureRedisForNextcloud() {
     const spinner = createSpinner('Configuring Redis for Nextcloud...').start();
-    const redisPass = this.generatePassword();  // Generate a new Redis password
+    const redisPass = this.generateRedisPassword();  // Generate a new Redis password
 
     try {
         // Set Redis configuration in Nextcloud
