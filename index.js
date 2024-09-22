@@ -81,11 +81,8 @@ async function welcome() {
 
 
     const rainbowTitle = chalkAnimation.rainbow(
-        'Nextcloud instance manager by T&M Hansson IT \n'
-    );
+        'Nextcloud instance manager by T&M Hansson IT \n');
     
-    
-
     await sleep();
     rainbowTitle.stop();
     
@@ -95,19 +92,20 @@ async function welcome() {
             figlet.textSync('Cloudman', { horizontalLayout: 'full' })
         )
     );
+    
 
     // Display the status under the splash screen
-    
+    console.log(dockerStatus);
+    console.log(BLUE('LAN:'),GREEN(address))
+    console.log(BLUE('WAN:'),GREEN(ipv4)) //  curl ip.me
     console.log(BLUE('Ubuntu:'),YELLOW(version),{name});
     console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus)
     console.log(BLUE('redis-server:'),redisStatus)
     console.log(BLUE('apache2:'),apache2Status)
-    console.log(dockerStatus);
+    
     console.log(BLUE('app updates:'),appUpdates)
-    console.log(``)
-    console.log(``)
-    console.log(BLUE('LAN:'),GREEN(address))
-    console.log(BLUE('WAN:'),GREEN(ipv4)) //  curl ip.me
+    console.log('')
+    console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
 }
 
 let activeMenu = null;
@@ -120,7 +118,7 @@ function resetActiveMenu() {
 const linkText = 'Want a professional to just fix it for you? Click here!';
 const url = 'https://shop.hanssonit.se/product-category/support/';
 // Klickbar länk i terminalen (fungerar i terminaler som stöder detta)
-console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
+
 
 async function mainMenu() {
 

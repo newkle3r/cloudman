@@ -117,8 +117,7 @@ class ncVARS {
         // Store dockerStatus for later use
         this.dockerStatus = dockerStatus;
 
-        // Output the final result
-        console.log(this.dockerStatus);
+ 
 
 
 
@@ -141,11 +140,11 @@ class ncVARS {
             appUpdateStatus = YELLOW('No apps have available updates');  // Use YELLOW for no updates
         }
     } catch (error) {
-        appUpdateStatus = RED('Error fetching app updates or no apps available');  // Use RED for error
+        appUpdateStatus = GRAY('Error fetching app updates or no apps available');  // Use RED for error
     }
 
     // Log the colored app update status
-    console.log(appUpdateStatus);
+    //console.log(appUpdateStatus);
 
     // Store the app update status for later use (optional)
     this.appUpdateStatus = appUpdateStatus;
