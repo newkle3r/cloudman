@@ -68,16 +68,16 @@ function loadVariables() {
   
 
   
-  console.log('LAN:',address)
-  console.log('WAN:',{ipv4}) //  curl ip.me
+  console.log(BLUE('LAN:'),GREEN(address))
+  console.log(BLUE('WAN:'),GREEN({ipv4})) //  curl ip.me
   
-  console.log('Ubuntu:',{os},{version});
+  console.log(BLUE('Ubuntu:'),YELLOW(version),{os});
   
-  console.log('PostgreSQL',psql,':',psqlStatus)
-  console.log('redis-server:',redisStatus)
-  console.log('apache2:',apache2Status)
+  console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus)
+  console.log(BLUE('redis-server:'),redisStatus)
+  console.log(BLUE('apache2:'),apache2Status)
   console.log(dockerStatus);
-  console.log('app updates:',appUpdates)
+  console.log(BLUE('app updates:'),appUpdates)
 
 
 async function welcome() {

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import { execSync } from 'child_process';
-
+import { RED,GREEN,BLUE,YELLOW,PURPLE } from './color.js';
 
 
 /**
@@ -53,7 +53,10 @@ class ncVARS {
         } catch (error) {
             postgresqlStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
         }
-        this.psqlStatus = postgresqlStatus;
+        
+        this.psqlStatus = YELLOW(postgresqlStatus) === 'active' ? GREEN(postgresqlStatus) : RED(postgresqlStatus);
+
+
         let redisStatus;
         try {
             redisStatus = execSync("systemctl status redis-server | grep Active | awk '{print $2}'").toString().trim();
@@ -63,7 +66,7 @@ class ncVARS {
         } catch (error) {
             redisStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
         }
-        this.redisStatus = redisStatus;
+        this.redisStatus = YELLOW(redisStatus) === 'active' ? GREEN(redisStatus) : RED(redisStatus);
 
         let apache2Status;
         try {
@@ -74,7 +77,8 @@ class ncVARS {
         } catch (error) {
             apache2Status = 'disabled';  // Sätt till 'disabled' om det uppstår ett fel (t.ex. tjänsten hittas inte)
         }
-        this.apache2Status = apache2Status;
+        this.apache2Status = apache2Status === 'active' ? GREEN(apache2Status) : RED(apache2Status);
+        
 
 
         let dockerStatus;
@@ -102,39 +106,43 @@ try {
         dockerStatus = 'No active containers';  // If no containers are running
     }
 } catch (error) {
-    dockerStatus = 'Docker is not running or an error occurred';  // Handle error, e.g., Docker not running
+    dockerStatus = PURPLE('Docker is not running or an error occurred');  // Handle error, e.g., Docker not running
 }
 
 // Store dockerStatus for later use
-this.dockerStatus = dockerStatus;
+
+this.dockerStatus = YELLOW(dockerStatus) === 'active' ? GREEN(dockerStatus) : RED(dockerStatus);
+
 
         
 
-        let appUpdateStatus;
+    let appUpdateStatus;
 
-        try {
-            // Fetch available updates from the ncAPPS.js module
-            const availableUpdates = getAvailableUpdates();
+    try {
+        // Fetch available updates from the ncAPPS.js module
+        const availableUpdates = getAvailableUpdates();
 
-            // Count how many apps have updates available
-            const updateCount = availableUpdates.length;
+        // Count how many apps have updates available
+        const updateCount = availableUpdates.length;
 
-            // If there are updates, format the status
-            if (updateCount > 0) {
-                const appNames = availableUpdates.map(app => app.name).join(', ');
-                appUpdateStatus = `There are ${updateCount} apps with updates: ${appNames}`;
-            } else {
-                appUpdateStatus = 'No apps have available updates';
-            }
-        } catch (error) {
-            appUpdateStatus = 'Error fetching app updates or no apps available';
+        // If there are updates, format the status
+        if (updateCount > 0) {
+            const appNames = availableUpdates.map(app => app.name).join(', ');
+            appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);  // Use GREEN for success
+        } else {
+            appUpdateStatus = YELLOW('No apps have available updates');  // Use YELLOW for no updates
         }
+    } catch (error) {
+        appUpdateStatus = RED('Error fetching app updates or no apps available');  // Use RED for error
+    }
 
-        // Log or return the app update status
-        console.log(appUpdateStatus);
-        this.appUpdateStatus = appUpdateStatus;
+    // Log the colored app update status
+    console.log(appUpdateStatus);
 
-                
+    // Store the app update status for later use (optional)
+    this.appUpdateStatus = appUpdateStatus;
+
+                    
 
 
                 
