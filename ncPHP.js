@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
 import { createSpinner } from 'nanospinner';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
@@ -7,89 +7,56 @@ import chalk from 'chalk';
 class ncPHP {
     constructor() {
         this.phpVersion = null;
-        this.phpLogProcess = null;
     }
 
     /**
-     * Identifies the installed PHP version and updates the variables.json file.
+     * Unholds any held packages that may be causing conflicts.
      */
-    async identifyPHP() {
-        const spinner = createSpinner('Identifying PHP version...').start();
-
+    async unholdPackages() {
+        const spinner = createSpinner('Checking for held packages...').start();
         try {
-            const PHPversionOutput = execSync('php -v').toString().trim();
-            const versionMatch = PHPversionOutput.match(/^PHP\s+(\d+\.\d+)/);
-            if (!versionMatch) throw new Error('Unable to determine PHP version');
-
-            this.phpVersion = versionMatch[1];
-
-            this.updateVariablesFile('PHP', this.phpVersion);
-            spinner.success({ text: `${chalk.green('PHP Version Identified and Updated:')} ${this.phpVersion}` });
+            const heldPackages = execSync('sudo apt-mark showhold').toString().trim();
+            if (heldPackages.length > 0) {
+                execSync(`sudo apt-mark unhold ${heldPackages}`, { stdio: 'inherit' });
+                spinner.success({ text: chalk.green(`Unheld packages: ${heldPackages}`) });
+            } else {
+                spinner.success({ text: chalk.green('No held packages found.') });
+            }
         } catch (error) {
-            spinner.error({ text: chalk.red('Failed to identify and update PHP version') });
+            spinner.error({ text: chalk.red('Failed to unhold packages') });
             console.error(error);
         }
     }
 
     /**
-     * Updates the variables.json file with the provided key and value.
+     * Purges all PHP versions, fixes broken dependencies, and cleans up the system.
      */
-    updateVariablesFile(key, value) {
-        const variablesPath = 'variables.json';
-        let variables = {};
-
-        if (fs.existsSync(variablesPath)) {
-            variables = JSON.parse(fs.readFileSync(variablesPath, 'utf8'));
-        }
-
-        variables[key] = value;
-        fs.writeFileSync(variablesPath, JSON.stringify(variables, null, 2), 'utf8');
-    }
-
-    /**
-     * General function to purge PHP versions and perform cleanup.
-     * @param {Array} versionsToPurge - List of PHP versions to purge
-     */
-    async purgePHPVersions(versionsToPurge = ['php7.*', 'php8.*']) {
+    async purgePHPVersions() {
         const spinner = createSpinner('Purging all PHP versions and cleaning system...').start();
 
         try {
-            // Step 1: Purge all PHP versions
-            execSync(`sudo apt-get purge -y ${versionsToPurge.join(' ')} libapache2-mod-php*`, { stdio: 'inherit' });
+            // Step 1: Unhold any held packages first
+            await this.unholdPackages();
+
+            // Step 2: Purge all PHP versions
+            execSync('sudo apt-get purge -y php7.* php8.* libapache2-mod-php*', { stdio: 'inherit' });
             execSync('sudo apt-get autoremove -y', { stdio: 'inherit' });
             execSync('sudo rm -rf /etc/php/', { stdio: 'inherit' });
 
-            // Step 2: Fix broken dependencies
+            // Step 3: Fix broken dependencies
             execSync('sudo apt-get install -f', { stdio: 'inherit' });
 
-            // Step 3: Clean APT cache
+            // Step 4: Clean the APT cache
             execSync('sudo apt-get clean && sudo apt-get autoclean', { stdio: 'inherit' });
-
-            // Step 4: Unhold packages if any are held
-            const heldPackages = execSync('sudo apt-mark showhold').toString().trim();
-            if (heldPackages.length > 0) {
-                execSync(`sudo apt-mark unhold ${heldPackages}`, { stdio: 'inherit' });
-            }
 
             // Step 5: Update repositories
             execSync('sudo apt-get update', { stdio: 'inherit' });
 
-            spinner.success({ text: chalk.green('PHP purged and system cleaned successfully') });
+            spinner.success({ text: chalk.green('PHP versions purged and system cleaned successfully') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to purge PHP versions and clean the system') });
             console.error(error);
         }
-    }
-
-    /**
-     * Downgrades PHP to version 7.4 and resets all PHP-related configurations.
-     */
-    async downgradePHP74() {
-        // Purge all PHP versions
-        await this.purgePHPVersions();
-
-        // Install PHP 7.4 and necessary modules
-        await this.installPHP('7.4');
     }
 
     /**
@@ -105,10 +72,10 @@ class ncPHP {
         const spinner = createSpinner(`Installing PHP ${phpVersion} and necessary modules...`).start();
 
         try {
-            // Step 6: Add the PPA, update system, and install PHP modules
+            // Add the PPA, update system, and install PHP modules
             execSync(`sudo add-apt-repository -y ppa:ondrej/php && sudo apt-get update && sudo apt-get install -y php${phpVersion} php${phpVersion}-fpm php${phpVersion}-common php${phpVersion}-curl php${phpVersion}-xml php${phpVersion}-json php${phpVersion}-opcache`, { stdio: 'inherit' });
 
-            // Step 7: Configure PHP-FPM
+            // Configure PHP-FPM
             await this.configurePHPFPM(phpVersion);
 
             // Enable PHP-FPM for Apache and restart services
@@ -167,6 +134,17 @@ php_admin_value[cgi.fix_pathinfo] = 1
             spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
             console.error(error);
         }
+    }
+
+    /**
+     * Downgrades PHP to version 7.4 and resets all PHP-related configurations.
+     */
+    async downgradePHP74() {
+        // Purge all PHP versions and unhold packages
+        await this.purgePHPVersions();
+
+        // Install PHP 7.4 and necessary modules
+        await this.installPHP('7.4');
     }
 
     /**
