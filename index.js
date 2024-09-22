@@ -57,7 +57,7 @@ function loadVariables() {
   const version = varsclass.DISTRO;
   const ipv4 = varsclass.WANIP4;
   const address = varsclass.ADDRESS;
-  const os = varsclass.CODENAME;
+  const name = varsclass.CODENAME;
   const psql = vars.PSQLVER; // "14"
   const psqlStatus = varsclass.psqlStatus; 
   const redisStatus = varsclass.redisStatus;
@@ -69,9 +69,9 @@ function loadVariables() {
 
   
   console.log(BLUE('LAN:'),GREEN(address))
-  console.log(BLUE('WAN:'),{ipv4}) //  curl ip.me
+  console.log(BLUE('WAN:'),GREEN(ipv4)) //  curl ip.me
   
-  console.log(BLUE('Ubuntu:'),YELLOW(version),{os});
+  console.log(BLUE('Ubuntu:'),YELLOW(version),{name});
   
   console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus)
   console.log(BLUE('redis-server:'),redisStatus)
