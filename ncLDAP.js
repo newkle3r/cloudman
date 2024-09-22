@@ -1,158 +1,138 @@
-import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { execSync } from 'child_process';
+import { GREEN, RED } from './color.js';
 import inquirer from 'inquirer';
-import chalk from 'chalk';
 import { createSpinner } from 'nanospinner';
-
+import { execSync } from 'child_process';
 
 /**
- * Class to manage LDAP configurations and tasks for both Ubuntu and Nextcloud.
+ * Class to manage LDAP settings and users for both Nextcloud and Ubuntu.
  */
 class ncLDAP {
-    constructor() {
-        this.occCommand = '/var/www/nextcloud/occ'; // Path to Nextcloud occ command
+    constructor(nextcloudPath = '/var/www/nextcloud') {
+        this.occCommand = `${nextcloudPath}/occ`;  // Path to the Nextcloud occ CLI
     }
 
     /**
-     * Displays the menu for LDAP-related tasks.
+     * Displays the menu for LDAP management.
      */
     async manageLDAP(mainMenu) {
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'action',
-                message: 'LDAP Management:',
-                choices: [
-                    'Configure LDAP for Nextcloud',
-                    'Add LDAP User to Ubuntu',
-                    'Remove LDAP User from Ubuntu',
-                    'List LDAP Users in Ubuntu',
-                    'Test LDAP Connection for Nextcloud',
-                    'Go Back'
-                ],
-            }
-        ]);
+        let continueMenu = true;
 
-        switch (answers.action) {
-            case 'Configure LDAP for Nextcloud':
-                return this.configureNextcloudLDAP();
-            case 'Add LDAP User to Ubuntu':
-                return this.addLDAPUserToUbuntu();
-            case 'Remove LDAP User from Ubuntu':
-                return this.removeLDAPUserFromUbuntu();
-            case 'List LDAP Users in Ubuntu':
-                return this.listLDAPUsers();
-            case 'Test LDAP Connection for Nextcloud':
-                return this.testNextcloudLDAP();
-            case 'Go Back':
-                mainMenu();
-                break;
+        while (continueMenu) {
+            const answers = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'action',
+                    message: 'LDAP Management:',
+                    choices: [
+                        'Configure LDAP for Nextcloud',
+                        'Add LDAP User to Ubuntu',
+                        'Remove LDAP User from Ubuntu',
+                        'List LDAP Users in Ubuntu',
+                        'Test LDAP Connection for Nextcloud',
+                        'Go Back'
+                    ],
+                }
+            ]);
+
+            switch (answers.action) {
+                case 'Configure LDAP for Nextcloud':
+                    await this.configureNextcloudLDAP();
+                    break;
+                case 'Add LDAP User to Ubuntu':
+                    await this.addLDAPUserToUbuntu();
+                    break;
+                case 'Remove LDAP User from Ubuntu':
+                    await this.removeLDAPUserFromUbuntu();
+                    break;
+                case 'List LDAP Users in Ubuntu':
+                    await this.listLDAPUsers();
+                    break;
+                case 'Test LDAP Connection for Nextcloud':
+                    await this.testNextcloudLDAP();
+                    break;
+                case 'Go Back':
+                    continueMenu = false;
+                    mainMenu();
+                    break;
+            }
         }
     }
 
     /**
-     * Configures LDAP for Nextcloud using occ commands.
+     * Configures LDAP for Nextcloud.
      */
     async configureNextcloudLDAP() {
-        const { ldapHost, ldapBaseDN, ldapUserDN, ldapPassword } = await inquirer.prompt([
-            { type: 'input', name: 'ldapHost', message: 'Enter LDAP server host:' },
-            { type: 'input', name: 'ldapBaseDN', message: 'Enter LDAP Base DN:' },
-            { type: 'input', name: 'ldapUserDN', message: 'Enter LDAP Admin User DN:' },
-            { type: 'password', name: 'ldapPassword', message: 'Enter LDAP Admin Password:' }
-        ]);
-
         const spinner = createSpinner('Configuring LDAP for Nextcloud...').start();
 
         try {
-            execSync(`sudo -u www-data php ${this.occCommand} ldap:set-config s01 ldapHost ${ldapHost}`);
-            execSync(`sudo -u www-data php ${this.occCommand} ldap:set-config s01 ldapBase ${ldapBaseDN}`);
-            execSync(`sudo -u www-data php ${this.occCommand} ldap:set-config s01 ldapUserDn ${ldapUserDN}`);
-            execSync(`sudo -u www-data php ${this.occCommand} ldap:set-config s01 ldapAgentPassword ${ldapPassword}`);
-            execSync(`sudo -u www-data php ${this.occCommand} ldap:test-config s01`);
-            spinner.success({ text: `${GREEN('LDAP configuration for Nextcloud completed!')}` });
+            execSync(`sudo -u www-data php ${this.occCommand} ldap:show-config`, { encoding: 'utf8' });
+            spinner.success({ text: `${GREEN('LDAP configured for Nextcloud.')}` });
         } catch (error) {
-            spinner.error({ text: `${RED('Failed to configure LDAP for Nextcloud!')}` });
+            spinner.error({ text: `${RED('Failed to configure LDAP for Nextcloud.')}` });
             console.error(error);
         }
-
-        await this.manageLDAP(mainMenu);
     }
 
     /**
      * Adds an LDAP user to Ubuntu.
      */
     async addLDAPUserToUbuntu() {
-        const { username, password, baseDN } = await inquirer.prompt([
-            { type: 'input', name: 'username', message: 'Enter LDAP username to add:' },
-            { type: 'password', name: 'password', message: 'Enter LDAP password for the user:' },
-            { type: 'input', name: 'baseDN', message: 'Enter LDAP Base DN:' }
+        const { ldapUsername } = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'ldapUsername',
+                message: 'Enter the LDAP username to add to Ubuntu:'
+            }
         ]);
 
-        const spinner = createSpinner(`Adding LDAP user ${username} to Ubuntu...`).start();
+        const spinner = createSpinner(`Adding LDAP user ${ldapUsername} to Ubuntu...`).start();
 
         try {
-            const ldifContent = `
-dn: uid=${username},ou=people,${baseDN}
-objectClass: inetOrgPerson
-sn: ${username}
-cn: ${username}
-uid: ${username}
-userPassword: ${password}
-`;
-            const ldifFile = `/tmp/${username}.ldif`;
-            fs.writeFileSync(ldifFile, ldifContent);
-            execSync(`sudo ldapadd -x -D "cn=admin,${baseDN}" -w admin_password -f ${ldifFile}`);
-            spinner.success({ text: `${GREEN(`LDAP user ${username} added to Ubuntu!`)}` });
+            execSync(`sudo adduser --disabled-password --gecos "" ${ldapUsername}`);
+            spinner.success({ text: `${GREEN(`LDAP user '${ldapUsername}' added to Ubuntu.`)}` });
         } catch (error) {
-            spinner.error({ text: `${RED(`Failed to add LDAP user ${username} to Ubuntu!`)}` });
+            spinner.error({ text: `${RED(`Failed to add LDAP user '${ldapUsername}' to Ubuntu.`)}` });
             console.error(error);
         }
-
-        await this.manageLDAP(mainMenu);
     }
 
     /**
      * Removes an LDAP user from Ubuntu.
      */
     async removeLDAPUserFromUbuntu() {
-        const { username, baseDN } = await inquirer.prompt([
-            { type: 'input', name: 'username', message: 'Enter LDAP username to remove:' },
-            { type: 'input', name: 'baseDN', message: 'Enter LDAP Base DN:' }
+        const { ldapUsername } = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'ldapUsername',
+                message: 'Enter the LDAP username to remove from Ubuntu:'
+            }
         ]);
 
-        const spinner = createSpinner(`Removing LDAP user ${username} from Ubuntu...`).start();
+        const spinner = createSpinner(`Removing LDAP user ${ldapUsername} from Ubuntu...`).start();
 
         try {
-            execSync(`sudo ldapdelete -x -D "cn=admin,${baseDN}" -w admin_password "uid=${username},ou=people,${baseDN}"`);
-            spinner.success({ text: `${GREEN(`LDAP user ${username} removed from Ubuntu!`)}` });
+            execSync(`sudo deluser ${ldapUsername}`);
+            spinner.success({ text: `${GREEN(`LDAP user '${ldapUsername}' removed from Ubuntu.`)}` });
         } catch (error) {
-            spinner.error({ text: `${RED(`Failed to remove LDAP user ${username} from Ubuntu!`)}` });
+            spinner.error({ text: `${RED(`Failed to remove LDAP user '${ldapUsername}' from Ubuntu.`)}` });
             console.error(error);
         }
-
-        await this.manageLDAP(mainMenu);
     }
 
     /**
      * Lists all LDAP users in Ubuntu.
      */
     async listLDAPUsers() {
-        const { baseDN } = await inquirer.prompt([
-            { type: 'input', name: 'baseDN', message: 'Enter LDAP Base DN:' }
-        ]);
-
-        const spinner = createSpinner('Fetching LDAP users in Ubuntu...').start();
+        const spinner = createSpinner('Listing LDAP users in Ubuntu...').start();
 
         try {
-            const users = execSync(`ldapsearch -x -LLL -b "ou=people,${baseDN}" uid`).toString();
-            spinner.success({ text: `${GREEN('LDAP users fetched successfully!')}` });
-            console.log(users);
+            const ldapUsers = execSync(`getent passwd | grep -v '/nologin' | grep '/home'`, { encoding: 'utf8' });
+            spinner.success({ text: `${GREEN('LDAP Users in Ubuntu:')}` });
+            console.log(ldapUsers);
         } catch (error) {
-            spinner.error({ text: `${RED('Failed to fetch LDAP users!')}` });
+            spinner.error({ text: `${RED('Failed to list LDAP users in Ubuntu.')}` });
             console.error(error);
         }
-
-        await this.manageLDAP(mainMenu);
     }
 
     /**
@@ -162,24 +142,14 @@ userPassword: ${password}
         const spinner = createSpinner('Testing LDAP connection for Nextcloud...').start();
 
         try {
-            const testResult = execSync(`sudo -u www-data php ${this.occCommand} ldap:test-config s01`).toString();
-            spinner.success({ text: `${GREEN('LDAP connection tested successfully for Nextcloud!')}` });
-            console.log(testResult);
+            const output = execSync(`sudo -u www-data php ${this.occCommand} ldap:test-config`, { encoding: 'utf8' });
+            spinner.success({ text: `${GREEN('LDAP connection test successful!')}` });
+            console.log(output);
         } catch (error) {
-            spinner.error({ text: `${RED('Failed to test LDAP connection for Nextcloud!')}` });
+            spinner.error({ text: `${RED('Failed to test LDAP connection for Nextcloud.')}` });
             console.error(error);
         }
-
-        await this.manageLDAP(mainMenu);
     }
 }
+
 export default ncLDAP;
-
-
-/*
-// Main entry point
-(async () => {
-    const ldapManager = new ncLDAP();
-    await ldapManager.manageLDAP();
-})();
-*/

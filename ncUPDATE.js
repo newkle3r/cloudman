@@ -70,23 +70,32 @@ class ncUPDATE {
 
     switch (answers.action) {
       case 'Run Full Update':
-        return this.runFullUpdate();
+        this.runFullUpdate();
+        break;
       case 'Enable Maintenance Mode':
-        return this.enableMaintenanceMode();
+        this.enableMaintenanceMode();
+        break;
       case 'Check Free Space':
-        return this.checkFreeSpace();
+        this.checkFreeSpace();
+        break;
       case 'Create Backup':
-        return this.createBackup();
+        this.createBackup();
+        break;
       case 'Download Nextcloud':
-        return this.downloadNextcloud();
+        this.downloadNextcloud();
+        break;
       case 'Extract Nextcloud':
-        return this.extractNextcloud();
+        this.extractNextcloud();
+        break;
       case 'Run Nextcloud Upgrade':
-        return this.upgradeNextcloud();
+        this.upgradeNextcloud();
+        break;
       case 'Cleanup':
-        return this.cleanup();
+        this.cleanup();
+        break;
       case 'Disable Maintenance Mode':
-        return this.disableMaintenanceMode();
+        this.disableMaintenanceMode();
+        break;
       case 'Exit':
         console.log(chalk.yellow('Returning to main menu...'));
         continueMenu = false;
