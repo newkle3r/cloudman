@@ -120,7 +120,7 @@ function resetActiveMenu() {
 const linkText = 'Want a professional to just fix it for you? Click here!';
 const url = 'https://shop.hanssonit.se/product-category/support/';
 // Klickbar länk i terminalen (fungerar i terminaler som stöder detta)
-console.log(`\x1B]8;;${url}\x07${linkText}\x1B]8;;\x07`);
+console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
 
 async function mainMenu() {
 

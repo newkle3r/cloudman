@@ -99,12 +99,12 @@ class ncVARS {
                     const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${name}`).toString().trim();
 
                     // Return colored information for name, ip, and ports
-                    return { name: BLUE(simplifiedName), ip: ipInfo, ports };
+                    return { name: PURPLE(simplifiedName), ip: ipInfo, ports };
                 });
 
                 // Format the result for all containers
                 dockerStatus = containers.map(container => {
-                    return `Container: ${BLUE(container.name)}, IP: ${GREEN(container.ip)}, Ports: ${GREEN(container.ports)}`;
+                    return `${BLUE('Container:')} ${PURPLE(container.name)}, ${BLUE('IP:')} ${GREEN(container.ip)}, ${BLUE('Ports:')} ${GREEN(container.ports)}`;
                 }).join('\n');
             } else {
                 dockerStatus = 'No active containers';  // If no containers are running
