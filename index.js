@@ -24,7 +24,7 @@ import figlet from 'figlet';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 import ncVARS from './ncVARS.js';
-import ncVARS from './ncVARS.js';
+
 
 const varsclass = new ncVARS();
 
