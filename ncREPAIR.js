@@ -38,37 +38,50 @@ class ncREPAIR {
    * @returns {Promise<void>} - Returns a promise that resolves when the user's choice is processed.
    */
   async manageRepair(mainMenu) {
-    const answers = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'action',
-        message: 'Repair management:',
-        choices: [
-          'Run Auto Repair',
-          'Update variables.json',
-          'Update index_json/nc_data.json',
-          'Install Dependencies',
-          'Exit'
-        ],
-      }
-    ]);
+    let continueMenu = true;  
 
-    switch (answers.action) {
-      case 'Run Auto Repair':
-        return this.autoRepair();
-      case 'Update variables.json':
-        const variableUpdates = this.collectData('Enter new data for variables.json (in JSON format): ');
-        return this.updateVariablesJson(variableUpdates);
-      case 'Update index_json/nc_data.json':
-        const indexUpdates = this.collectData('Enter new data for index_json/nc_data.json (in JSON format): ');
-        return this.updateIndexJson(indexUpdates);
-      case 'Install Dependencies':
-        return this.installDependencies();
-      case 'Exit':
-        mainMenu();
-        break;
+    while (continueMenu) {  
+        const answers = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'action',
+                message: 'Repair management:',
+                choices: [
+                    'Run Auto Repair',
+                    'Update variables.json',
+                    'Update index_json/nc_data.json',
+                    'Install Dependencies',
+                    'Exit'
+                ],
+            }
+        ]);
+
+        switch (answers.action) {
+            case 'Run Auto Repair':
+                await this.autoRepair();  
+                break;  
+
+            case 'Update variables.json':
+                const variableUpdates = await this.collectData('Enter new data for variables.json (in JSON format): ');
+                await this.updateVariablesJson(variableUpdates);
+                break;
+
+            case 'Update index_json/nc_data.json':
+                const indexUpdates = await this.collectData('Enter new data for index_json/nc_data.json (in JSON format): ');
+                await this.updateIndexJson(indexUpdates);
+                break;
+
+            case 'Install Dependencies':
+                await this.installDependencies();  
+                break;
+
+            case 'Exit':
+                continueMenu = false;  
+                mainMenu();  
+                break;
+        }
     }
-  }
+}
 
   /**
    * Runs a provided bash script for auto repair processes.
@@ -76,7 +89,7 @@ class ncREPAIR {
    */
   autoRepair() {
     console.log('Starting auto-repair process...');
-    this.runCommand(`bash ${this.SCRIPTS_PATH}/repair.sh`);  // Running bash script for auto-repair
+    this.runCommand(`bash ${this.SCRIPTS_PATH}/repair.sh`);  
     console.log('Auto-repair completed.');
   }
 
@@ -179,8 +192,4 @@ class ncREPAIR {
   }
 }
 
-// Start the ncREPAIR process
-const repairTool = new ncREPAIR();
-repairTool.manageRepair(() => {
-  console.log("Returned to main menu.");
-});
+export default ncREPAIR;

@@ -30,50 +30,64 @@ class ncPHP {
      * @returns {Promise<void>} - Returnerar en Promise som avslutas när användarens val är bearbetat.
      */
     async managePHP(mainMenu) {
-
         let continueMenu = true;
-
+    
         while (continueMenu === true) {
-
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'action',
-                message: 'PHP management:',
-                choices: [
-                    'Identify Version',
-                    'Downgrade to php7.4',
-                    'Upgrade PHP',
-                    'Repair Nextcloud PHP',
-                    'Tail PHP logs',
-                    'Stop PHP log tailing', 
-                    'Remove PHP',
-                    'Go Back'
-                ],
+    
+            const answers = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'action',
+                    message: 'PHP management:',
+                    choices: [
+                        'Identify Version',
+                        'Downgrade to php7.4',
+                        'Upgrade PHP',
+                        'Repair Nextcloud PHP',
+                        'Tail PHP logs',
+                        'Stop PHP log tailing', 
+                        'Remove PHP',
+                        'Go Back'
+                    ],
+                }
+            ]);
+    
+            switch (answers.action) {
+                case 'Identify Version':
+                    await this.identifyPHP();  // Call function without return
+                    break;  // Continue the loop after execution
+    
+                case 'Downgrade to php7.4':
+                    await this.downgradePHP74();  // Call function without return
+                    break;
+    
+                case 'Upgrade PHP':
+                    await this.upgradePHP();  // Call the upgrade function (if defined)
+                    break;
+    
+                case 'Repair Nextcloud PHP':
+                    await this.repairPHP();  // Call function without return
+                    break;
+    
+                case 'Tail PHP logs':
+                    await this.tailPHPlogs();  // Call function without return
+                    break;
+    
+                case 'Stop PHP log tailing':
+                    await this.stopTailPHPlogs();  // Call function without return
+                    break;
+    
+                case 'Remove PHP':
+                    await this.removePHP();  // Call function without return
+                    break;
+    
+                case 'Go Back':
+                    continueMenu = false;  // Exit the loop
+                    mainMenu();  // Go back to the main menu
+                    break;
             }
-        ]);
-
-
-
-        switch (answers.action) {
-            case 'Identify Version':
-                return this.identifyPHP();
-            case 'Downgrade to php7.4':
-                return this.downgradePHP74();
-            case 'Repair Nextcloud PHP':
-                return this.repairPHP();
-            case 'Tail PHP logs':
-                return this.tailPHPlogs();
-            case 'Stop PHP log tailing':
-                return this.stopTailPHPlogs();
-            case 'Remove PHP':
-                return this.removePHP();
-            case 'Go Back':
-                mainMenu(); 
-                break;
         }
     }
-}
 
     /**
      * @function identifyPHP
