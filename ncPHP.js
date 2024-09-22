@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { createSpinner } from 'nanospinner';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
@@ -7,6 +7,63 @@ import chalk from 'chalk';
 class ncPHP {
     constructor() {
         this.phpVersion = null;
+        this.phpLogProcess = null;
+    }
+
+    /**
+     * Identifies the installed PHP version and updates the variables.json file.
+     */
+    async identifyPHP() {
+        const spinner = createSpinner('Identifying PHP version...').start();
+
+        try {
+            const PHPversionOutput = execSync('sudo php -v').toString().trim();
+            const versionMatch = PHPversionOutput.match(/^PHP\s+(\d+\.\d+)/);
+            if (!versionMatch) throw new Error('Unable to determine PHP version');
+
+            this.phpVersion = versionMatch[1];
+            this.updateVariablesFile('PHP', this.phpVersion);
+            spinner.success({ text: `${chalk.green('PHP Version Identified and Updated:')} ${this.phpVersion}` });
+        } catch (error) {
+            spinner.error({ text: chalk.red('Failed to identify and update PHP version') });
+            console.error(error);
+        }
+    }
+
+    /**
+     * Updates the variables.json file with the provided key and value.
+     */
+    updateVariablesFile(key, value) {
+        const variablesPath = 'variables.json';
+        let variables = {};
+
+        if (fs.existsSync(variablesPath)) {
+            variables = JSON.parse(fs.readFileSync(variablesPath, 'utf8'));
+        }
+
+        variables[key] = value;
+        fs.writeFileSync(variablesPath, JSON.stringify(variables, null, 2), 'utf8');
+    }
+
+    /**
+     * Purges all PHP versions, fixes broken dependencies, and cleans up the system.
+     */
+    async purgePHPVersions() {
+        const spinner = createSpinner('Purging all PHP versions and cleaning system...').start();
+
+        try {
+            await this.forceUnholdPHP();
+            execSync('sudo apt-get purge -y php* libapache2-mod-php*', { stdio: 'inherit' });
+            execSync('sudo apt-get autoremove -y', { stdio: 'inherit' });
+            execSync('sudo rm -rf /etc/php/', { stdio: 'inherit' });
+            execSync('sudo apt-get install -f', { stdio: 'inherit' });
+            execSync('sudo apt-get clean && sudo apt-get autoclean', { stdio: 'inherit' });
+            execSync('sudo apt-get update', { stdio: 'inherit' });
+            spinner.success({ text: chalk.green('PHP versions purged and system cleaned successfully') });
+        } catch (error) {
+            spinner.error({ text: chalk.red('Failed to purge PHP versions and clean the system') });
+            console.error(error);
+        }
     }
 
     /**
@@ -25,37 +82,6 @@ class ncPHP {
     }
 
     /**
-     * Purges all PHP versions, fixes broken dependencies, and cleans up the system.
-     */
-    async purgePHPVersions() {
-        const spinner = createSpinner('Purging all PHP versions and cleaning system...').start();
-
-        try {
-            // Step 1: Unhold all PHP-related packages
-            await this.forceUnholdPHP();
-
-            // Step 2: Purge all PHP versions
-            execSync('sudo apt-get purge -y php* libapache2-mod-php*', { stdio: 'inherit' });
-            execSync('sudo apt-get autoremove -y', { stdio: 'inherit' });
-            execSync('sudo rm -rf /etc/php/', { stdio: 'inherit' });
-
-            // Step 3: Fix broken dependencies
-            execSync('sudo apt-get install -f', { stdio: 'inherit' });
-
-            // Step 4: Clean the APT cache
-            execSync('sudo apt-get clean && sudo apt-get autoclean', { stdio: 'inherit' });
-
-            // Step 5: Update repositories
-            execSync('sudo apt-get update', { stdio: 'inherit' });
-
-            spinner.success({ text: chalk.green('PHP versions purged and system cleaned successfully') });
-        } catch (error) {
-            spinner.error({ text: chalk.red('Failed to purge PHP versions and clean the system') });
-            console.error(error);
-        }
-    }
-
-    /**
      * Installs the specified PHP version and necessary modules, as well as PECL extensions like igbinary and smbclient.
      * @param {string} phpVersion - The PHP version to install (e.g., '7.4', '8.0', '8.2')
      */
@@ -68,30 +94,21 @@ class ncPHP {
         const spinner = createSpinner(`Installing PHP ${phpVersion}, necessary modules, and PECL extensions...`).start();
 
         try {
-            // Add the PPA and update the package lists
             execSync('sudo add-apt-repository -y ppa:ondrej/php', { stdio: 'inherit' });
             execSync('sudo apt-get update', { stdio: 'inherit' });
 
-            // Install PHP and necessary modules, excluding the virtual `php-json` package
             execSync(`sudo apt-get install -y php${phpVersion} php${phpVersion}-fpm php${phpVersion}-redis php${phpVersion}-intl php${phpVersion}-ldap php${phpVersion}-imap php${phpVersion}-gd php${phpVersion}-pgsql php${phpVersion}-curl php${phpVersion}-xml php${phpVersion}-zip php${phpVersion}-mbstring php${phpVersion}-soap php${phpVersion}-gmp php${phpVersion}-bz2 php${phpVersion}-bcmath php-pear`, { stdio: 'inherit' });
 
-            // Install PECL extensions (igbinary, smbclient, redis)
-            execSync(`sudo pecl install igbinary`, { stdio: 'inherit' });
-            execSync(`sudo pecl install smbclient`, { stdio: 'inherit' });
-            execSync(`sudo pecl install redis`, { stdio: 'inherit' });
+            execSync(`sudo pecl install igbinary smbclient redis`, { stdio: 'inherit' });
 
-            // Enable the PECL extensions in PHP configuration
             execSync(`sudo bash -c "echo 'extension=igbinary.so' > /etc/php/${phpVersion}/mods-available/igbinary.ini"`, { stdio: 'inherit' });
             execSync(`sudo bash -c "echo 'extension=smbclient.so' > /etc/php/${phpVersion}/mods-available/smbclient.ini"`, { stdio: 'inherit' });
             execSync(`sudo bash -c "echo 'extension=redis.so' > /etc/php/${phpVersion}/mods-available/redis.ini"`, { stdio: 'inherit' });
 
-            // Enable these extensions for PHP CLI and FPM
             execSync(`sudo phpenmod -v ALL igbinary smbclient redis`, { stdio: 'inherit' });
 
-            // Configure PHP-FPM
             await this.configurePHPFPM(phpVersion);
 
-            // Enable PHP-FPM for Apache and restart services
             execSync(`sudo a2enconf php${phpVersion}-fpm && sudo systemctl restart apache2`, { stdio: 'inherit' });
 
             spinner.success({ text: chalk.green(`PHP ${phpVersion}, PECL extensions (igbinary, smbclient) installed and configured successfully!`) });
@@ -105,14 +122,12 @@ class ncPHP {
      * Configures PHP-FPM for the specified version, ensuring pool and socket setup.
      * @param {string} phpVersion - PHP version to configure (e.g., '7.4', '8.0')
      */
-    async configurePHPFPM(phpVersion = this.phpVersion) {
+    async configurePHPFPM(phpVersion) {
         const spinner = createSpinner(`Configuring PHP-FPM for PHP ${phpVersion}...`).start();
 
         try {
             const phpPoolDir = `/etc/php/${phpVersion}/fpm/pool.d`;
             const poolConfigPath = `${phpPoolDir}/nextcloud.conf`;
-            const defaultConfPath = `${phpPoolDir}/www.conf`;
-
             const poolConfigContent = `
 [Nextcloud]
 user = www-data
@@ -129,17 +144,7 @@ security.limit_extensions = .php
 php_admin_value[cgi.fix_pathinfo] = 1
             `;
 
-            // Write the Nextcloud pool configuration
             execSync(`echo "${poolConfigContent}" | sudo tee ${poolConfigPath}`, { stdio: 'inherit' });
-
-            // Check if www.conf exists before attempting to move it
-            if (fs.existsSync(defaultConfPath)) {
-                execSync(`sudo mv ${defaultConfPath} ${defaultConfPath}.backup`, { stdio: 'inherit' });
-            } else {
-                console.log(chalk.yellow(`Notice: ${defaultConfPath} does not exist, skipping backup of www.conf.`));
-            }
-
-            // Restart PHP-FPM service
             execSync(`sudo systemctl restart php${phpVersion}-fpm`, { stdio: 'inherit' });
 
             spinner.success({ text: `PHP-FPM pool configuration updated for PHP ${phpVersion}` });
@@ -167,6 +172,64 @@ php_admin_value[cgi.fix_pathinfo] = 1
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to remove PHP.') });
             console.error(error);
+        }
+    }
+
+    /**
+     * Repairs the Nextcloud PHP environment by reinstalling necessary packages.
+     */
+    async repairPHP() {
+        const spinner = createSpinner('Repairing Nextcloud PHP environment...').start();
+
+        try {
+            // Reinstalling necessary PHP modules for Nextcloud
+            execSync('sudo apt-get install -y php-gd php-mbstring php-curl php-intl php-zip php-xml php-bcmath', { stdio: 'inherit' });
+
+            // Restarting Apache to apply changes
+            execSync('sudo systemctl restart apache2', { stdio: 'inherit' });
+
+            spinner.success({ text: chalk.green('Nextcloud PHP environment repaired successfully!') });
+        } catch (error) {
+            spinner.error({ text: chalk.red('Failed to repair Nextcloud PHP environment.') });
+            console.error(error);
+        }
+    }
+
+    /**
+     * Starts tailing PHP logs for real-time monitoring.
+     */
+    tailPHPlogs() {
+        const variables = JSON.parse(fs.readFileSync('variables.json', 'utf8'));
+        const phpLogFile = `/var/log/php${variables.PHP}-fpm.log`;
+
+        if (this.phpLogProcess) {
+            console.log(chalk.yellow('PHP log tailing is already running.'));
+            return;
+        }
+
+        console.log(`${chalk.yellow('Tailing PHP logs from:')} ${phpLogFile}`);
+        this.phpLogProcess = spawn('sudo', ['tail', '-f', phpLogFile], { stdio: 'inherit' });
+
+        this.phpLogProcess.on('error', (error) => {
+            console.error(`${chalk.red('Error tailing logs:')} ${error.message}`);
+            this.phpLogProcess = null;
+        });
+
+        process.on('SIGINT', () => {
+            if (this.phpLogProcess) this.stopTailPHPlogs();
+        });
+    }
+
+    /**
+     * Stops real-time tailing of PHP logs.
+     */
+    stopTailPHPlogs() {
+        if (this.phpLogProcess) {
+            console.log(chalk.yellow('Stopping PHP log tailing...'));
+            this.phpLogProcess.kill('SIGTERM');
+            this.phpLogProcess = null;
+        } else {
+            console.log(chalk.red('No PHP log tailing process is running.'));
         }
     }
 
@@ -236,10 +299,10 @@ php_admin_value[cgi.fix_pathinfo] = 1
                     }
                     break;
                 case 'Tail PHP logs':
-                    await this.tailPHPlogs();
+                    this.tailPHPlogs();
                     break;
                 case 'Stop PHP log tailing':
-                    await this.stopTailPHPlogs();
+                    this.stopTailPHPlogs();
                     break;
                 case 'Remove PHP':
                     await this.removePHP();
