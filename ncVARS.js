@@ -140,7 +140,7 @@ class ncVARS {
             appUpdateStatus = YELLOW('No apps have available updates');  // Use YELLOW for no updates
         }
     } catch (error) {
-        appUpdateStatus = GRAY('Error fetching app updates or no apps available');  // Use RED for error
+        appUpdateStatus = 'Error fetching app updates or no apps available';  // Use RED for error
     }
 
     // Log the colored app update status
