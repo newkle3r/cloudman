@@ -10,20 +10,16 @@ class ncPHP {
     }
 
     /**
-     * Unholds any held packages that may be causing conflicts.
+     * Forcefully unholds all PHP-related packages.
      */
-    async unholdPackages() {
-        const spinner = createSpinner('Checking for held packages...').start();
+    async forceUnholdPHP() {
+        const spinner = createSpinner('Forcing unhold of all PHP-related packages...').start();
+
         try {
-            const heldPackages = execSync('sudo apt-mark showhold').toString().trim();
-            if (heldPackages.length > 0) {
-                execSync(`sudo apt-mark unhold ${heldPackages}`, { stdio: 'inherit' });
-                spinner.success({ text: chalk.green(`Unheld packages: ${heldPackages}`) });
-            } else {
-                spinner.success({ text: chalk.green('No held packages found.') });
-            }
+            execSync('sudo apt-mark unhold php*', { stdio: 'inherit' });
+            spinner.success({ text: chalk.green('Successfully unheld all PHP packages.') });
         } catch (error) {
-            spinner.error({ text: chalk.red('Failed to unhold packages') });
+            spinner.error({ text: chalk.red('Failed to unhold PHP packages.') });
             console.error(error);
         }
     }
@@ -35,11 +31,11 @@ class ncPHP {
         const spinner = createSpinner('Purging all PHP versions and cleaning system...').start();
 
         try {
-            // Step 1: Unhold any held packages first
-            await this.unholdPackages();
+            // Step 1: Unhold all PHP-related packages
+            await this.forceUnholdPHP();
 
             // Step 2: Purge all PHP versions
-            execSync('sudo apt-get purge -y php7.* php8.* libapache2-mod-php*', { stdio: 'inherit' });
+            execSync('sudo apt-get purge -y php* libapache2-mod-php*', { stdio: 'inherit' });
             execSync('sudo apt-get autoremove -y', { stdio: 'inherit' });
             execSync('sudo rm -rf /etc/php/', { stdio: 'inherit' });
 
@@ -60,8 +56,8 @@ class ncPHP {
     }
 
     /**
-     * Installs the specified PHP version and necessary modules.
-     * @param {string} phpVersion - The PHP version to install (e.g., '7.4', '8.0')
+     * Installs the specified PHP version and necessary modules, as well as PECL extensions like igbinary and smbclient.
+     * @param {string} phpVersion - The PHP version to install (e.g., '7.4', '8.0', '8.2')
      */
     async installPHP(phpVersion) {
         if (!phpVersion) {
@@ -69,11 +65,28 @@ class ncPHP {
             return;
         }
 
-        const spinner = createSpinner(`Installing PHP ${phpVersion} and necessary modules...`).start();
+        const spinner = createSpinner(`Installing PHP ${phpVersion}, necessary modules, and PECL extensions...`).start();
 
         try {
-            // Add the PPA, update system, and install PHP modules
-            execSync(`sudo add-apt-repository -y ppa:ondrej/php && sudo apt-get update && sudo apt-get install -y php${phpVersion} php${phpVersion}-fpm php${phpVersion}-common php${phpVersion}-curl php${phpVersion}-xml php${phpVersion}-json php${phpVersion}-opcache`, { stdio: 'inherit' });
+            // Add the PPA and update the package lists
+            execSync('sudo add-apt-repository -y ppa:ondrej/php', { stdio: 'inherit' });
+            execSync('sudo apt-get update', { stdio: 'inherit' });
+
+            // Install PHP and necessary modules, excluding the virtual `php-json` package
+            execSync(`sudo apt-get install -y php${phpVersion} php${phpVersion}-fpm php${phpVersion}-redis php${phpVersion}-intl php${phpVersion}-ldap php${phpVersion}-imap php${phpVersion}-gd php${phpVersion}-pgsql php${phpVersion}-curl php${phpVersion}-xml php${phpVersion}-zip php${phpVersion}-mbstring php${phpVersion}-soap php${phpVersion}-gmp php${phpVersion}-bz2 php${phpVersion}-bcmath php-pear`, { stdio: 'inherit' });
+
+            // Install PECL extensions (igbinary, smbclient, redis)
+            execSync(`sudo pecl install igbinary`, { stdio: 'inherit' });
+            execSync(`sudo pecl install smbclient`, { stdio: 'inherit' });
+            execSync(`sudo pecl install redis`, { stdio: 'inherit' });
+
+            // Enable the PECL extensions in PHP configuration
+            execSync(`sudo bash -c "echo 'extension=igbinary.so' > /etc/php/${phpVersion}/mods-available/igbinary.ini"`, { stdio: 'inherit' });
+            execSync(`sudo bash -c "echo 'extension=smbclient.so' > /etc/php/${phpVersion}/mods-available/smbclient.ini"`, { stdio: 'inherit' });
+            execSync(`sudo bash -c "echo 'extension=redis.so' > /etc/php/${phpVersion}/mods-available/redis.ini"`, { stdio: 'inherit' });
+
+            // Enable these extensions for PHP CLI and FPM
+            execSync(`sudo phpenmod -v ALL igbinary smbclient redis`, { stdio: 'inherit' });
 
             // Configure PHP-FPM
             await this.configurePHPFPM(phpVersion);
@@ -81,9 +94,9 @@ class ncPHP {
             // Enable PHP-FPM for Apache and restart services
             execSync(`sudo a2enconf php${phpVersion}-fpm && sudo systemctl restart apache2`, { stdio: 'inherit' });
 
-            spinner.success({ text: chalk.green(`PHP ${phpVersion} installed and configured successfully!`) });
+            spinner.success({ text: chalk.green(`PHP ${phpVersion}, PECL extensions (igbinary, smbclient) installed and configured successfully!`) });
         } catch (error) {
-            spinner.error({ text: chalk.red(`Failed to install PHP ${phpVersion}: ${error.message}`) });
+            spinner.error({ text: chalk.red(`Failed to install PHP ${phpVersion} or PECL extensions: ${error.message}`) });
             console.error(error);
         }
     }
@@ -134,17 +147,6 @@ php_admin_value[cgi.fix_pathinfo] = 1
             spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
             console.error(error);
         }
-    }
-
-    /**
-     * Downgrades PHP to version 7.4 and resets all PHP-related configurations.
-     */
-    async downgradePHP74() {
-        // Purge all PHP versions and unhold packages
-        await this.purgePHPVersions();
-
-        // Install PHP 7.4 and necessary modules
-        await this.installPHP('7.4');
     }
 
     /**
@@ -207,7 +209,7 @@ php_admin_value[cgi.fix_pathinfo] = 1
                         {
                             type: 'input',
                             name: 'phpVersion',
-                            message: 'Enter the PHP version you want to install (e.g., 7.4, 8.0, 8.3):'
+                            message: 'Enter the PHP version you want to install (e.g., 7.4, 8.0, 8.2):'
                         }
                     ]);
                     if (versionAnswer.phpVersion) {
@@ -224,7 +226,7 @@ php_admin_value[cgi.fix_pathinfo] = 1
                         {
                             type: 'input',
                             name: 'phpVersion',
-                            message: 'Enter the PHP version to configure (e.g., 7.4, 8.0, 8.3):'
+                            message: 'Enter the PHP version to configure (e.g., 7.4, 8.0, 8.2):'
                         }
                     ]);
                     if (configureVersionAnswer.phpVersion) {
