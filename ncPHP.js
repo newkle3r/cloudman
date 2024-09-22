@@ -157,46 +157,51 @@ class ncPHP {
      */
     async configurePHPFPM(phpVersion) {
         const spinner = createSpinner(`Configuring PHP-FPM for PHP ${phpVersion}...`).start();
-
+    
         try {
             const phpPoolDir = `/etc/php/${phpVersion}/fpm/pool.d`;
             const poolConfigPath = `${phpPoolDir}/nextcloud.conf`;
-
+    
             if (!fs.existsSync(phpPoolDir)) throw new Error(`PHP-FPM pool directory not found: ${phpPoolDir}`);
-
+    
             const poolConfigContent = `
-[Nextcloud]
-user = www-data
-group = www-data
-listen = /run/php/php${phpVersion}-fpm.nextcloud.sock
-listen.owner = www-data
-listen.group = www-data
-pm = dynamic
-pm.max_children = 8
-pm.start_servers = 3
-pm.min_spare_servers = 2
-pm.max_spare_servers = 3
-env[HOSTNAME] = $(hostname -f)
-env[PATH] = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-env[TMP] = /tmp
-env[TMPDIR] = /tmp  
-env[TEMP] = /tmp
-security.limit_extensions = .php
-php_admin_value[cgi.fix_pathinfo] = 1
+    [Nextcloud]
+    user = www-data
+    group = www-data
+    listen = /run/php/php${phpVersion}-fpm.nextcloud.sock
+    listen.owner = www-data
+    listen.group = www-data
+    pm = dynamic
+    pm.max_children = 8
+    pm.start_servers = 3
+    pm.min_spare_servers = 2
+    pm.max_spare_servers = 3
+    env[HOSTNAME] = $(hostname -f)
+    env[PATH] = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+    env[TMP] = /tmp
+    env[TMPDIR] = /tmp
+    env[TEMP] = /tmp
+    security.limit_extensions = .php
+    php_admin_value[cgi.fix_pathinfo] = 1
             `;
-
-            fs.writeFileSync(poolConfigPath, poolConfigContent, 'utf8');
-            spinner.success({ text: chalk.green(`PHP-FPM pool configuration updated for PHP ${phpVersion}.`) });
-
+    
+            // Write to pool config with sudo permissions
+            const writeCommand = `echo "${poolConfigContent}" | sudo tee ${poolConfigPath}`;
+            execSync(writeCommand, { stdio: 'inherit' });
+    
+            // Disable the default PHP-FPM pool (www.conf)
+            execSync(`sudo mv ${phpPoolDir}/www.conf ${phpPoolDir}/www.conf.backup`, { stdio: 'inherit' });
+    
+            // Restart PHP-FPM
             execSync(`sudo systemctl restart php${phpVersion}-fpm`, { stdio: 'inherit' });
-            spinner.success({ text: chalk.green(`PHP-FPM service restarted for PHP ${phpVersion}.`) });
-
+            spinner.success({ text: `PHP-FPM pool configuration updated and service restarted for PHP ${phpVersion}.` });
+    
         } catch (error) {
-            spinner.error({ text: chalk.red('Failed to configure PHP-FPM.') });
+            spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
             console.error(error);
         }
     }
-
+    
     /**
      * @function repairPHP
      * @description Reparerar PHP-installationen för Nextcloud med ytterligare PHP- och PECL-moduler.
