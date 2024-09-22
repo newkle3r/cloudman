@@ -78,33 +78,36 @@ class ncVARS {
 
 
         let dockerStatus;
-        try {
-            // Kör kommandot för att lista alla aktiva containrar och extrahera deras namn, IP-adress och portnummer
-            const containerInfo = execSync("docker ps --format '{{.Names}} {{.Ports}}'").toString().trim();
+try {
+    // List active containers with their names and ports
+    const containerInfo = execSync("docker ps --format '{{.Names}} {{.Ports}}'").toString().trim();
+
+    if (containerInfo) {
+        // Process each container's information
+        const containers = containerInfo.split('\n').map(container => {
+            const [name, ports] = container.split(' ');
             
-            if (containerInfo) {
-                // För varje container, vi hämtar dess nätverksinformation
-                const containers = containerInfo.split('\n').map(container => {
-                    const [name, ports] = container.split(' ');
-                    const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${name}`).toString().trim();
-                    return { name, ip: ipInfo, ports };
-                });
+            // Split the name on '_' or '-' and take the last part to simplify the container name
+            const simplifiedName = name.split(/[_-]/).pop();
 
-                // Formatera resultatet för alla containrar
-                dockerStatus = containers.map(container => {
-                    return `Container: ${container.name}, IP: ${container.ip}, Ports: ${container.ports}`;
-                }).join('\n');
-            } else {
-                dockerStatus = 'No active containers';  // Om inga containrar körs
-            }
-        } catch (error) {
-            dockerStatus = 'Docker is not running or an error occurred';  // Hantera fel, t.ex. om Docker inte körs
-        }
+            const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${name}`).toString().trim();
+            return { name: simplifiedName, ip: ipInfo, ports };
+        });
 
-        // Sätt dockerStatus variabeln så att den kan användas senare
-        this.dockerStatus = dockerStatus;
+        // Format the result for all containers
+        dockerStatus = containers.map(container => {
+            return `Container: ${container.name}, IP: ${container.ip}, Ports: ${container.ports}`;
+        }).join('\n');
+    } else {
+        dockerStatus = 'No active containers';  // If no containers are running
+    }
+} catch (error) {
+    dockerStatus = 'Docker is not running or an error occurred';  // Handle error, e.g., Docker not running
+}
 
-        // Import the getAvailableUpdates function from ncAPPS.js
+// Store dockerStatus for later use
+this.dockerStatus = dockerStatus;
+
         
 
         let appUpdateStatus;
