@@ -54,7 +54,7 @@ class ncVARS {
             postgresqlStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
         }
         
-        this.psqlStatus = YELLOW(postgresqlStatus) === 'active' ? GREEN(postgresqlStatus) : RED(postgresqlStatus);
+        this.psqlStatus = YELLOW(postgresqlStatus) === 'active' ? RED(postgresqlStatus) : GREEN(postgresqlStatus);
 
 
         let redisStatus;
@@ -66,7 +66,7 @@ class ncVARS {
         } catch (error) {
             redisStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
         }
-        this.redisStatus = YELLOW(redisStatus) === 'active' ? GREEN(redisStatus) : RED(redisStatus);
+        this.redisStatus = YELLOW(redisStatus) === 'active' ? RED(redisStatus) : GREEN(redisStatus);
 
         let apache2Status;
         try {
@@ -77,7 +77,7 @@ class ncVARS {
         } catch (error) {
             apache2Status = 'disabled';  // Sätt till 'disabled' om det uppstår ett fel (t.ex. tjänsten hittas inte)
         }
-        this.apache2Status = apache2Status === 'active' ? GREEN(apache2Status) : RED(apache2Status);
+        this.apache2Status = apache2Status === 'active' ? RED(apache2Status) : GREEN(apache2Status);
         
 
 

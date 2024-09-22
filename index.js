@@ -79,7 +79,7 @@ function loadVariables() {
 async function welcome() {
 
 
-
+    console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n');
     
@@ -102,10 +102,8 @@ async function welcome() {
     console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus)
     console.log(BLUE('redis-server:'),redisStatus)
     console.log(BLUE('apache2:'),apache2Status)
-    
     console.log(BLUE('app updates:'),appUpdates)
-    console.log('')
-    console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
+
 }
 
 let activeMenu = null;
