@@ -5,9 +5,8 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 
 class ncPHP {
-
     constructor() {
-        this.phpVersion = null; 
+        this.phpVersion = null;
         this.phpLogProcess = null;
     }
 
@@ -48,31 +47,48 @@ class ncPHP {
     }
 
     /**
-     * General function to purge specified PHP versions.
-     * @param {Array} versionsToPurge - List of versions to purge
+     * General function to purge PHP versions and perform cleanup.
+     * @param {Array} versionsToPurge - List of PHP versions to purge
      */
-    async purgePHPVersions(versionsToPurge) {
-        const spinner = createSpinner('Purging PHP versions...').start();
+    async purgePHPVersions(versionsToPurge = ['php7.*', 'php8.*']) {
+        const spinner = createSpinner('Purging all PHP versions and cleaning system...').start();
 
         try {
-            const installedVersions = versionsToPurge.join(' ');
-            if (installedVersions.length > 0) {
-                execSync(`dpkg-query -l ${installedVersions}* | grep -E "ii|hi" | cut -d " " -f 3 | xargs sudo apt-get purge -y`, { stdio: 'inherit' });
-            } else {
-                execSync('dpkg-query -l php7.[5-9]* php8.* | grep -E "ii|hi" | cut -d " " -f 3 | xargs sudo apt-get purge -y', { stdio: 'inherit' });
+            // Step 1: Purge all PHP versions
+            execSync(`sudo apt-get purge -y ${versionsToPurge.join(' ')} libapache2-mod-php*`, { stdio: 'inherit' });
+            execSync('sudo apt-get autoremove -y', { stdio: 'inherit' });
+            execSync('sudo rm -rf /etc/php/', { stdio: 'inherit' });
+
+            // Step 2: Fix broken dependencies
+            execSync('sudo apt-get install -f', { stdio: 'inherit' });
+
+            // Step 3: Clean APT cache
+            execSync('sudo apt-get clean && sudo apt-get autoclean', { stdio: 'inherit' });
+
+            // Step 4: Unhold packages if any are held
+            const heldPackages = execSync('sudo apt-mark showhold').toString().trim();
+            if (heldPackages.length > 0) {
+                execSync(`sudo apt-mark unhold ${heldPackages}`, { stdio: 'inherit' });
             }
-            spinner.success({ text: chalk.green('PHP versions purged successfully') });
+
+            // Step 5: Update repositories
+            execSync('sudo apt-get update', { stdio: 'inherit' });
+
+            spinner.success({ text: chalk.green('PHP purged and system cleaned successfully') });
         } catch (error) {
-            spinner.error({ text: chalk.red('Failed to purge PHP versions') });
+            spinner.error({ text: chalk.red('Failed to purge PHP versions and clean the system') });
             console.error(error);
         }
     }
 
     /**
-     * Downgrades PHP to version 7.4.
+     * Downgrades PHP to version 7.4 and resets all PHP-related configurations.
      */
     async downgradePHP74() {
-        await this.purgePHPVersions(['php7.4', 'php8.0']);
+        // Purge all PHP versions
+        await this.purgePHPVersions();
+
+        // Install PHP 7.4 and necessary modules
         await this.installPHP('7.4');
     }
 
@@ -85,37 +101,39 @@ class ncPHP {
             console.error(chalk.red('PHP version is undefined. Please specify a valid PHP version.'));
             return;
         }
-    
+
         const spinner = createSpinner(`Installing PHP ${phpVersion} and necessary modules...`).start();
-    
+
         try {
-            // Add PPA for PHP, update system, and install PHP modules
-            execSync(`sudo add-apt-repository -y ppa:ondrej/php && sudo apt-get update && sudo apt-get install -y php${phpVersion} php${phpVersion}-fpm php${phpVersion}-common php${phpVersion}-curl php${phpVersion}-xml`, { stdio: 'inherit' });
-    
+            // Step 6: Add the PPA, update system, and install PHP modules
+            execSync(`sudo add-apt-repository -y ppa:ondrej/php && sudo apt-get update && sudo apt-get install -y php${phpVersion} php${phpVersion}-fpm php${phpVersion}-common php${phpVersion}-curl php${phpVersion}-xml php${phpVersion}-json php${phpVersion}-opcache`, { stdio: 'inherit' });
+
+            // Step 7: Configure PHP-FPM
             await this.configurePHPFPM(phpVersion);
+
+            // Enable PHP-FPM for Apache and restart services
             execSync(`sudo a2enconf php${phpVersion}-fpm && sudo systemctl restart apache2`, { stdio: 'inherit' });
-    
+
             spinner.success({ text: chalk.green(`PHP ${phpVersion} installed and configured successfully!`) });
         } catch (error) {
             spinner.error({ text: chalk.red(`Failed to install PHP ${phpVersion}: ${error.message}`) });
             console.error(error);
         }
     }
-    
 
     /**
- * Configures PHP-FPM for the specified version, ensuring pool and socket setup.
- * @param {string} phpVersion - PHP version to configure (e.g., '7.4', '8.0')
- */
-async configurePHPFPM(phpVersion = this.phpVersion) {
-    const spinner = createSpinner(`Configuring PHP-FPM for PHP ${phpVersion}...`).start();
+     * Configures PHP-FPM for the specified version, ensuring pool and socket setup.
+     * @param {string} phpVersion - PHP version to configure (e.g., '7.4', '8.0')
+     */
+    async configurePHPFPM(phpVersion = this.phpVersion) {
+        const spinner = createSpinner(`Configuring PHP-FPM for PHP ${phpVersion}...`).start();
 
-    try {
-        const phpPoolDir = `/etc/php/${phpVersion}/fpm/pool.d`;
-        const poolConfigPath = `${phpPoolDir}/nextcloud.conf`;
-        const defaultConfPath = `${phpPoolDir}/www.conf`;
+        try {
+            const phpPoolDir = `/etc/php/${phpVersion}/fpm/pool.d`;
+            const poolConfigPath = `${phpPoolDir}/nextcloud.conf`;
+            const defaultConfPath = `${phpPoolDir}/www.conf`;
 
-        const poolConfigContent = `
+            const poolConfigContent = `
 [Nextcloud]
 user = www-data
 group = www-data
@@ -129,30 +147,30 @@ pm.min_spare_servers = 2
 pm.max_spare_servers = 3
 security.limit_extensions = .php
 php_admin_value[cgi.fix_pathinfo] = 1
-        `;
-        
-        // Write the Nextcloud pool configuration
-        execSync(`echo "${poolConfigContent}" | sudo tee ${poolConfigPath}`, { stdio: 'inherit' });
+            `;
 
-        // Check if www.conf exists before attempting to move it
-        if (fs.existsSync(defaultConfPath)) {
-            execSync(`sudo mv ${defaultConfPath} ${defaultConfPath}.backup`, { stdio: 'inherit' });
-        } else {
-            console.log(chalk.yellow(`Notice: ${defaultConfPath} does not exist, skipping backup of www.conf.`));
+            // Write the Nextcloud pool configuration
+            execSync(`echo "${poolConfigContent}" | sudo tee ${poolConfigPath}`, { stdio: 'inherit' });
+
+            // Check if www.conf exists before attempting to move it
+            if (fs.existsSync(defaultConfPath)) {
+                execSync(`sudo mv ${defaultConfPath} ${defaultConfPath}.backup`, { stdio: 'inherit' });
+            } else {
+                console.log(chalk.yellow(`Notice: ${defaultConfPath} does not exist, skipping backup of www.conf.`));
+            }
+
+            // Restart PHP-FPM service
+            execSync(`sudo systemctl restart php${phpVersion}-fpm`, { stdio: 'inherit' });
+
+            spinner.success({ text: `PHP-FPM pool configuration updated for PHP ${phpVersion}` });
+        } catch (error) {
+            spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
+            console.error(error);
         }
-
-        // Restart PHP-FPM service
-        execSync(`sudo systemctl restart php${phpVersion}-fpm`, { stdio: 'inherit' });
-
-        spinner.success({ text: `PHP-FPM pool configuration updated for PHP ${phpVersion}` });
-    } catch (error) {
-        spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
-        console.error(error);
     }
-}
 
     /**
-     * Removes the installed PHP version and related packages.
+     * Removes all installed PHP versions and related packages.
      */
     async removePHP() {
         const spinner = createSpinner('Removing PHP...').start();
@@ -160,7 +178,8 @@ php_admin_value[cgi.fix_pathinfo] = 1
         try {
             execSync('sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --on');
             execSync('sudo systemctl stop apache2.service');
-            execSync('sudo apt-get purge php* -y && sudo apt-get autoremove -y && sudo rm -Rf /etc/php');
+            execSync('sudo apt-get purge -y php* libapache2-mod-php* php7.* php8.* && sudo apt-get autoremove -y');
+            execSync('sudo rm -Rf /etc/php');
             execSync('sudo systemctl start apache2.service');
             execSync('sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --off');
 
@@ -172,50 +191,12 @@ php_admin_value[cgi.fix_pathinfo] = 1
     }
 
     /**
-     * Starts tailing PHP logs for real-time monitoring.
-     */
-    tailPHPlogs() {
-        const variables = JSON.parse(fs.readFileSync('variables.json', 'utf8'));
-        const phpLogFile = `/var/log/php${variables.PHP}-fpm.log`;
-
-        if (this.phpLogProcess) {
-            console.log(chalk.yellow('PHP log tailing is already running.'));
-            return;
-        }
-
-        console.log(`${chalk.yellow('Tailing PHP logs from:')} ${phpLogFile}`);
-        this.phpLogProcess = spawn('sudo', ['tail', '-f', phpLogFile], { stdio: 'inherit' });
-
-        this.phpLogProcess.on('error', (error) => {
-            console.error(`${chalk.red('Error tailing logs:')} ${error.message}`);
-            this.phpLogProcess = null;
-        });
-
-        process.on('SIGINT', () => {
-            if (this.phpLogProcess) this.stopTailPHPlogs();
-        });
-    }
-
-    /**
-     * Stops real-time tailing of PHP logs.
-     */
-    stopTailPHPlogs() {
-        if (this.phpLogProcess) {
-            console.log(chalk.yellow('Stopping PHP log tailing...'));
-            this.phpLogProcess.kill('SIGTERM');
-            this.phpLogProcess = null;
-        } else {
-            console.log(chalk.red('No PHP log tailing process is running.'));
-        }
-    }
-
-    /**
      * Manages PHP operations via menu.
      * @param {function} mainMenu - Callback to return to main menu
      */
     async managePHP(mainMenu) {
         let continueMenu = true;
-    
+
         while (continueMenu) {
             const answers = await inquirer.prompt([
                 {
@@ -235,7 +216,7 @@ php_admin_value[cgi.fix_pathinfo] = 1
                     ],
                 }
             ]);
-    
+
             switch (answers.action) {
                 case 'Identify Version':
                     await this.identifyPHP();
@@ -291,4 +272,5 @@ php_admin_value[cgi.fix_pathinfo] = 1
         }
     }
 }
+
 export default ncPHP;
