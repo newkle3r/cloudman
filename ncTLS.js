@@ -1,5 +1,7 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
+import inquirer from 'inquirer';
+
 
 /**
  * Class to manage TLS activation and configuration for Nextcloud.
