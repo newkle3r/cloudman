@@ -280,6 +280,95 @@ class ncTLS {
             console.error(`Failed to activate TLS configuration: ${this.TLS_CONF}`, error);
         }
     }
+
+/**
+     * Function to display the menu and handle user interactions.
+     */
+async certMenu() {
+    let continueMenu = true;
+
+    while (continueMenu) {
+        const { action } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'action',
+                message: 'TLS Management Menu:',
+                choices: [
+                    'Set TLS Config',
+                    'Install and Generate TLS Certificate',
+                    'Check Domain Reachability',
+                    'Check Open Ports',
+                    'Activate TLS Configuration',
+                    'Restart Web Server',
+                    'Exit'
+                ]
+            }
+        ]);
+
+        switch (action) {
+            case 'Set TLS Config':
+                const { domain } = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'domain',
+                        message: 'Enter the domain for TLS configuration:'
+                    }
+                ]);
+                this.setTLSConfig(domain);
+                break;
+            case 'Install and Generate TLS Certificate':
+                const { certDomain } = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'certDomain',
+                        message: 'Enter the domain for which to generate the certificate:'
+                    }
+                ]);
+                this.installAndGenerateCert(certDomain);
+                break;
+            case 'Check Domain Reachability':
+                const { checkDomain } = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'checkDomain',
+                        message: 'Enter the domain to check reachability:'
+                    }
+                ]);
+                this.checkDomainReachability(checkDomain);
+                break;
+            case 'Check Open Ports':
+                const { portDomain } = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'portDomain',
+                        message: 'Enter the domain to check open ports:'
+                    }
+                ]);
+                this.checkPorts(portDomain);
+                break;
+            case 'Activate TLS Configuration':
+                const { oldConfig } = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'oldConfig',
+                        message: 'Enter the old configuration file to disable (default is 000-default.conf):',
+                        default: '000-default.conf'
+                    }
+                ]);
+                this.activateTLSConfig(oldConfig);
+                break;
+            case 'Restart Web Server':
+                this.restartWebServer();
+                break;
+            case 'Exit':
+                continueMenu = false;
+                break;
+            default:
+                break;
+        }
+    }
 }
+}
+
 
 export default ncTLS;

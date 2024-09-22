@@ -25,6 +25,7 @@ import figlet from 'figlet';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import ncSMTP from './ncSMTP.js';
+import ncTLS from './ncTLS.js';
 
 
 
@@ -89,8 +90,10 @@ async function mainMenu() {
                 'Manage DNS/FQDN',
                 'Manage LDAP',
                 'Manage Nextcloud Apps',
+                'Manage Mail',
                 'Manage Docker',
                 'Manage Redis',
+                'Manage TLS',
                 'Backup',
                 'Exit'
             ],
@@ -150,6 +153,11 @@ async function mainMenu() {
             activeMenu = 'redis';
             await redisManager.manageRedis(mainMenu);
             break;
+
+        case 'Manage TLS':
+            const certManager = new ncTLS();
+            return certManager.certMenu(mainMenu);
+ 
 
         case 'Backup':
             const backupManager = new ncBAK();

@@ -43,7 +43,7 @@ class ncBAK {
     backupPostgreSQL() {
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
         try {
-            execSync(`sudo pg_dumpall -U postgres > ${this.postgresBackupFile}`);
+            execSync(`sudo -u postgres pg_dump nextcloud_db > ${this.postgresBackupFile}`);
             spinner.success({ text: chalk.green('PostgreSQL backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup PostgreSQL!') });

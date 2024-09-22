@@ -14,6 +14,10 @@ class ncFQDN {
      * Displays the menu for DNS and FQDN management tasks.
      */
     async manageFQDN(mainMenu) {
+
+        let continueMenu = true;
+        while (continueMenu === true) {
+
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -52,6 +56,7 @@ class ncFQDN {
                 break;
         }
     }
+}
 
     /**
      * Identifies the Fully Qualified Domain Name (FQDN) of the current Ubuntu system.
@@ -131,18 +136,31 @@ class ncFQDN {
     /**
      * Identifies the DNS settings of the current Ubuntu system.
      */
-    async identifyDNS() {
+    identifyDNS() {
         const spinner = createSpinner('Identifying DNS settings...').start();
-
+    
         try {
-            const dnsSettings = execSync('systemd-resolve --status | grep "DNS Servers"').toString().trim();
-            spinner.success({ text: `${GREEN(`DNS identified: ${dnsSettings}`)}` });
+            // First, try using resolvectl (if available on the system)
+            try {
+                const dnsSettings = execSync('resolvectl status | grep "DNS Servers"').toString().trim();
+                spinner.success({ text: chalk.green('DNS settings identified via resolvectl:') });
+                console.log(dnsSettings);
+            } catch {
+                // Fallback to /etc/resolv.conf if resolvectl is not available
+                const dnsConf = fs.readFileSync('/etc/resolv.conf', 'utf8');
+                const dnsServers = dnsConf.match(/nameserver\s+(\S+)/g);
+    
+                if (dnsServers) {
+                    spinner.success({ text: chalk.green('DNS settings identified via /etc/resolv.conf:') });
+                    dnsServers.forEach(server => console.log(server));
+                } else {
+                    throw new Error('No DNS settings found in /etc/resolv.conf');
+                }
+            }
         } catch (error) {
-            spinner.error({ text: `${RED('Failed to identify DNS settings')}` });
-            console.error(error);
+            spinner.error({ text: chalk.red('Failed to identify DNS settings.') });
+            console.error(error.message);
         }
-
-        await this.manageFQDN();
     }
 
     /**
