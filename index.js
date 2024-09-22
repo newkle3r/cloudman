@@ -60,8 +60,9 @@ async function welcome() {
     const address = varsclass.ADDRESS;
     const ipv4 = varsclass.WANIP4;
     const psql = varsclass.PSQLVER;
-    const redis = execSync("systemctl status redis-server | grep Active | awk '{print $2, $3}'")
-    const apache2 = execSync("systemctl status apache2 | grep Active | awk '{print $2, $3}'")
+    const redis = execSync("systemctl status redis-server | grep Active | awk '{print $2}'")
+    const apache2 = execSync("systemctl status apache2 | grep Active | awk '{print $2}'")
+    const postgresql = execSync("systemctl status postgresql | grep Active | awk '{print $2}'")
     const phpVersion = vars.PHP || 'Unknown PHP';
     const domain = vars.TLSDOMAIN || 'No Domain';
     const ports = vars.NONO_PORTS || [80, 443];
@@ -76,7 +77,10 @@ async function welcome() {
     const redisStatus = await checkComponent(`test -S ${redisSock}`) ? GREEN(`[redis]`) : RED(`[No Redis]`);
     const dockerStatusText = dockerStatus ? GREEN(`[docker]`) : RED(`[No Docker]`);
     const wanStatus = GREEN(`[${wan}]`);
-    const redisServer = GREEN(`redis-server:${redis}`)
+    const redisServer = GREEN(`redis-server: ${redis}`)
+    const apache2Status = GREEN(`apache2: ${apache2}`)
+    const psqlStatus = GREEN(`postgreSQL v.${psql}: ${postgresql}`)
+    const PHP = GREEN(`PHP${phpVersion}`)
 
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n'
@@ -96,6 +100,10 @@ async function welcome() {
     console.log(`${phpStatus} ${domainStatus}   `);
     console.log(`${wanStatus} ${dockerStatusText}`);
     console.log(`${redisServer}`);
+    console.log(`${psqlStatus}`);
+    console.log(`${PHP}`);
+    console.log(`${apache2Status}`);
+    console.log('');
     console.log('');
     console.log(`${PURPLE('Welcome to Nextcloud Manager!')}`);
     console.log(`${YELLOW('by T&M Hansson IT')}`)
