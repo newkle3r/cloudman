@@ -15,96 +15,124 @@ class ncSMTP {
         this.smtpConfigFile = '/etc/msmtprc';
         this.variablesPath = path.join('/var/scripts', 'variables.json');
     }
-
-    /**
-     * @function isRoot
-     * @description Checks if the script is running as root.
-     * @throws Will throw an error if not running as root.
+   /**
+     * Displays the menu for SMTP management tasks.
      */
-    isRoot() {
-        if (process.getuid() !== 0) {
-            console.error(RED('This script must be run as root!'));
-            process.exit(1);
+   async manageSMTP(mainMenu) {
+    let continueMenu = true;
+    
+    while (continueMenu) {
+        const answers = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'action',
+                message: 'SMTP Management:',
+                choices: [
+                    'Install SMTP (msmtp)',
+                    'Install Postfix',
+                    'Install Dovecot',
+                    'Set up SSL Certificates',
+                    'Integrate with Nextcloud',
+                    'Send Test Email',
+                    'Remove SMTP Configuration',
+                    'Go Back'
+                ]
+            }
+        ]);
+
+        switch (answers.action) {
+            case 'Install SMTP (msmtp)':
+                await this.installSMTP();
+                break;
+            case 'Install Postfix':
+                this.installPostfix();
+                break;
+            case 'Install Dovecot':
+                this.installDovecot();
+                break;
+            case 'Set up SSL Certificates':
+                this.setupSSL();
+                break;
+            case 'Integrate with Nextcloud':
+                this.integrateWithNextcloud();
+                break;
+            case 'Send Test Email':
+                const { recipient } = await inquirer.prompt({
+                    type: 'input',
+                    name: 'recipient',
+                    message: 'Enter recipient email for the test email:'
+                });
+                await this.sendTestEmail(recipient);
+                break;
+            case 'Remove SMTP Configuration':
+                this.removeSMTPConfig();
+                break;
+            case 'Go Back':
+                continueMenu = false;
+                mainMenu(); // Return to the main menu
+                break;
         }
     }
+}
 
-    /**
-     * @function checkVariablesFile
-     * @description Ensures that the variables.json file exists.
-     * @returns {object} The parsed variables.json content.
-     */
-    checkVariablesFile() {
-        if (!fs.existsSync(this.variablesPath)) {
-            console.error(RED('variables.json file not found.'));
-            process.exit(1);
-        }
-        return JSON.parse(readFileSync(this.variablesPath, 'utf8'));
+
+checkVariablesFile() {
+    if (!fs.existsSync(this.variablesPath)) {
+        console.error(RED('variables.json file not found.'));
+        process.exit(1);
+    }
+    return JSON.parse(readFileSync(this.variablesPath, 'utf8'));
+}
+
+updateVariables(key, value) {
+    let variables = this.checkVariablesFile();
+    variables[key] = value;
+    writeFileSync(this.variablesPath, JSON.stringify(variables, null, 4));
+    console.log(`${GREEN(`Updated ${key} in variables.json`)}`);
+}
+
+removeSMTPConfig() {
+    const spinner = createSpinner('Removing existing SMTP configuration...').start();
+    try {
+        execSync('sudo apt-get purge -y msmtp msmtp-mta mailutils');
+        fs.unlinkSync('/etc/mail.rc');
+        fs.unlinkSync(this.smtpConfigFile);
+        execSync('rm -f /var/log/msmtp');
+        fs.writeFileSync('/etc/aliases', '');
+        spinner.success({ text: `${GREEN('SMTP configuration removed successfully.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to remove SMTP configuration.')}` });
+        console.error(error);
+    }
+}
+
+async installSMTP() {
+    const spinner = createSpinner('Installing SMTP...').start();
+    try {
+        execSync('sudo apt-get update && sudo apt-get install -y msmtp msmtp-mta mailutils');
+        spinner.success({ text: `${GREEN('SMTP installation complete.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to install SMTP.')}` });
+        console.error(error);
+        return;
     }
 
-    /**
-     * @function updateVariables
-     * @description Updates important SMTP-related variables in variables.json.
-     * @param {string} key - The key in variables.json to update.
-     * @param {string} value - The value to set for the specified key.
-     */
-    updateVariables(key, value) {
-        let variables = this.checkVariablesFile();
-        variables[key] = value;
-        writeFileSync(this.variablesPath, JSON.stringify(variables, null, 4));
-        console.log(`${GREEN(`Updated ${key} in variables.json`)}`);
-    }
+    const { choice, mailServer, smtpPort, protocol, username, password, recipient } = await this.promptSMTPSettings();
 
-    /**
-     * @function removeSMTPConfig
-     * @description Removes existing SMTP configurations if msmtp is already installed.
-     */
-    removeSMTPConfig() {
-        const spinner = createSpinner('Removing existing SMTP configuration...').start();
-        try {
-            execSync('sudo apt-get purge -y msmtp msmtp-mta mailutils');
-            fs.unlinkSync('/etc/mail.rc');
-            fs.unlinkSync(this.smtpConfigFile);
-            execSync('rm -f /var/log/msmtp');
-            fs.writeFileSync('/etc/aliases', '');
-            spinner.success({ text: `${GREEN('SMTP configuration removed successfully.')}` });
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to remove SMTP configuration.')}` });
-            console.error(error);
-        }
-    }
+    this.configureSMTP({
+        mailServer,
+        smtpPort,
+        protocol,
+        username,
+        password,
+        recipient
+    });
+    this.updateVariables('smtp_server', mailServer);
+    this.updateVariables('smtp_port', smtpPort);
+    this.updateVariables('smtp_protocol', protocol);
+    this.updateVariables('smtp_username', username);
+}
 
-    /**
-     * @function installSMTP
-     * @description Installs and configures SMTP relay for the Nextcloud server.
-     */
-    async installSMTP() {
-        this.isRoot();
-        const spinner = createSpinner('Installing SMTP...').start();
-
-        try {
-            execSync('sudo apt-get update && sudo apt-get install -y msmtp msmtp-mta mailutils');
-            spinner.success({ text: `${GREEN('SMTP installation complete.')}` });
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to install SMTP.')}` });
-            console.error(error);
-            return;
-        }
-
-        const { choice, mailServer, smtpPort, protocol, username, password, recipient } = await this.promptSMTPSettings();
-
-        this.configureSMTP({
-            mailServer,
-            smtpPort,
-            protocol,
-            username,
-            password,
-            recipient
-        });
-        this.updateVariables('smtp_server', mailServer);
-        this.updateVariables('smtp_port', smtpPort);
-        this.updateVariables('smtp_protocol', protocol);
-        this.updateVariables('smtp_username', username);
-    }
 
     /**
      * @function promptSMTPSettings
@@ -303,6 +331,137 @@ The NcVM Team
             console.error(error);
         }
     }
+
+
+/**
+ * @function installPostfix
+ * @description Installs and configures Postfix as the Mail Transfer Agent (MTA).
+ */
+installPostfix() {
+    const spinner = createSpinner('Installing and configuring Postfix...').start();
+
+    try {
+        execSync('sudo apt-get update && sudo apt-get install -y postfix');
+        // Configure Postfix main.cf
+        const postfixConfig = `
+myhostname = mail.mydomain.com
+myorigin = /etc/mailname
+mydestination = mail.mydomain.com, localhost, localhost.localdomain
+relayhost =
+mynetworks = 127.0.0.0/8
+mailbox_size_limit = 0
+recipient_delimiter = +
+inet_interfaces = all
+
+# SSL Settings
+smtpd_tls_cert_file=/etc/ssl/certs/mailcert.pem
+smtpd_tls_key_file=/etc/ssl/private/mail.key
+smtpd_use_tls=yes
+smtpd_tls_security_level=may
+
+# SASL authentication
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+        `;
+        fs.writeFileSync('/etc/postfix/main.cf', postfixConfig);
+
+        // Restart Postfix to apply changes
+        execSync('sudo systemctl restart postfix');
+        spinner.success({ text: `${GREEN('Postfix installed and configured successfully.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to install and configure Postfix.')}` });
+        console.error(error);
+    }
+}
+
+/**
+ * @function installDovecot
+ * @description Installs and configures Dovecot as the IMAP server.
+ */
+installDovecot() {
+    const spinner = createSpinner('Installing and configuring Dovecot...').start();
+
+    try {
+        execSync('sudo apt-get install -y dovecot-core dovecot-imapd');
+
+        // Configure Dovecot dovecot.conf
+        const dovecotConfig = `
+disable_plaintext_auth = no
+mail_privileged_group = mail
+mail_location = mbox:~/mail:INBOX=/var/mail/%u
+protocols = imap
+
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    mode = 0660
+    user = postfix
+    group = postfix
+  }
+}
+
+ssl=required
+ssl_cert = </etc/ssl/certs/mailcert.pem
+ssl_key = </etc/ssl/private/mail.key
+        `;
+        fs.writeFileSync('/etc/dovecot/dovecot.conf', dovecotConfig);
+
+        // Restart Dovecot to apply changes
+        execSync('sudo systemctl restart dovecot');
+        spinner.success({ text: `${GREEN('Dovecot installed and configured successfully.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to install and configure Dovecot.')}` });
+        console.error(error);
+    }
+}
+/**
+ * @function setupSSL
+ * @description Generates a self-signed SSL certificate for mail encryption.
+ */
+setupSSL() {
+    const spinner = createSpinner('Setting up SSL certificates...').start();
+
+    try {
+        // Generate self-signed certificate
+        execSync('sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/mail.key -out /etc/ssl/certs/mailcert.pem -subj "/C=US/ST=State/L=City/O=Organization/OU=IT/CN=mail.mydomain.com"');
+        spinner.success({ text: `${GREEN('SSL certificates created successfully.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to create SSL certificates.')}` });
+        console.error(error);
+    }
+}
+/**
+ * @function integrateWithNextcloud
+ * @description Configures Nextcloud to use the newly set up SMTP server for notifications.
+ */
+integrateWithNextcloud() {
+    const spinner = createSpinner('Integrating SMTP with Nextcloud...').start();
+
+    try {
+        const variables = this.checkVariablesFile();
+        const smtpSettings = `
+'mail_smtpmode' => 'smtp',
+'mail_smtpauthtype' => 'LOGIN',
+'mail_smtpname' => '${variables.smtp_username}',
+'mail_smtppassword' => '${variables.smtp_password}',
+'mail_smtphost' => '${variables.smtp_server}',
+'mail_smtpport' => '${variables.smtp_port}',
+'mail_from_address' => 'admin',
+'mail_domain' => 'mydomain.com',
+'mail_smtpsecure' => '${variables.smtp_protocol === 'SSL' ? 'ssl' : 'tls'}',
+        `;
+        
+        const nextcloudConfigPath = '/var/www/nextcloud/config/config.php';
+        const config = fs.readFileSync(nextcloudConfigPath, 'utf8');
+        const updatedConfig = config.replace(/(.*'mail_smtpmode'.*)/, smtpSettings);
+        fs.writeFileSync(nextcloudConfigPath, updatedConfig);
+        
+        spinner.success({ text: `${GREEN('Nextcloud SMTP settings updated successfully.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to update Nextcloud SMTP settings.')}` });
+        console.error(error);
+    }
+}
 }
 
 export default ncSMTP;
