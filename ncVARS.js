@@ -82,40 +82,47 @@ class ncVARS {
 
 
         let dockerStatus;
-try {
-    // List active containers with their names and ports
-    const containerInfo = execSync("docker ps --format '{{.Names}} {{.Ports}}'").toString().trim();
 
-    if (containerInfo) {
-        // Process each container's information
-        const containers = containerInfo.split('\n').map(container => {
-            const [name, ports] = container.split(' ');
-            
-            // Split the name on '_' or '-' and take the last part to simplify the container name
-            // Split the name on '_' or '-' and take the first part to simplify the container name
-            const simplifiedName = name.split(/[_-]/)[0];
+        try {
+            // List active containers with their names and ports
+            const containerInfo = execSync("docker ps --format '{{.Names}} {{.Ports}}'").toString().trim();
 
-            const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${BLUE(name)}`).toString().trim();
-            return { name: BLUE(simplifiedName), ip: ipInfo, ports };
-        });
+            if (containerInfo) {
+                // Process each container's information
+                const containers = containerInfo.split('\n').map(container => {
+                    const [name, ports] = container.split(' ');
+                    
+                    // Simplify the container name by taking the first part before '_' or '-'
+                    const simplifiedName = name.split(/[_-]/)[0];
 
-        // Format the result for all containers
-        dockerStatus = containers.map(container => {
-            return `Container: ${BLUE(container.name)}, IP: ${GREEN(container.ip)}, Ports: ${GREEN(container.ports)}`;
-        }).join('\n');
-    } else {
-        dockerStatus = 'No active containers';  // If no containers are running
-    }
-} catch (error) {
-    dockerStatus = PURPLE('Docker is not running or an error occurred');  // Handle error, e.g., Docker not running
-}
+                    // Fetch IP address of the container (without coloring in execSync command)
+                    const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${name}`).toString().trim();
 
-// Store dockerStatus for later use
+                    // Return colored information for name, ip, and ports
+                    return { name: BLUE(simplifiedName), ip: ipInfo, ports };
+                });
 
-this.dockerStatus = YELLOW(dockerStatus) === 'active' ? GREEN(dockerStatus) : RED(dockerStatus);
+                // Format the result for all containers
+                dockerStatus = containers.map(container => {
+                    return `Container: ${BLUE(container.name)}, IP: ${GREEN(container.ip)}, Ports: ${GREEN(container.ports)}`;
+                }).join('\n');
+            } else {
+                dockerStatus = 'No active containers';  // If no containers are running
+            }
+        } catch (error) {
+            console.error('Error while fetching Docker containers:', error.message);  // Log the error for debugging
+            dockerStatus = PURPLE('Docker is not running or an error occurred');  // Handle error
+        }
+
+        // Store dockerStatus for later use
+        this.dockerStatus = dockerStatus;
+
+        // Output the final result
+        console.log(this.dockerStatus);
 
 
-        
+
+                
 
     let appUpdateStatus;
 
