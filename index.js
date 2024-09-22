@@ -24,6 +24,7 @@ import chalkAnimation from 'chalk-animation';
 import figlet from 'figlet';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
+import ncSMTP from './ncSMTP.js';
 
 
 
@@ -130,6 +131,10 @@ async function mainMenu() {
         case 'Manage Nextcloud Apps':
             const appsManager = new ncAPPS();
             return appsManager.manageApps(mainMenu);
+
+        case 'Manage SMTP':
+            const mailManager = new ncSMTP();
+            return mailManager.manageSMTP(mainMenu);
 
         case 'Manage Docker':
             const dockerManager = new ncDOCKER();

@@ -35,6 +35,7 @@ class ncPHP {
                         'Downgrade to php7.4',
                         'Upgrade PHP',
                         'Repair Nextcloud PHP',
+                        'Configure PHP-FPM',
                         'Tail PHP logs',
                         'Stop PHP log tailing', 
                         'Remove PHP',
@@ -55,6 +56,9 @@ class ncPHP {
                     break;
                 case 'Repair Nextcloud PHP':
                     await this.repairPHP();
+                    break;
+                case 'Configure PHP-FPM':
+                    await this.configurePHPFPM()
                     break;
                 case 'Tail PHP logs':
                     await this.tailPHPlogs();
@@ -175,7 +179,7 @@ pm.max_spare_servers = 3
 env[HOSTNAME] = $(hostname -f)
 env[PATH] = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 env[TMP] = /tmp
-env[TMPDIR] = /tmp
+env[TMPDIR] = /tmp  
 env[TEMP] = /tmp
 security.limit_extensions = .php
 php_admin_value[cgi.fix_pathinfo] = 1
