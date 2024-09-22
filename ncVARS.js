@@ -54,7 +54,7 @@ class ncVARS {
         "DEDYNPORT": "Custom port for public access if the user decides to change it."
 
 */
-
+        this.redis = execSync("systemctl status redis | grep Active | awk '{print $2, $3}'").toString().trim();
 
         // DNS and ports
         this.INTERNET_DNS = '9.9.9.9';

@@ -17,12 +17,16 @@ import noVMNC from './nextcloud.js';
 
 
 import fs from 'fs';
-import chalk from 'chalk';
+import chalk, { colorNames } from 'chalk';
 import chalkAnimation from 'chalk-animation';
 import gradient from 'gradient-string';
 import figlet from 'figlet';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
+import ncVARS from './ncVARS.js';
+import ncVARS from './ncVARS.js';
+
+const varsclass = new ncVARS();
 
 async function sleep(ms = 2000) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,10 +52,16 @@ function loadVariables() {
 }
 
 async function welcome() {
-    
+
 
     // Load variables from variables.json
     const vars = loadVariables();
+    const distro = varsclass.DISTRO;
+    const address = varsclass.ADDRESS;
+    const ipv4 = varsclass.WANIP4;
+    const psql = varsclass.PSQLVER;
+    const redis = execSync("systemctl status redis-server | grep Active | awk '{print $2, $3}'")
+    const apache2 = execSync("systemctl status apache2 | grep Active | awk '{print $2, $3}'")
     const phpVersion = vars.PHP || 'Unknown PHP';
     const domain = vars.TLSDOMAIN || 'No Domain';
     const ports = vars.NONO_PORTS || [80, 443];
@@ -66,6 +76,7 @@ async function welcome() {
     const redisStatus = await checkComponent(`test -S ${redisSock}`) ? GREEN(`[redis]`) : RED(`[No Redis]`);
     const dockerStatusText = dockerStatus ? GREEN(`[docker]`) : RED(`[No Docker]`);
     const wanStatus = GREEN(`[${wan}]`);
+    const redisServer = GREEN(`redis-server:${redis}`)
 
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n'
@@ -82,9 +93,10 @@ async function welcome() {
 
     // Display the status under the splash screen
     
-    console.log(`${phpStatus} ${domainStatus}  ${redisStatus} `);
-    console.log(`${wanStatus} ${dockerStatusText}`)
-    console.log('')
+    console.log(`${phpStatus} ${domainStatus}   `);
+    console.log(`${wanStatus} ${dockerStatusText}`);
+    console.log(`${redisServer}`);
+    console.log('');
     console.log(`${PURPLE('Welcome to Nextcloud Manager!')}`);
     console.log(`${YELLOW('by T&M Hansson IT')}`)
     console.log('')
