@@ -117,13 +117,14 @@ class ncTLS {
      */
     getCertStatus() {
         try {
-            const status = this.getCommandOutput("sudo certbot certificates | grep -i 'VALID'");
-            return status.includes('VALID') ? 'Valid' : 'Expired or Invalid';
+            const certStatus = execSync("sudo certbot certificates | grep -i 'VALID'").toString().trim();
+            return certStatus.includes('VALID') ? 'Valid' : 'Expired or Invalid';
         } catch (error) {
-            console.error('Error checking certificate status:', error);
+            console.error('Error executing certbot command or no certificates found:', error.message);
             return 'Unknown';
         }
     }
+    
 
     /**
      * Set the domain for TLS and update the Nextcloud configuration.
@@ -136,44 +137,49 @@ class ncTLS {
     setTLSConfig(domain) {
         this.TLSDOMAIN = domain;
         this.TLS_CONF = `/etc/apache2/sites-available/${this.TLSDOMAIN}.conf`;
-
+    
         const content = `
-<VirtualHost *:80>
-    RewriteEngine On
-    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
-</VirtualHost>
-
-<VirtualHost *:443>
-    ServerAdmin admin@${this.TLSDOMAIN}
-    ServerName ${this.TLSDOMAIN}
-
-    <FilesMatch "\\.php$">
-        SetHandler "proxy:unix:/run/php/php${this.PHPVER}-fpm.nextcloud.sock|fcgi://localhost"
-    </FilesMatch>
-
-    Header add Strict-Transport-Security: "max-age=15552000;includeSubdomains"
-    SSLEngine on
-    SSLCompression off
-    SSLProtocol -all +TLSv1.2
-    SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
-
-    DocumentRoot ${this.NCPATH}
-    <Directory ${this.NCPATH}>
-        Options Indexes FollowSymLinks
-        AllowOverride None
-        Require all granted
-    </Directory>
-
-    SSLCertificateFile ${this.CERTFILES}/${this.TLSDOMAIN}/fullchain.pem
-    SSLCertificateKeyFile ${this.CERTFILES}/${this.TLSDOMAIN}/privkey.pem
-    SSLOpenSSLConfCmd DHParameters ${this.DHPARAMS_TLS}
-</VirtualHost>
+    <VirtualHost *:80>
+        RewriteEngine On
+        RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+    </VirtualHost>
+    
+    <VirtualHost *:443>
+        ServerAdmin admin@${this.TLSDOMAIN}
+        ServerName ${this.TLSDOMAIN}
+    
+        <FilesMatch "\\.php$">
+            SetHandler "proxy:unix:/run/php/php${this.PHPVER}-fpm.nextcloud.sock|fcgi://localhost"
+        </FilesMatch>
+    
+        Header add Strict-Transport-Security: "max-age=15552000;includeSubdomains"
+        SSLEngine on
+        SSLCompression off
+        SSLProtocol -all +TLSv1.2
+        SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
+    
+        DocumentRoot ${this.NCPATH}
+        <Directory ${this.NCPATH}>
+            Options Indexes FollowSymLinks
+            AllowOverride None
+            Require all granted
+        </Directory>
+    
+        SSLCertificateFile ${this.CERTFILES}/${this.TLSDOMAIN}/fullchain.pem
+        SSLCertificateKeyFile ${this.CERTFILES}/${this.TLSDOMAIN}/privkey.pem
+        SSLOpenSSLConfCmd DHParameters ${this.DHPARAMS_TLS}
+    </VirtualHost>
         `;
-
-        // Save the TLS configuration to the file
-        fs.writeFileSync(this.TLS_CONF, content, 'utf8');
-        console.log(`TLS configuration saved to ${this.TLS_CONF}`);
+    
+        try {
+            // Use sudo to write the file
+            execSync(`echo "${content}" | sudo tee ${this.TLS_CONF}`);
+            console.log(`TLS configuration saved to ${this.TLS_CONF}`);
+        } catch (error) {
+            console.error(`Failed to write TLS configuration: ${error.message}`);
+        }
     }
+    
 
     /**
      * Generate a new DHParams file if it doesn't exist.

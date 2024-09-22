@@ -16,36 +16,55 @@ import noVMNC from './nextcloud.js';
 
 
 
-import OpenAI from 'openai';
+import fs from 'fs';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
-import gradient from 'gradient-string';
 import chalkAnimation from 'chalk-animation';
+import gradient from 'gradient-string';
 import figlet from 'figlet';
-import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
-import ncSMTP from './ncSMTP.js';
-import ncTLS from './ncTLS.js';
 
+async function sleep(ms = 2000) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+async function checkComponent(command) {
+    try {
+        execSync(command);
+        return true; // Component is installed/working
+    } catch (error) {
+        return false; // Component not installed/working
+    }
+}
 
-
-
-
-
-// console.log(chalk.redBright('Nextcloud Manager - Cloudman'));
-
-
-const VARS = new ncVars();
-
-
-
-VARS.loadVariables('variables.json');
-
-const sleep = (ms = 2000) => new Promise((r) => setTimeout(r, ms));
+function loadVariables() {
+    try {
+        const data = fs.readFileSync('./variables.json', 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.error('Error reading variables.json:', error);
+        return {};
+    }
+}
 
 async function welcome() {
-    
+    const GREEN = chalk.green;
+    const RED = chalk.red;
+
+    // Load variables from variables.json
+    const vars = loadVariables();
+    const phpVersion = vars.PHP || 'Unknown PHP';
+    const domain = vars.TLSDOMAIN || 'No Domain';
+    const ports = vars.NONO_PORTS || [80, 443];
+    const redisSock = vars.REDIS_SOCK || 'No Redis';
+    const dockerStatus = await checkComponent('docker --version');
+
+    // Create status indicators for each component
+    const phpStatus = await checkComponent(`php -v | grep ${phpVersion}`) ? GREEN(`[${phpVersion}]`) : RED(`[${phpVersion}]`);
+    const domainStatus = domain !== 'No Domain' ? GREEN(`[${domain}]`) : RED(`[${domain}]`);
+    const portsStatus = ports.length > 0 ? GREEN(`[${ports.join(', ')}]`) : RED(`[No Ports]`);
+    const redisStatus = await checkComponent(`test -S ${redisSock}`) ? GREEN(`[redis]`) : RED(`[No Redis]`);
+    const dockerStatusText = dockerStatus ? GREEN(`[docker]`) : RED(`[No Docker]`);
+
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n'
     );
@@ -59,10 +78,15 @@ async function welcome() {
         )
     );
 
-    
-    
+    // Display the status under the splash screen
+    console.log(
+        `${phpStatus} ${domainStatus} ${portsStatus} ${redisStatus} ${dockerStatusText}`
+    );
+
     console.log(`${GREEN('Welcome to Nextcloud Manager!')}`);
 }
+
+
 let activeMenu = null;
 /**
  * Clear any active prompts or actions before going back to the main menu
