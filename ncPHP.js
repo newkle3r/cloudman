@@ -97,24 +97,25 @@ class ncPHP {
     
             spinner.success({ text: chalk.green(`PHP ${phpVersion} installed and configured successfully!`) });
         } catch (error) {
-            spinner.error({ text: chalk.red(`Failed to install PHP ${phpVersion}`) });
+            spinner.error({ text: chalk.red(`Failed to install PHP ${phpVersion}: ${error.message}`) });
             console.error(error);
         }
     }
     
 
     /**
-     * Configures PHP-FPM for the specified version, ensuring pool and socket setup.
-     * @param {string} phpVersion - PHP version to configure (e.g., '7.4')
-     */
-    async configurePHPFPM(phpVersion = this.phpVersion) {
-        const spinner = createSpinner(`Configuring PHP-FPM for PHP ${phpVersion}...`).start();
+ * Configures PHP-FPM for the specified version, ensuring pool and socket setup.
+ * @param {string} phpVersion - PHP version to configure (e.g., '7.4', '8.0')
+ */
+async configurePHPFPM(phpVersion = this.phpVersion) {
+    const spinner = createSpinner(`Configuring PHP-FPM for PHP ${phpVersion}...`).start();
 
-        try {
-            const phpPoolDir = `/etc/php/${phpVersion}/fpm/pool.d`;
-            const poolConfigPath = `${phpPoolDir}/nextcloud.conf`;
+    try {
+        const phpPoolDir = `/etc/php/${phpVersion}/fpm/pool.d`;
+        const poolConfigPath = `${phpPoolDir}/nextcloud.conf`;
+        const defaultConfPath = `${phpPoolDir}/www.conf`;
 
-            const poolConfigContent = `
+        const poolConfigContent = `
 [Nextcloud]
 user = www-data
 group = www-data
@@ -128,24 +129,27 @@ pm.min_spare_servers = 2
 pm.max_spare_servers = 3
 security.limit_extensions = .php
 php_admin_value[cgi.fix_pathinfo] = 1
-            `;
-            execSync(`echo "${poolConfigContent}" | sudo tee ${poolConfigPath}`);
-            execSync(`sudo mv ${phpPoolDir}/www.conf ${phpPoolDir}/www.conf.backup && sudo systemctl restart php${phpVersion}-fpm`);
+        `;
+        
+        // Write the Nextcloud pool configuration
+        execSync(`echo "${poolConfigContent}" | sudo tee ${poolConfigPath}`, { stdio: 'inherit' });
 
-            spinner.success({ text: `PHP-FPM pool configuration updated for PHP ${phpVersion}` });
-        } catch (error) {
-            spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
-            console.error(error);
+        // Check if www.conf exists before attempting to move it
+        if (fs.existsSync(defaultConfPath)) {
+            execSync(`sudo mv ${defaultConfPath} ${defaultConfPath}.backup`, { stdio: 'inherit' });
+        } else {
+            console.log(chalk.yellow(`Notice: ${defaultConfPath} does not exist, skipping backup of www.conf.`));
         }
-    }
 
-    /**
-     * Repairs PHP installation by reinstalling necessary packages and updating configurations.
-     */
-    async repairPHP() {
-        await this.purgePHPVersions([this.phpVersion]);
-        await this.installPHP(this.phpVersion);
+        // Restart PHP-FPM service
+        execSync(`sudo systemctl restart php${phpVersion}-fpm`, { stdio: 'inherit' });
+
+        spinner.success({ text: `PHP-FPM pool configuration updated for PHP ${phpVersion}` });
+    } catch (error) {
+        spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
+        console.error(error);
     }
+}
 
     /**
      * Removes the installed PHP version and related packages.
