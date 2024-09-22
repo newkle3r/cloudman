@@ -80,6 +80,7 @@ class ncPHP {
             console.error(error);
         }
     }
+    
 
     /**
      * Installs the specified PHP version and necessary modules, as well as PECL extensions like igbinary and smbclient.
@@ -152,6 +153,16 @@ php_admin_value[cgi.fix_pathinfo] = 1
             spinner.error({ text: `Failed to configure PHP-FPM: ${error.message}` });
             console.error(error);
         }
+    }
+    /**
+     * Downgrades PHP to version 7.4 and resets all PHP-related configurations.
+     */
+    async downgradePHP74() {
+        // Purge all PHP versions and unhold packages
+        await this.purgePHPVersions();
+
+        // Install PHP 7.4 and necessary modules
+        await this.installPHP('7.4');
     }
 
     /**
