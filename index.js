@@ -52,6 +52,7 @@ function loadVariables() {
   // Load variables from variables.json
   const varsclass = new ncVARS();
   const vars = loadVariables();
+  
 
   
   const version = varsclass.DISTRO;
@@ -73,11 +74,7 @@ function loadVariables() {
   
   console.log(BLUE('Ubuntu:'),YELLOW(version),{name});
   
-  console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus)
-  console.log(BLUE('redis-server:'),redisStatus)
-  console.log(BLUE('apache2:'),apache2Status)
-  console.log(dockerStatus);
-  console.log(BLUE('app updates:'),appUpdates)
+  
 
 
 async function welcome() {
@@ -87,6 +84,8 @@ async function welcome() {
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n'
     );
+    console.log(BLUE(`https://shop.hanssonit.se/nextcloud`));
+    
 
     await sleep();
     rainbowTitle.stop();
@@ -99,17 +98,18 @@ async function welcome() {
 
     // Display the status under the splash screen
     
-    console.log(`${phpStatus} ${domainStatus}   `);
-    console.log(`${wanStatus} ${dockerStatusText}`);
-    console.log(`${redisServer}`);
-    console.log(`${psqlStatus}`);
-    console.log(`${PHP}`);
-    console.log(`${apache2Status}`);
-    console.log('');
-    console.log('');
     console.log(`${PURPLE('Welcome to Nextcloud Manager!')}`);
     console.log(`${YELLOW('by T&M Hansson IT')}`)
-    console.log('')
+    console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus)
+    console.log(BLUE('redis-server:'),redisStatus)
+    console.log(BLUE('apache2:'),apache2Status)
+    console.log(dockerStatus);
+    console.log(BLUE('app updates:'),appUpdates)
+    console.log(``);
+    console.log(``);
+    console.log(`${PURPLE('Welcome to Nextcloud Manager!')}`);
+    console.log(``);
+    console.log(``);
 }
 
 

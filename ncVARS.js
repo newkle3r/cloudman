@@ -92,15 +92,16 @@ try {
             const [name, ports] = container.split(' ');
             
             // Split the name on '_' or '-' and take the last part to simplify the container name
-            const simplifiedName = name.split(/[_-]/).pop();
+            // Split the name on '_' or '-' and take the first part to simplify the container name
+            const simplifiedName = name.split(/[_-]/)[0];
 
-            const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${name}`).toString().trim();
-            return { name: simplifiedName, ip: ipInfo, ports };
+            const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${BLUE(name)}`).toString().trim();
+            return { name: BLUE(simplifiedName), ip: ipInfo, ports };
         });
 
         // Format the result for all containers
         dockerStatus = containers.map(container => {
-            return `Container: ${BLUE(container.name)}, IP: ${GREEN(container.ip)}, Ports: ${RED(container.ports)}`;
+            return `Container: ${BLUE(container.name)}, IP: ${GREEN(container.ip)}, Ports: ${GREEN(container.ports)}`;
         }).join('\n');
     } else {
         dockerStatus = 'No active containers';  // If no containers are running
