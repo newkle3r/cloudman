@@ -43,9 +43,31 @@ class ncREDIS {
     }
 
     /**
+     * Delete Redis and Memcache configuration from Nextcloud.
+     */
+    async deleteNextcloudRedisConfig() {
+        const spinner = createSpinner('Deleting existing Redis and Memcache configurations from Nextcloud...').start();
+
+        try {
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.local', { stdio: 'inherit' });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.distributed', { stdio: 'inherit' });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete filelocking.enabled', { stdio: 'inherit' });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.locking', { stdio: 'inherit' });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete redis password', { stdio: 'inherit' });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete redis', { stdio: 'inherit' });
+
+            spinner.success({ text: `${GREEN('Existing Redis and Memcache configurations deleted.')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to delete Redis and Memcache configurations.')}` });
+            console.error(error);
+        }
+    }
+
+    /**
      * Install Redis and PHP Redis module if not installed.
      */
     async installRedis() {
+        await this.deleteNextcloudRedisConfig(); // Ensure config is deleted first
         const spinner = createSpinner('Checking Redis installation...').start();
 
         try {
@@ -102,21 +124,6 @@ class ncREDIS {
             execSync(`sudo phpenmod -v ALL redis`);
         } catch (error) {
             console.error(RED('Failed to configure PHP Redis module.'), error);
-        }
-    }
-
-    /**
-     * Remove Redis from the system.
-     */
-    async removeRedis() {
-        const spinner = createSpinner('Removing Redis...').start();
-
-        try {
-            execSync('sudo apt-get purge -y redis-server && sudo apt-get autoremove -y', { stdio: 'inherit' });
-            spinner.success({ text: `${GREEN('Redis has been removed successfully.')}` });
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to remove Redis.')}` });
-            console.error(error);
         }
     }
 
