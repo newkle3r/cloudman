@@ -128,6 +128,47 @@ class ncREDIS {
     }
 
     /**
+     * Remove Redis from the system.
+     */
+    async removeRedis() {
+        const spinner = createSpinner('Removing Redis...').start();
+
+        try {
+            execSync('sudo apt-get purge -y redis-server', { stdio: 'inherit' });
+            execSync('sudo apt-get autoremove -y', { stdio: 'inherit' });
+            spinner.success({ text: `${GREEN('Redis has been removed successfully.')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to remove Redis.')}` });
+            console.error(error);
+        }
+    }
+
+    /**
+     * Remove Redis configuration from Nextcloud.
+     */
+    async removeRedisConfigFromNextcloud() {
+        const spinner = createSpinner('Removing Redis configuration from Nextcloud...').start();
+    
+        try {
+            // Remove Redis settings
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete redis', { stdio: 'inherit' });
+    
+            // Remove Memcache configurations
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.local', { stdio: 'inherit' });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.locking', { stdio: 'inherit' });
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:delete memcache.distributed', { stdio: 'inherit' });
+    
+            // Optionally, ensure file locking is disabled after removing Redis
+            execSync('sudo -u www-data php /var/www/nextcloud/occ config:system:set filelocking.enabled --value=false', { stdio: 'inherit' });
+    
+            spinner.success({ text: `${GREEN('Redis and Memcache configuration has been removed from Nextcloud.')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to remove Redis configuration.')}` });
+            console.error(error);
+        }
+    }
+
+    /**
      * Restart the Redis server.
      */
     async restartRedis() {
