@@ -202,70 +202,84 @@ php_admin_value[cgi.fix_pathinfo] = 1
      * @description Reparerar PHP-installationen för Nextcloud med ytterligare PHP- och PECL-moduler.
      * @returns {Promise<void>}
      */
+
     async repairPHP() {
         const spinner = createSpinner('Repairing PHP installation...').start();
-
+    
         try {
-            // Load the PHP version from variables.json
             const variables = JSON.parse(fs.readFileSync('variables.json', 'utf8'));
             const PHPVER = variables.PHP;
-
+    
             if (!PHPVER) throw new Error('PHP version not specified in variables.json.');
-
+    
             // Uninstall previous PHP versions
             execSync('sudo apt-get purge php* -y && sudo apt-get autoremove -y && sudo rm -Rf /etc/php', { stdio: 'inherit' });
             spinner.update({ text: 'Removed old PHP versions...' });
-
+    
             // Install required PHP packages
             execSync(`sudo apt-get update && sudo apt-get install -y php${PHPVER}-fpm php${PHPVER}-intl php${PHPVER}-ldap php${PHPVER}-imap php${PHPVER}-gd php${PHPVER}-pgsql php${PHPVER}-curl php${PHPVER}-xml php${PHPVER}-zip php${PHPVER}-mbstring php${PHPVER}-soap php${PHPVER}-gmp php${PHPVER}-bz2 php${PHPVER}-bcmath php-pear`, { stdio: 'inherit' });
             spinner.update({ text: `Installed PHP ${PHPVER} and necessary modules...` });
-
+    
+            // Install php-dev to ensure phpize is available
+            try {
+                execSync(`sudo apt-get install -y php${PHPVER}-dev`, { stdio: 'inherit' });
+                spinner.update({ text: `Installed php${PHPVER}-dev package...` });
+            } catch (error) {
+                spinner.error({ text: `Failed to install php${PHPVER}-dev: ${error.message}` });
+                return;
+            }
+    
             // Set PHP as default using update-alternatives
-            execSync(`sudo update-alternatives --set php /usr/bin/php${PHPVER}`);
-            execSync(`sudo update-alternatives --set phpize /usr/bin/phpize${PHPVER}`);
-            execSync(`sudo update-alternatives --set php-config /usr/bin/php-config${PHPVER}`);
-            spinner.update({ text: 'Set PHP version in Ubuntu...' });
-
+            try {
+                execSync(`sudo update-alternatives --set php /usr/bin/php${PHPVER}`);
+                execSync(`sudo update-alternatives --set phpize /usr/bin/phpize${PHPVER}`);
+                execSync(`sudo update-alternatives --set php-config /usr/bin/php-config${PHPVER}`);
+                spinner.update({ text: 'Set PHP version in Ubuntu...' });
+            } catch (error) {
+                spinner.error({ text: `Failed to set alternatives for php and phpize: ${error.message}` });
+                return;
+            }
+    
             // Enable PHP-FPM configuration in Apache
             execSync(`sudo a2enconf php${PHPVER}-fpm`, { stdio: 'inherit' });
             spinner.update({ text: 'Enabled PHP-FPM configuration in Apache...' });
-
+    
             // Enable HTTP/2 with H2Direct
             const HTTP2_CONF = '/etc/apache2/conf-available/http2.conf';
             fs.writeFileSync(HTTP2_CONF, `
-<IfModule http2_module>
-    Protocols h2 http/1.1
-    H2Direct on
-</IfModule>
+    <IfModule http2_module>
+        Protocols h2 http/1.1
+        H2Direct on
+    </IfModule>
             `);
             execSync('sudo a2enmod http2 && sudo systemctl restart apache2', { stdio: 'inherit' });
             spinner.update({ text: 'Enabled HTTP/2 with H2Direct in Apache...' });
-
+    
             // PHP-FPM Pool Configuration for Nextcloud
             const PHP_POOL_DIR = `/etc/php/${PHPVER}/fpm/pool.d`;
             fs.writeFileSync(`${PHP_POOL_DIR}/nextcloud.conf`, `
-[Nextcloud]
-user = www-data
-group = www-data
-listen = /run/php/php${PHPVER}-fpm.nextcloud.sock
-listen.owner = www-data
-listen.group = www-data
-pm = dynamic
-pm.max_children = 8
-pm.start_servers = 3
-pm.min_spare_servers = 2
-pm.max_spare_servers = 3
-env[HOSTNAME] = $(hostname -f)
-env[PATH] = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-env[TMP] = /tmp
-env[TMPDIR] = /tmp
-env[TEMP] = /tmp
-security.limit_extensions = .php
-php_admin_value[cgi.fix_pathinfo] = 1
+    [Nextcloud]
+    user = www-data
+    group = www-data
+    listen = /run/php/php${PHPVER}-fpm.nextcloud.sock
+    listen.owner = www-data
+    listen.group = www-data
+    pm = dynamic
+    pm.max_children = 8
+    pm.start_servers = 3
+    pm.min_spare_servers = 2
+    pm.max_spare_servers = 3
+    env[HOSTNAME] = $(hostname -f)
+    env[PATH] = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+    env[TMP] = /tmp
+    env[TMPDIR] = /tmp
+    env[TEMP] = /tmp
+    security.limit_extensions = .php
+    php_admin_value[cgi.fix_pathinfo] = 1
             `);
             execSync(`sudo mv ${PHP_POOL_DIR}/www.conf ${PHP_POOL_DIR}/www.conf.backup && sudo systemctl restart php${PHPVER}-fpm`, { stdio: 'inherit' });
             spinner.update({ text: 'Configured PHP-FPM pool for Nextcloud...' });
-
+    
             // Install and configure PECL modules (smbclient, igbinary)
             execSync(`sudo apt-get install -y php${PHPVER}-dev libsmbclient-dev`, { stdio: 'inherit' });
             execSync(`yes no | sudo pecl install smbclient igbinary`, { stdio: 'inherit' });
@@ -274,57 +288,59 @@ php_admin_value[cgi.fix_pathinfo] = 1
             fs.writeFileSync(`${PHP_MODS_DIR}/igbinary.ini`, 'extension=igbinary.so');
             execSync(`sudo phpenmod -v ALL smbclient igbinary`, { stdio: 'inherit' });
             spinner.update({ text: 'Installed and configured smbclient and igbinary PECL modules...' });
-
+    
             // Update php.ini with performance settings
             const PHP_INI = `/etc/php/${PHPVER}/fpm/php.ini`;
             fs.appendFileSync(PHP_INI, `
-max_execution_time = 3500
-max_input_time = 3600
-memory_limit = 512M
-post_max_size = 1100M
-upload_max_filesize = 1000M
+    max_execution_time = 3500
+    max_input_time = 3600
+    memory_limit = 512M
+    post_max_size = 1100M
+    upload_max_filesize = 1000M
             `);
             spinner.update({ text: 'Updated php.ini with performance settings...' });
-
+    
             // Enable OPCache for PHP
             fs.appendFileSync(PHP_INI, `
-opcache.enable=1
-opcache.enable_cli=1
-opcache.interned_strings_buffer=8
-opcache.max_accelerated_files=10000
-opcache.memory_consumption=256
-opcache.save_comments=1
-opcache.revalidate_freq=1
-opcache.validate_timestamps=1
+    opcache.enable=1
+    opcache.enable_cli=1
+    opcache.interned_strings_buffer=8
+    opcache.max_accelerated_files=10000
+    opcache.memory_consumption=256
+    opcache.save_comments=1
+    opcache.revalidate_freq=1
+    opcache.validate_timestamps=1
             `);
             execSync(`sudo phpenmod opcache`, { stdio: 'inherit' });
             spinner.update({ text: 'Enabled OPCache for PHP...' });
-
+    
             // PHP-FPM Optimizations
             const PHP_FPM_CONF = `/etc/php/${PHPVER}/fpm/php-fpm.conf`;
             execSync(`sudo sed -i "s|;emergency_restart_threshold.*|emergency_restart_threshold = 10|g" ${PHP_FPM_CONF}`, { stdio: 'inherit' });
             execSync(`sudo sed -i "s|;emergency_restart_interval.*|emergency_restart_interval = 1m|g" ${PHP_FPM_CONF}`, { stdio: 'inherit' });
             execSync(`sudo sed -i "s|;process_control_timeout.*|process_control_timeout = 10|g" ${PHP_FPM_CONF}`, { stdio: 'inherit' });
             spinner.update({ text: 'Applied PHP-FPM optimizations...' });
-
+    
             // Configure Redis for Nextcloud caching
             execSync('sudo apt-get install redis-server -y', { stdio: 'inherit' });
             execSync('nextcloud_occ config:system:set memcache.local --value="\\OC\\Memcache\\Redis"', { stdio: 'inherit' });
             spinner.update({ text: 'Configured Redis caching for Nextcloud...' });
-
+    
             // Remove maintenance mode
             execSync('nextcloud_occ maintenance:mode --off', { stdio: 'inherit' });
             spinner.update({ text: 'Exited maintenance mode...' });
-
+    
             // Restart Apache and PHP-FPM
             execSync(`sudo systemctl restart apache2 php${PHPVER}-fpm`, { stdio: 'inherit' });
-
+    
             spinner.success({ text: `${GREEN('PHP installation and configuration repaired successfully!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to repair PHP installation')}` });
             console.error(error);
         }
     }
+    
+
 
 
     /**
