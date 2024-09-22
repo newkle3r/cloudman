@@ -14,7 +14,7 @@ class ncDOCKER {
     /**
      * Displays the menu for Docker management.
      */
-    async manageDocker() {
+    async manageDocker(mainMenu) {
 
         let continueMenu = true;
 
@@ -40,21 +40,29 @@ class ncDOCKER {
 
         switch (answers.action) {
             case 'List Containers':
-                return this.listContainers();
+                this.listContainers();
+                break;
             case 'List Images':
-                return this.listImages();
+                this.listImages();
+                break;
             case 'Start Container':
-                return this.startContainer();
+                this.startContainer();
+                break;
             case 'Stop Container':
-                return this.stopContainer();
+                this.stopContainer();
             case 'Remove Container':
-                return this.removeContainer();
+                this.removeContainer();
+                break;
             case 'Remove Image':
-                return this.removeImage();
+                this.removeImage();
+                break;
             case 'View Networks':
-                return this.viewNetworks();
+                this.viewNetworks();
+                break;
             case 'Go Back':
-                return;  // Implement the logic for going back to the main menu
+                continueMenu = false;
+                mainMenu();
+                break;
         }
     }
     }

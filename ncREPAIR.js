@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import readlineSync from 'readline-sync';
 
+
 /**
  * Class responsible for managing repair tasks for Nextcloud.
  * Provides options to perform auto-repair, update JSON configurations, install dependencies, and run manual repair steps via a menu.
@@ -13,6 +14,7 @@ class ncREPAIR {
     this.SCRIPTS_PATH = '/var/scripts';
     this.VARIABLES_JSON_PATH = '/mnt/data/variables.json';
     this.INDEX_JSON_PATH = '/mnt/data/index_json/nc_data.json';
+    const nextcloudOCC = 'sudo -u www-data php /var/www/nextcloud/occ';
   }
 
   /**
@@ -81,6 +83,7 @@ class ncREPAIR {
                 break;
         }
     }
+    
 }
 
   /**

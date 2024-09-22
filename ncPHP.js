@@ -217,7 +217,7 @@ class ncPHP {
 
         console.log(`${YELLOW('Tailing PHP logs from:')} ${phpLogFile}`);
 
-        this.phpLogProcess = spawn('tail', ['-f', phpLogFile]);
+        this.phpLogProcess = spawn('sudo', ['tail', '-f', phpLogFile]);
 
         this.phpLogProcess.stdout.on('data', (data) => {
             console.log(`${GREEN(data.toString())}`);
@@ -229,7 +229,7 @@ class ncPHP {
 
         this.phpLogProcess.on('close', () => {
             console.log(chalk.green('PHP log tailing stopped.'));
-            this.phpLogProcess = null;  // Rensa processen när den stoppats
+            this.phpLogProcess = null;  
         });
     }
 
@@ -240,7 +240,7 @@ class ncPHP {
     stopTailPHPlogs() {
         if (this.phpLogProcess) {
             console.log(chalk.yellow('Stopping PHP log tailing...'));
-            this.phpLogProcess.kill();  // Dödar processen som loggar
+            this.phpLogProcess.kill();  
             this.phpLogProcess = null;
         } else {
             console.log(chalk.red('No PHP log tailing process is running.'));

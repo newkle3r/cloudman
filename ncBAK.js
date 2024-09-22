@@ -1,5 +1,5 @@
 import { RED, BLUE, GRAY, GRAYLI, GREEN, YELLOW, YELLOWLI, PURPLE } from './color.js';
-import { execSync } from 'child_process';
+import { spawnSync, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { createSpinner } from 'nanospinner';
@@ -24,19 +24,26 @@ class ncBAK {
         this.phpConfigDir = '/etc/php'; // PHP config directory
     }
 
-    // Ensure backup directory exists
+    // Ensure backup directory exists (using sudo)
     ensureBackupDir() {
         if (!fs.existsSync(this.backupDir)) {
-            fs.mkdirSync(this.backupDir, { recursive: true });
-            console.log(chalk.green(`Created backup directory at ${this.backupDir}`));
+            console.log(chalk.yellow('Creating backup directory...'));
+            const result = spawnSync('sudo', ['mkdir', '-p', this.backupDir]);
+
+            if (result.error) {
+                console.error(chalk.red('Failed to create backup directory.'));
+                process.exit(1);  // Exit the process on failure
+            } else {
+                console.log(chalk.green(`Created backup directory at ${this.backupDir}`));
+            }
         }
     }
 
-    // PostgreSQL backup
+    // PostgreSQL backup (using sudo)
     backupPostgreSQL() {
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
         try {
-            execSync(`pg_dumpall -U postgres > ${this.postgresBackupFile}`);
+            execSync(`sudo pg_dumpall -U postgres > ${this.postgresBackupFile}`);
             spinner.success({ text: chalk.green('PostgreSQL backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup PostgreSQL!') });
@@ -44,12 +51,12 @@ class ncBAK {
         }
     }
 
-    // Nextcloud data backup
+    // Nextcloud data backup (using sudo)
     backupNextcloud() {
         const spinner = createSpinner('Backing up Nextcloud data and configuration...').start();
         try {
             const nextcloudBackupFile = path.join(this.backupDir, `nextcloud_backup_${this.timestamp}.tar.gz`);
-            execSync(`tar -czf ${nextcloudBackupFile} ${this.nextcloudDataDir}`);
+            execSync(`sudo tar -czf ${nextcloudBackupFile} ${this.nextcloudDataDir}`);
             spinner.success({ text: chalk.green('Nextcloud data and config backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup Nextcloud data and config!') });
@@ -57,12 +64,12 @@ class ncBAK {
         }
     }
 
-    // Backup Redis configuration
+    // Backup Redis configuration (using sudo)
     backupRedis() {
         const spinner = createSpinner('Backing up Redis configuration...').start();
         try {
             const redisBackupFile = path.join(this.backupDir, `redis_backup_${this.timestamp}.tar.gz`);
-            execSync(`tar -czf ${redisBackupFile} ${this.redisConfigDir}`);
+            execSync(`sudo tar -czf ${redisBackupFile} ${this.redisConfigDir}`);
             spinner.success({ text: chalk.green('Redis configuration backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup Redis configuration!') });
@@ -70,12 +77,12 @@ class ncBAK {
         }
     }
 
-    // Apache configuration backup
+    // Apache configuration backup (using sudo)
     backupApache() {
         const spinner = createSpinner('Backing up Apache configuration...').start();
         try {
             const apacheBackupFile = path.join(this.backupDir, `apache_backup_${this.timestamp}.tar.gz`);
-            execSync(`tar -czf ${apacheBackupFile} ${this.apacheConfigDir}`);
+            execSync(`sudo tar -czf ${apacheBackupFile} ${this.apacheConfigDir}`);
             spinner.success({ text: chalk.green('Apache configuration backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup Apache configuration!') });
@@ -83,12 +90,12 @@ class ncBAK {
         }
     }
 
-    // PHP configuration backup
+    // PHP configuration backup (using sudo)
     backupPHP() {
         const spinner = createSpinner('Backing up PHP configuration...').start();
         try {
             const phpBackupFile = path.join(this.backupDir, `php_backup_${this.timestamp}.tar.gz`);
-            execSync(`tar -czf ${phpBackupFile} ${this.phpConfigDir}`);
+            execSync(`sudo tar -czf ${phpBackupFile} ${this.phpConfigDir}`);
             spinner.success({ text: chalk.green('PHP configuration backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup PHP configuration!') });
@@ -137,11 +144,5 @@ class ncBAK {
         console.log(chalk.green('Selected backups completed!'));
     }
 }
-/*
-// Main entry point
-(async () => {
-    const ncBAK = new ncBAK();
-    await ncBAK.runBackups();
-})();
-*/
+
 export default ncBAK;

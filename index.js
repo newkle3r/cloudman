@@ -99,7 +99,7 @@ async function mainMenu() {
     switch (answers.action) {
         case 'Update Nextcloud':
             const updateManager = new ncUPDATE();
-            return updateManager.updateMenu(mainMenu,exitProgram,VARS);
+            return updateManager.manageUpdate(mainMenu,exitProgram,VARS);
 
         case 'Repair Nextcloud':
             const repairNC = new noVMNC();

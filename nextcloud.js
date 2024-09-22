@@ -11,6 +11,7 @@ import { execSync } from 'child_process';
 
 
 class noVMNC {
+    
     async installNextcloud() {
         const spinner = createSpinner('Installing Nextcloud...').start();
         
@@ -39,7 +40,7 @@ class noVMNC {
         const spinner = createSpinner('Repairing Nextcloud...').start();
         
         try {
-            execSync('sudo nextcloud.occ maintenance:repair');
+            execSync('sudo nextcloud_occ maintenance:repair');
             spinner.success({ text: `${GREEN('Nextcloud has been repaired!')}` });
             mainMenu();
         } catch (error) {

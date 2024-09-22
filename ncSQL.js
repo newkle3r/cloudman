@@ -27,31 +27,39 @@ class ncSQL {
      * Displays the menu for PostgreSQL management tasks.
      */
     async managePostgreSQL(mainMenu) {
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'action',
-                message: 'PostgreSQL management:',
-                choices: [
-                    'Backup Database',
-                    'Restore Database',
-                    'View Database Status',
-                    'Go Back'
-                ],
-            }
-        ]);
 
-        switch (answers.action) {
-            case 'Backup Database':
-                return this.backupDatabase();
-            case 'Restore Database':
-                return this.restoreDatabase();
-            case 'View Database Status':
-                return this.viewDatabaseStatus();
-            case 'Go Back':
-                mainMenu();
-                break;
-                
+        let continueMenu = true;
+        while (continueMenu === true) {
+            const answers = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'action',
+                    message: 'PostgreSQL management:',
+                    choices: [
+                        'Backup Database',
+                        'Restore Database',
+                        'View Database Status',
+                        'Go Back'
+                    ],
+                }
+            ]);
+
+            switch (answers.action) {
+                case 'Backup Database':
+                    this.backupDatabase();
+                    break;
+                case 'Restore Database':
+                    this.restoreDatabase();
+                    break;
+                case 'View Database Status':
+                    this.viewDatabaseStatus();
+                    break;
+                case 'Go Back':
+                    continueMenu = false;
+                    mainMenu();
+                    break;
+                    
+            }
         }
     }
 
@@ -64,7 +72,7 @@ class ncSQL {
         
         try {
             // Execute backup command
-            execSync(`sudo -u postgres pg_dumpall > ${this.backupPath}`);
+            execSync(`sudo -u postgres pg_dump nextcloud_db > ${this.backupPath}/nextcloud_db_backup.sql`);
             spinner.success({ text: `${GREEN('Database backup completed!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to backup PostgreSQL database')}` });
@@ -82,7 +90,7 @@ class ncSQL {
         
         try {
             // Execute restore command
-            execSync(`sudo -u postgres psql < ${this.backupPath}`);
+            execSync(`sudo -u postgres psql nextcloud_db < ${this.backupPath}/nextcloud_db_backup.sql`);
             spinner.success({ text: `${GREEN('Database restore completed!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to restore PostgreSQL database')}` });
