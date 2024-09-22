@@ -12,6 +12,35 @@ class ncDOCKER {
     constructor() {}
 
     /**
+     * Check if Docker is installed.
+     */
+    checkDockerInstalled() {
+        try {
+            // Run the `docker` command to see if Docker is installed
+            execSync('docker --version', { stdio: 'ignore' });
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
+     * Install Docker on the system.
+     */
+    async installDocker() {
+        const spinner = createSpinner('Installing Docker...').start();
+
+        try {
+            execSync(`sudo apt-get update && sudo apt-get install -y docker.io`, { stdio: 'inherit' });
+            spinner.success({ text: `${GREEN('Docker installed successfully!')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to install Docker.')}` });
+            console.error(error);
+        }
+    }
+
+
+    /**
      * Displays the menu for Docker management.
      */
     async manageDocker(mainMenu) {

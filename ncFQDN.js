@@ -1,9 +1,8 @@
-import { RED,GREEN,YELLOW } from './color.js';
+import { RED, GREEN, YELLOW } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
-
 
 /**
  * Class for managing DNS, FQDN, and ports using CLI commands.
@@ -34,19 +33,23 @@ class ncFQDN {
 
         switch (answers.action) {
             case 'Identify FQDN':
-                return this.identifyFQDN();
+                await this.identifyFQDN();
+                break;
             case 'Update FQDN':
-                return this.updateFQDN();
+                await this.updateFQDN();
+                break;
             case 'Identify DNS':
-                return this.identifyDNS();
+                await this.identifyDNS();
+                break;
             case 'Update DNS':
-                return this.updateDNS();
+                await this.updateDNS();
+                break;
             case 'Check/Forward Ports':
-                return this.forwardPorts();
+                await this.forwardPorts();
+                break;
             case 'Go Back':
                 mainMenu();
                 break;
-                
         }
     }
 
@@ -181,31 +184,33 @@ class ncFQDN {
 
         try {
             // Check if port 80 and 443 are open with UFW
-            const checkPort80 = execSync('sudo ufw status | grep "80/tcp"').toString().trim();
-            const checkPort443 = execSync('sudo ufw status | grep "443/tcp"').toString().trim();
-
-            if (!checkPort80) {
-                console.log(GREEN('Opening port 80 for HTTP...'));
-                execSync('sudo ufw allow 80/tcp');
+            let useIptables = false;
+            try {
+                execSync('which ufw', { stdio: 'ignore' });
+            } catch {
+                useIptables = true;
             }
 
-            if (!checkPort443) {
-                console.log(GREEN('Opening port 443 for HTTPS...'));
-                execSync('sudo ufw allow 443/tcp');
-            }
+            if (!useIptables) {
+                const checkPort80 = execSync('sudo ufw status | grep "80/tcp"').toString().trim();
+                const checkPort443 = execSync('sudo ufw status | grep "443/tcp"').toString().trim();
 
-            const { useIptables } = await inquirer.prompt([
-                {
-                    type: 'confirm',
-                    name: 'useIptables',
-                    message: 'Do you want to configure iptables for port forwarding?',
-                    default: false,
+                if (!checkPort80) {
+                    console.log(GREEN('Opening port 80 for HTTP...'));
+                    execSync('sudo ufw allow 80/tcp');
                 }
-            ]);
+
+                if (!checkPort443) {
+                    console.log(GREEN('Opening port 443 for HTTPS...'));
+                    execSync('sudo ufw allow 443/tcp');
+                }
+            }
 
             if (useIptables) {
-                const checkIptables80 = execSync('sudo iptables -L -n | grep ":80"').toString().trim();
-                const checkIptables443 = execSync('sudo iptables -L -n | grep ":443"').toString().trim();
+                console.log(chalk.yellow('Using iptables instead of UFW.'));
+                
+                const checkIptables80 = execSync('sudo iptables -L -n | grep ":80 "').toString().trim();
+                const checkIptables443 = execSync('sudo iptables -L -n | grep ":443 "').toString().trim();
 
                 if (!checkIptables80) {
                     console.log(GREEN('Forwarding port 80 for HTTP in iptables...'));
