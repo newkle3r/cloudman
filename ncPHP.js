@@ -7,7 +7,7 @@ import chalk from 'chalk';
 class ncPHP {
 
     constructor() {
-        this.phpVersion = null;
+        this.phpVersion = null; 
         this.phpLogProcess = null;
     }
 
@@ -81,21 +81,27 @@ class ncPHP {
      * @param {string} phpVersion - The PHP version to install (e.g., '7.4', '8.0')
      */
     async installPHP(phpVersion) {
+        if (!phpVersion) {
+            console.error(chalk.red('PHP version is undefined. Please specify a valid PHP version.'));
+            return;
+        }
+    
         const spinner = createSpinner(`Installing PHP ${phpVersion} and necessary modules...`).start();
-
+    
         try {
             // Add PPA for PHP, update system, and install PHP modules
             execSync(`sudo add-apt-repository -y ppa:ondrej/php && sudo apt-get update && sudo apt-get install -y php${phpVersion} php${phpVersion}-fpm php${phpVersion}-common php${phpVersion}-curl php${phpVersion}-xml`, { stdio: 'inherit' });
-
+    
             await this.configurePHPFPM(phpVersion);
             execSync(`sudo a2enconf php${phpVersion}-fpm && sudo systemctl restart apache2`, { stdio: 'inherit' });
-
+    
             spinner.success({ text: chalk.green(`PHP ${phpVersion} installed and configured successfully!`) });
         } catch (error) {
             spinner.error({ text: chalk.red(`Failed to install PHP ${phpVersion}`) });
             console.error(error);
         }
     }
+    
 
     /**
      * Configures PHP-FPM for the specified version, ensuring pool and socket setup.
@@ -205,7 +211,7 @@ php_admin_value[cgi.fix_pathinfo] = 1
      */
     async managePHP(mainMenu) {
         let continueMenu = true;
-
+    
         while (continueMenu) {
             const answers = await inquirer.prompt([
                 {
@@ -225,7 +231,7 @@ php_admin_value[cgi.fix_pathinfo] = 1
                     ],
                 }
             ]);
-
+    
             switch (answers.action) {
                 case 'Identify Version':
                     await this.identifyPHP();
@@ -234,13 +240,35 @@ php_admin_value[cgi.fix_pathinfo] = 1
                     await this.downgradePHP74();
                     break;
                 case 'Upgrade PHP':
-                    await this.installPHP();
+                    const versionAnswer = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'phpVersion',
+                            message: 'Enter the PHP version you want to install (e.g., 7.4, 8.0, 8.3):'
+                        }
+                    ]);
+                    if (versionAnswer.phpVersion) {
+                        await this.installPHP(versionAnswer.phpVersion);
+                    } else {
+                        console.error(chalk.red('You must specify a valid PHP version.'));
+                    }
                     break;
                 case 'Repair Nextcloud PHP':
                     await this.repairPHP();
                     break;
                 case 'Configure PHP-FPM':
-                    await this.configurePHPFPM();
+                    const configureVersionAnswer = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'phpVersion',
+                            message: 'Enter the PHP version to configure (e.g., 7.4, 8.0, 8.3):'
+                        }
+                    ]);
+                    if (configureVersionAnswer.phpVersion) {
+                        await this.configurePHPFPM(configureVersionAnswer.phpVersion);
+                    } else {
+                        console.error(chalk.red('You must specify a valid PHP version.'));
+                    }
                     break;
                 case 'Tail PHP logs':
                     await this.tailPHPlogs();
@@ -259,5 +287,4 @@ php_admin_value[cgi.fix_pathinfo] = 1
         }
     }
 }
-
 export default ncPHP;
