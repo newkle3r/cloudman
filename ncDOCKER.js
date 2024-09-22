@@ -15,6 +15,11 @@ class ncDOCKER {
      * Displays the menu for Docker management.
      */
     async manageDocker() {
+
+        let continueMenu = true;
+
+        while (continueMenu === true) {
+
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -52,7 +57,7 @@ class ncDOCKER {
                 return;  // Implement the logic for going back to the main menu
         }
     }
-
+    }
     /**
      * Lists all running and stopped Docker containers.
      */

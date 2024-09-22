@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import fs from 'fs';
+import { execSync } from 'child_process';
 
 /**
  * Class responsible for managing PHP tasks in Nextcloud.
@@ -29,6 +30,11 @@ class ncPHP {
      * @returns {Promise<void>} - Returnerar en Promise som avslutas när användarens val är bearbetat.
      */
     async managePHP(mainMenu) {
+
+        let continueMenu = true;
+
+        while (continueMenu === true) {
+
         const answers = await inquirer.prompt([
             {
                 type: 'list',
@@ -46,6 +52,8 @@ class ncPHP {
                 ],
             }
         ]);
+
+
 
         switch (answers.action) {
             case 'Identify Version':
@@ -65,6 +73,7 @@ class ncPHP {
                 break;
         }
     }
+}
 
     /**
      * @function identifyPHP

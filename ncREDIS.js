@@ -3,6 +3,7 @@ import { createSpinner } from 'nanospinner';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { RED, GREEN, YELLOW } from './color.js';
+import fs from 'fs';
 
 class ncREDIS {
     constructor() {
@@ -125,7 +126,7 @@ class ncREDIS {
     /**
      * Check and validate if config.php has the correct Redis and Memcache configuration.
      */
-    checkAndFixNextcloudConfig() {
+    async checkAndFixNextcloudConfig() {
         const spinner = createSpinner('Checking Nextcloud config.php...').start();
 
         try {
@@ -398,7 +399,7 @@ async configureRedisForNextcloud() {
                 await this.checkRedisStatus();
                 break;
             case 'rewrite':
-                checkAndFixNextcloudConfig();
+                await this.checkAndFixNextcloudConfig();
                 break;
 
             case 'menu':
