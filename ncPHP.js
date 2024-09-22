@@ -206,48 +206,88 @@ php_admin_value[cgi.fix_pathinfo] = 1
         const spinner = createSpinner('Repairing PHP installation...').start();
 
         try {
+            // Load the PHP version from variables.json
             const variables = JSON.parse(fs.readFileSync('variables.json', 'utf8'));
             const PHPVER = variables.PHP;
 
             if (!PHPVER) throw new Error('PHP version not specified in variables.json.');
 
-            execSync('sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --on');
-            execSync('sudo systemctl stop apache2.service');
+            // Uninstall previous PHP versions
+            execSync('sudo apt-get purge php* -y && sudo apt-get autoremove -y && sudo rm -Rf /etc/php', { stdio: 'inherit' });
+            spinner.update({ text: 'Removed old PHP versions...' });
 
-            execSync('sudo apt-get install -y apache2');
-            execSync('sudo a2enmod rewrite headers proxy proxy_fcgi ssl');
-            execSync('sudo a2enconf php' + PHPVER + '-fpm');
-            execSync('sudo systemctl restart apache2 php' + PHPVER + '-fpm');
+            // Install required PHP packages
+            execSync(`sudo apt-get update && sudo apt-get install -y php${PHPVER}-fpm php${PHPVER}-intl php${PHPVER}-ldap php${PHPVER}-imap php${PHPVER}-gd php${PHPVER}-pgsql php${PHPVER}-curl php${PHPVER}-xml php${PHPVER}-zip php${PHPVER}-mbstring php${PHPVER}-soap php${PHPVER}-gmp php${PHPVER}-bz2 php${PHPVER}-bcmath php-pear`, { stdio: 'inherit' });
+            spinner.update({ text: `Installed PHP ${PHPVER} and necessary modules...` });
 
-            // Install PECL extensions
-            spinner.update({ text: 'Installing PECL dependencies...' });
-            execSync(`sudo apt-get install -y php${PHPVER}-dev redis-server libsmbclient-dev`, { stdio: 'inherit' });
+            // Set PHP as default using update-alternatives
+            execSync(`sudo update-alternatives --set php /usr/bin/php${PHPVER}`);
+            execSync(`sudo update-alternatives --set phpize /usr/bin/phpize${PHPVER}`);
+            execSync(`sudo update-alternatives --set php-config /usr/bin/php-config${PHPVER}`);
+            spinner.update({ text: 'Set PHP version in Ubuntu...' });
 
-            // Install smbclient via PECL
-            execSync('yes no | sudo pecl install smbclient');
-            const phpModsDir = `/etc/php/${PHPVER}/mods-available`;
-            if (!fs.existsSync(`${phpModsDir}/smbclient.ini`)) fs.writeFileSync(`${phpModsDir}/smbclient.ini`, 'extension=smbclient.so');
-            execSync(`sudo phpenmod -v ALL smbclient`);
+            // Enable PHP-FPM configuration in Apache
+            execSync(`sudo a2enconf php${PHPVER}-fpm`, { stdio: 'inherit' });
+            spinner.update({ text: 'Enabled PHP-FPM configuration in Apache...' });
 
-            // Install igbinary
-            spinner.update({ text: 'Installing igbinary extension...' });
-            execSync('yes no | sudo pecl install -Z igbinary');
-            if (!fs.existsSync(`${phpModsDir}/igbinary.ini`)) fs.writeFileSync(`${phpModsDir}/igbinary.ini`, 'extension=igbinary.so');
-            execSync(`sudo phpenmod -v ALL igbinary`);
+            // Enable HTTP/2 with H2Direct
+            const HTTP2_CONF = '/etc/apache2/conf-available/http2.conf';
+            fs.writeFileSync(HTTP2_CONF, `
+<IfModule http2_module>
+    Protocols h2 http/1.1
+    H2Direct on
+</IfModule>
+            `);
+            execSync('sudo a2enmod http2 && sudo systemctl restart apache2', { stdio: 'inherit' });
+            spinner.update({ text: 'Enabled HTTP/2 with H2Direct in Apache...' });
 
-            // Update php.ini settings
-            spinner.update({ text: 'Updating PHP settings in php.ini...' });
-            const phpIniPath = `/etc/php/${PHPVER}/fpm/php.ini`;
-            execSync(`sed -i "s|max_execution_time =.*|max_execution_time = 3500|g" ${phpIniPath}`);
-            execSync(`sed -i "s|max_input_time =.*|max_input_time = 3600|g" ${phpIniPath}`);
-            execSync(`sed -i "s|memory_limit =.*|memory_limit = 512M|g" ${phpIniPath}`);
-            execSync(`sed -i "s|post_max_size =.*|post_max_size = 1100M|g" ${phpIniPath}`);
-            execSync(`sed -i "s|upload_max_filesize =.*|upload_max_filesize = 1000M|g" ${phpIniPath}`);
+            // PHP-FPM Pool Configuration for Nextcloud
+            const PHP_POOL_DIR = `/etc/php/${PHPVER}/fpm/pool.d`;
+            fs.writeFileSync(`${PHP_POOL_DIR}/nextcloud.conf`, `
+[Nextcloud]
+user = www-data
+group = www-data
+listen = /run/php/php${PHPVER}-fpm.nextcloud.sock
+listen.owner = www-data
+listen.group = www-data
+pm = dynamic
+pm.max_children = 8
+pm.start_servers = 3
+pm.min_spare_servers = 2
+pm.max_spare_servers = 3
+env[HOSTNAME] = $(hostname -f)
+env[PATH] = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+env[TMP] = /tmp
+env[TMPDIR] = /tmp
+env[TEMP] = /tmp
+security.limit_extensions = .php
+php_admin_value[cgi.fix_pathinfo] = 1
+            `);
+            execSync(`sudo mv ${PHP_POOL_DIR}/www.conf ${PHP_POOL_DIR}/www.conf.backup && sudo systemctl restart php${PHPVER}-fpm`, { stdio: 'inherit' });
+            spinner.update({ text: 'Configured PHP-FPM pool for Nextcloud...' });
 
-            // Enable OPCache
-            spinner.update({ text: 'Enabling OPCache for Nextcloud...' });
-            execSync(`sudo phpenmod opcache`);
-            const opcacheSettings = `
+            // Install and configure PECL modules (smbclient, igbinary)
+            execSync(`sudo apt-get install -y php${PHPVER}-dev libsmbclient-dev`, { stdio: 'inherit' });
+            execSync(`yes no | sudo pecl install smbclient igbinary`, { stdio: 'inherit' });
+            const PHP_MODS_DIR = `/etc/php/${PHPVER}/mods-available`;
+            fs.writeFileSync(`${PHP_MODS_DIR}/smbclient.ini`, 'extension=smbclient.so');
+            fs.writeFileSync(`${PHP_MODS_DIR}/igbinary.ini`, 'extension=igbinary.so');
+            execSync(`sudo phpenmod -v ALL smbclient igbinary`, { stdio: 'inherit' });
+            spinner.update({ text: 'Installed and configured smbclient and igbinary PECL modules...' });
+
+            // Update php.ini with performance settings
+            const PHP_INI = `/etc/php/${PHPVER}/fpm/php.ini`;
+            fs.appendFileSync(PHP_INI, `
+max_execution_time = 3500
+max_input_time = 3600
+memory_limit = 512M
+post_max_size = 1100M
+upload_max_filesize = 1000M
+            `);
+            spinner.update({ text: 'Updated php.ini with performance settings...' });
+
+            // Enable OPCache for PHP
+            fs.appendFileSync(PHP_INI, `
 opcache.enable=1
 opcache.enable_cli=1
 opcache.interned_strings_buffer=8
@@ -255,25 +295,37 @@ opcache.max_accelerated_files=10000
 opcache.memory_consumption=256
 opcache.save_comments=1
 opcache.revalidate_freq=1
-            `;
-            fs.appendFileSync(phpIniPath, opcacheSettings);
+opcache.validate_timestamps=1
+            `);
+            execSync(`sudo phpenmod opcache`, { stdio: 'inherit' });
+            spinner.update({ text: 'Enabled OPCache for PHP...' });
 
-            // PHP-FPM optimizations
-            spinner.update({ text: 'Optimizing PHP-FPM...' });
-            const fpmConfigPath = `/etc/php/${PHPVER}/fpm/php-fpm.conf`;
-            execSync(`sed -i "s|;emergency_restart_threshold.*|emergency_restart_threshold = 10|g" ${fpmConfigPath}`);
-            execSync(`sed -i "s|;emergency_restart_interval.*|emergency_restart_interval = 1m|g" ${fpmConfigPath}`);
-            execSync(`sed -i "s|;process_control_timeout.*|process_control_timeout = 10|g" ${fpmConfigPath}`);
+            // PHP-FPM Optimizations
+            const PHP_FPM_CONF = `/etc/php/${PHPVER}/fpm/php-fpm.conf`;
+            execSync(`sudo sed -i "s|;emergency_restart_threshold.*|emergency_restart_threshold = 10|g" ${PHP_FPM_CONF}`, { stdio: 'inherit' });
+            execSync(`sudo sed -i "s|;emergency_restart_interval.*|emergency_restart_interval = 1m|g" ${PHP_FPM_CONF}`, { stdio: 'inherit' });
+            execSync(`sudo sed -i "s|;process_control_timeout.*|process_control_timeout = 10|g" ${PHP_FPM_CONF}`, { stdio: 'inherit' });
+            spinner.update({ text: 'Applied PHP-FPM optimizations...' });
 
-            execSync('sudo systemctl restart php' + PHPVER + '-fpm apache2');
-            execSync('sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --off');
+            // Configure Redis for Nextcloud caching
+            execSync('sudo apt-get install redis-server -y', { stdio: 'inherit' });
+            execSync('nextcloud_occ config:system:set memcache.local --value="\\OC\\Memcache\\Redis"', { stdio: 'inherit' });
+            spinner.update({ text: 'Configured Redis caching for Nextcloud...' });
 
-            spinner.success({ text: `${GREEN('PHP installation repaired successfully!')}` });
+            // Remove maintenance mode
+            execSync('nextcloud_occ maintenance:mode --off', { stdio: 'inherit' });
+            spinner.update({ text: 'Exited maintenance mode...' });
+
+            // Restart Apache and PHP-FPM
+            execSync(`sudo systemctl restart apache2 php${PHPVER}-fpm`, { stdio: 'inherit' });
+
+            spinner.success({ text: `${GREEN('PHP installation and configuration repaired successfully!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to repair PHP installation')}` });
             console.error(error);
         }
     }
+
 
     /**
      * @function removePHP
