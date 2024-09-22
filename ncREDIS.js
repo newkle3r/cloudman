@@ -128,6 +128,40 @@ class ncREDIS {
     }
 
     /**
+     * Restart the Redis server.
+     */
+    async restartRedis() {
+        const spinner = createSpinner('Restarting Redis server...').start();
+
+        try {
+            execSync('sudo systemctl restart redis-server', { stdio: 'inherit' });
+            spinner.success({ text: `${GREEN('Redis has been restarted.')}` });
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to restart Redis.')}` });
+            console.error(error);
+        }
+    }
+
+    /**
+     * Check the status of the Redis server.
+     */
+    async checkRedisStatus() {
+        const spinner = createSpinner('Checking Redis server status...').start();
+
+        try {
+            const status = execSync('sudo systemctl is-active redis-server', { stdio: 'pipe' }).toString().trim();
+            if (status === 'active') {
+                spinner.success({ text: `${GREEN('Redis is running.')}` });
+            } else {
+                spinner.error({ text: `${RED('Redis is not running.')}` });
+            }
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to check Redis server status.')}` });
+            console.error(error);
+        }
+    }
+
+    /**
      * Check and fix Nextcloud config.php for Redis.
      */
     async checkAndFixNextcloudConfig() {
