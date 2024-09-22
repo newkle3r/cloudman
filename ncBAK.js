@@ -24,7 +24,7 @@ class ncBAK {
         this.phpConfigDir = '/etc/php'; // PHP config directory
     }
 
-    // Ensure backup directory exists (using sudo)
+    // Ensure backup directory exists  
     ensureBackupDir() {
         if (!fs.existsSync(this.backupDir)) {
             console.log(chalk.yellow('Creating backup directory...'));
@@ -39,7 +39,7 @@ class ncBAK {
         }
     }
 
-    // PostgreSQL backup (using sudo)
+    // PostgreSQL backup  
     backupPostgreSQL() {
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
         try {
@@ -51,7 +51,7 @@ class ncBAK {
         }
     }
 
-    // Nextcloud data backup (using sudo)
+    // Nextcloud data backup  
     backupNextcloud() {
         const spinner = createSpinner('Backing up Nextcloud data and configuration...').start();
         try {
@@ -64,7 +64,7 @@ class ncBAK {
         }
     }
 
-    // Backup Redis configuration (using sudo)
+    // Backup Redis configuration  
     backupRedis() {
         const spinner = createSpinner('Backing up Redis configuration...').start();
         try {
@@ -77,7 +77,7 @@ class ncBAK {
         }
     }
 
-    // Apache configuration backup (using sudo)
+    // Apache configuration backup  
     backupApache() {
         const spinner = createSpinner('Backing up Apache configuration...').start();
         try {
@@ -90,7 +90,7 @@ class ncBAK {
         }
     }
 
-    // PHP configuration backup (using sudo)
+    // PHP configuration backup  
     backupPHP() {
         const spinner = createSpinner('Backing up PHP configuration...').start();
         try {
