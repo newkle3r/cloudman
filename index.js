@@ -69,7 +69,7 @@ function loadVariables() {
 
   
   console.log(BLUE('LAN:'),GREEN(address))
-  console.log(BLUE('WAN:'),GREEN({ipv4})) //  curl ip.me
+  console.log(BLUE('WAN:'),{ipv4}) //  curl ip.me
   
   console.log(BLUE('Ubuntu:'),YELLOW(version),{os});
   
