@@ -100,7 +100,7 @@ try {
 
         // Format the result for all containers
         dockerStatus = containers.map(container => {
-            return `Container: ${container.name}, IP: ${container.ip}, Ports: ${container.ports}`;
+            return `Container: ${BLUE(container.name)}, IP: ${GREEN(container.ip)}, Ports: ${RED(container.ports)}`;
         }).join('\n');
     } else {
         dockerStatus = 'No active containers';  // If no containers are running
