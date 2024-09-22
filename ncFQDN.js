@@ -52,6 +52,7 @@ class ncFQDN {
                 await this.forwardPorts();
                 break;
             case 'Go Back':
+                continueMenu = false;
                 mainMenu();
                 break;
         }

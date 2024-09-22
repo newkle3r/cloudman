@@ -96,13 +96,14 @@ async function welcome() {
 
     // Display the status under the splash screen
     console.log(dockerStatus);
-    console.log(BLUE('LAN:'),GREEN(address))
-    console.log(BLUE('WAN:'),GREEN(ipv4)) //  curl ip.me
+    console.log(BLUE('LAN:'),GREEN(address));
+    console.log(BLUE('WAN:'),GREEN(ipv4)); //  curl ip.me
     console.log(BLUE('Ubuntu:'),YELLOW(version),{name});
-    console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus)
-    console.log(BLUE('redis-server:'),redisStatus)
-    console.log(BLUE('apache2:'),apache2Status)
-    console.log(BLUE('app updates:'),appUpdates)
+    console.log(BLUE('PostgreSQL'),YELLOW(psql),':',psqlStatus);
+    console.log(BLUE('redis-server:'),redisStatus);
+    console.log(BLUE('apache2:'),apache2Status);
+    console.log(BLUE('app updates:'),appUpdates);
+    console.log('');
 
 }
 
@@ -150,7 +151,7 @@ async function mainMenu() {
     switch (answers.action) {
         case 'Update Nextcloud':
             const updateManager = new ncUPDATE();
-            return updateManager.manageUpdate(mainMenu,exitProgram,VARS);
+            return updateManager.manageUpdate(mainMenu,exitProgram,varsclass);
 
         case 'Repair Nextcloud':
             const repairNC = new noVMNC();
