@@ -2,6 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import { execSync } from 'child_process';
 
+
+
 /**
  * Class to manage Nextcloud configuration variables.
  * Provides functionality to load, save, and update system variables in variables.json.
@@ -39,6 +41,100 @@ class ncVARS {
         this.WANIP4 = this.getCommandOutput('curl -s -k -m 5 -4 https://api64.ipify.org');
         this.INTERFACES = '/etc/netplan/nextcloud.yaml';
         this.GATEWAY = this.getCommandOutput("ip route | grep default | awk '{print $3}'");
+
+            // Extract the PostgreSQL status or set to 'disabled' if empty
+        
+        let postgresqlStatus;
+        try {
+            postgresqlStatus = execSync("systemctl status postgresql | grep Active | awk '{print $2}'").toString().trim();
+            if (!postgresqlStatus) {
+                postgresqlStatus = 'disabled';  // Set to 'disabled' if status is empty
+            }
+        } catch (error) {
+            postgresqlStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
+        }
+        this.psqlStatus = postgresqlStatus;
+        let redisStatus;
+        try {
+            redisStatus = execSync("systemctl status redis-server | grep Active | awk '{print $2}'").toString().trim();
+            if (!redisStatus) {
+                redisStatus = 'disabled';  // Set to 'disabled' if status is empty
+            }
+        } catch (error) {
+            redisStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
+        }
+        this.redisStatus = redisStatus;
+
+        let apache2Status;
+        try {
+            apache2Status = execSync("systemctl status apache2 | grep Active | awk '{print $2}'").toString().trim();
+            if (!apache2Status) {
+                apache2Status = 'disabled';  // Sätt till 'disabled' om statusen är tom
+            }
+        } catch (error) {
+            apache2Status = 'disabled';  // Sätt till 'disabled' om det uppstår ett fel (t.ex. tjänsten hittas inte)
+        }
+        this.apache2Status = apache2Status;
+
+
+        let dockerStatus;
+        try {
+            // Kör kommandot för att lista alla aktiva containrar och extrahera deras namn, IP-adress och portnummer
+            const containerInfo = execSync("docker ps --format '{{.Names}} {{.Ports}}'").toString().trim();
+            
+            if (containerInfo) {
+                // För varje container, vi hämtar dess nätverksinformation
+                const containers = containerInfo.split('\n').map(container => {
+                    const [name, ports] = container.split(' ');
+                    const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${name}`).toString().trim();
+                    return { name, ip: ipInfo, ports };
+                });
+
+                // Formatera resultatet för alla containrar
+                dockerStatus = containers.map(container => {
+                    return `Container: ${container.name}, IP: ${container.ip}, Ports: ${container.ports}`;
+                }).join('\n');
+            } else {
+                dockerStatus = 'No active containers';  // Om inga containrar körs
+            }
+        } catch (error) {
+            dockerStatus = 'Docker is not running or an error occurred';  // Hantera fel, t.ex. om Docker inte körs
+        }
+
+        // Sätt dockerStatus variabeln så att den kan användas senare
+        this.dockerStatus = dockerStatus;
+
+        // Import the getAvailableUpdates function from ncAPPS.js
+        
+
+        let appUpdateStatus;
+
+        try {
+            // Fetch available updates from the ncAPPS.js module
+            const availableUpdates = getAvailableUpdates();
+
+            // Count how many apps have updates available
+            const updateCount = availableUpdates.length;
+
+            // If there are updates, format the status
+            if (updateCount > 0) {
+                const appNames = availableUpdates.map(app => app.name).join(', ');
+                appUpdateStatus = `There are ${updateCount} apps with updates: ${appNames}`;
+            } else {
+                appUpdateStatus = 'No apps have available updates';
+            }
+        } catch (error) {
+            appUpdateStatus = 'Error fetching app updates or no apps available';
+        }
+
+        // Log or return the app update status
+        console.log(appUpdateStatus);
+        this.appUpdateStatus = appUpdateStatus;
+
+                
+
+
+                
 
         // Let's encrypt - TLS cert
         

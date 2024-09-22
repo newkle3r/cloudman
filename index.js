@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import ncVars from './ncVARS.js';
+
 import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
 import ncPHP from './ncPHP.js';
@@ -10,8 +10,9 @@ import ncUPDATE from './ncUPDATE.js';
 import ncBAK from './ncBAK.js';
 import ncLDAP from './ncLDAP.js';
 import ncREDIS from './ncREDIS.js';
-import ncTERMINATOR from './ncTERMINATE.js';
 import noVMNC from './nextcloud.js';
+// import { getAvailableUpdates } from 'ncAPPS.js';  // Ensure your file is named 'ncAPPS.js' with the `.js` extension
+import ncVARS from './ncVARS.js';
 
 
 
@@ -23,10 +24,8 @@ import gradient from 'gradient-string';
 import figlet from 'figlet';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
-import ncVARS from './ncVARS.js';
 
 
-const varsclass = new ncVARS();
 
 async function sleep(ms = 2000) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -40,7 +39,6 @@ async function checkComponent(command) {
         return false; 
     }
 }
-
 function loadVariables() {
     try {
         const data = fs.readFileSync('./variables.json', 'utf8');
@@ -51,36 +49,40 @@ function loadVariables() {
     }
 }
 
+  // Load variables from variables.json
+  const varsclass = new ncVARS();
+  const vars = loadVariables();
+
+  
+  const version = varsclass.DISTRO;
+  const ipv4 = varsclass.WANIP4;
+  const address = varsclass.ADDRESS;
+  const os = varsclass.CODENAME;
+  const psql = vars.PSQLVER; // "14"
+  const psqlStatus = varsclass.psqlStatus; 
+  const redisStatus = varsclass.redisStatus;
+  const apache2Status = varsclass.apache2Status;
+  const SMTPStatus = varsclass.SMTPStatus;
+  const dockerStatus = varsclass.dockerStatus;
+  const appUpdates = varsclass.getAvailableUpdates;
+  
+
+  
+  console.log('LAN:',address)
+  console.log('WAN:',{ipv4}) //  curl ip.me
+  
+  console.log('Ubuntu:',{os},{version});
+  
+  console.log('PostgreSQL',psql,':',psqlStatus)
+  console.log('redis-server:',redisStatus)
+  console.log('apache2:',apache2Status)
+  console.log(dockerStatus);
+  console.log('app updates:',appUpdates)
+
+
 async function welcome() {
 
 
-    // Load variables from variables.json
-    const vars = loadVariables();
-    const distro = varsclass.DISTRO;
-    const address = varsclass.ADDRESS;
-    const ipv4 = varsclass.WANIP4;
-    const psql = varsclass.PSQLVER;
-    const redis = execSync("systemctl status redis-server | grep Active | awk '{print $2}'")
-    const apache2 = execSync("systemctl status apache2 | grep Active | awk '{print $2}'")
-    const postgresql = execSync("systemctl status postgresql | grep Active | awk '{print $2}'")
-    const phpVersion = vars.PHP || 'Unknown PHP';
-    const domain = vars.TLSDOMAIN || 'No Domain';
-    const ports = vars.NONO_PORTS || [80, 443];
-    const redisSock = vars.REDIS_SOCK || 'No Redis';
-    const dockerStatus = await checkComponent('docker --version');
-    const wan = vars.WANIP4 || 'disconnected';
-
-    // Create status indicators for each component
-    const phpStatus = await checkComponent(`php -v | grep ${phpVersion}`) ? GREEN(`[${phpVersion}]`) : RED(`[${phpVersion}]`);
-    const domainStatus = domain !== 'No Domain' ? GREEN(`[${domain}]`) : RED(`[${domain}]`);
-    const portsStatus = ports.length > 0 ? GREEN(`[${ports.join(', ')}]`) : RED(`[No Ports]`);
-    const redisStatus = await checkComponent(`test -S ${redisSock}`) ? GREEN(`[redis]`) : RED(`[No Redis]`);
-    const dockerStatusText = dockerStatus ? GREEN(`[docker]`) : RED(`[No Docker]`);
-    const wanStatus = GREEN(`[${wan}]`);
-    const redisServer = GREEN(`redis-server: ${redis}`)
-    const apache2Status = GREEN(`apache2: ${apache2}`)
-    const psqlStatus = GREEN(`postgreSQL v.${psql}: ${postgresql}`)
-    const PHP = GREEN(`PHP${phpVersion}`)
 
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n'
