@@ -1,5 +1,5 @@
 import { RED, GREEN } from './color.js';
-import { clearConsole, welcome, runCommand } from './utils.js';
+import { clearConsole, welcome } from './utils.js';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
