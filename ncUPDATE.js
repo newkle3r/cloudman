@@ -1,6 +1,6 @@
 import { RED, GREEN } from './color.js';
 import { clearConsole, welcome } from './utils.js';
-import { execSync } from 'child_process';
+import { execSync,spawn } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
 
@@ -69,8 +69,8 @@ class ncUPDATE {
                 case 'Run Full Update':
                     await this.runFullUpdate();
                     break;
-                case 'Enable Maintenance Mode':
-                    await this.enableMaintenanceMode();
+                case 'Manage Maintenance Mode':
+                    await this.manageMaintenanceMode();
                     break;
                 case 'Check Free Space':
                     await this.checkFreeSpace();
@@ -89,9 +89,6 @@ class ncUPDATE {
                     break;
                 case 'Cleanup':
                     await this.cleanup();
-                    break;
-                case 'Disable Maintenance Mode':
-                    await this.disableMaintenanceMode();
                     break;
                 case 'Exit':
                     console.log(GREEN('Returning to main menu...'));
@@ -116,24 +113,67 @@ class ncUPDATE {
     }
 
     /**
-     * Enables maintenance mode in Nextcloud.
+     * Displays a menu to manage maintenance mode in Nextcloud.
+     * The menu will show whether maintenance mode is currently enabled or disabled.
      */
-    async enableMaintenanceMode() {
-        clearConsole();
-        this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`);
-        console.log(GREEN('Maintenance mode enabled.'));
-        await this.awaitContinue();
-    }
+    async manageMaintenanceMode() {
+      clearConsole();
 
-    /**
-     * Disables maintenance mode in Nextcloud.
-     */
-    async disableMaintenanceMode() {
-        clearConsole();
-        this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
-        console.log(GREEN('Maintenance mode disabled.'));
-        await this.awaitContinue();
-    }
+      // Check current status of maintenance mode
+      const isMaintenanceEnabled = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode | grep -c "enabled: true"`);
+
+      // Menu options with a clear indication of current state
+      const choices = [
+          { name: `Enable Maintenance Mode ${isMaintenanceEnabled ? '(Currently Active)' : ''}`, value: 'enable' },
+          { name: `Disable Maintenance Mode ${!isMaintenanceEnabled ? '(Currently Inactive)' : ''}`, value: 'disable' },
+          { name: 'Abort and Go Back', value: 'abort' }
+      ];
+
+      const { action } = await inquirer.prompt([
+          {
+              type: 'list',
+              name: 'action',
+              message: 'Maintenance Mode Management:',
+              choices: choices
+          }
+      ]);
+
+      switch (action) {
+          case 'enable':
+              if (isMaintenanceEnabled) {
+                  console.log(GREEN('Maintenance mode is already enabled.'));
+              } else {
+                  this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`);
+                  console.log(GREEN('Maintenance mode enabled.'));
+              }
+              break;
+
+          case 'disable':
+              if (!isMaintenanceEnabled) {
+                  console.log(GREEN('Maintenance mode is already disabled.'));
+              } else {
+                  this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
+                  console.log(GREEN('Maintenance mode disabled.'));
+              }
+              break;
+
+          case 'abort':
+              console.log(GREEN('Returning to the previous menu...'));
+              break;
+      }
+
+      await this.awaitContinue();
+      return this.manageUpdate(); // Assuming you want to return to the update management menu.
+  }
+
+  /**
+   * Prompts user to press Enter to continue.
+   */
+  async awaitContinue() {
+      await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+  }
+
+ 
 
     /**
      * Checks if the server has enough free disk space for the update.
@@ -165,48 +205,80 @@ class ncUPDATE {
     }
 
     /**
-     * Downloads the latest Nextcloud release.
+     * Downloads the latest Nextcloud release to the home directory of the current user with a progress bar.
      */
     async downloadNextcloud() {
-        clearConsole();
-        console.log('Downloading the latest Nextcloud release...');
-        this.runCommand('curl -o nextcloud-latest.zip https://download.nextcloud.com/server/releases/latest.zip');
-        console.log(GREEN('Nextcloud package downloaded.'));
-        await this.awaitContinue();
-    }
+      clearConsole();
+      const homeDir = this.runCommand('echo $HOME');
+      console.log(GREEN('Downloading the latest Nextcloud release to your home directory...'));
+
+      return new Promise((resolve, reject) => {
+          const downloadProcess = spawn('curl', [
+              '-#', // This is the progress bar option for curl
+              '-o', `${homeDir}/nextcloud-latest.zip`,
+              'https://download.nextcloud.com/server/releases/latest.zip'
+          ]);
+
+          downloadProcess.stdout.on('data', (data) => {
+              process.stdout.write(data); // Write curl's progress bar to stdout
+          });
+
+          downloadProcess.stderr.on('data', (data) => {
+              process.stderr.write(data);
+          });
+
+          downloadProcess.on('close', (code) => {
+              if (code === 0) {
+                  console.log(GREEN('\nNextcloud package downloaded successfully.'));
+                  resolve();
+              } else {
+                  console.error(RED('\nFailed to download Nextcloud package.'));
+                  reject(new Error(`Download process exited with code ${code}`));
+              }
+          });
+      }).finally(async () => {
+          await this.awaitContinue();
+      });
+  }
 
     /**
-     * Extracts the downloaded Nextcloud package into the web directory.
+     * Extracts the downloaded Nextcloud package into the /var/www/nextcloud directory with www-data permissions.
      */
     async extractNextcloud() {
-        clearConsole();
-        console.log('Extracting Nextcloud package...');
-        this.runCommand('unzip nextcloud-latest.zip -d /var/www');
-        console.log(GREEN('Extraction completed.'));
-        await this.awaitContinue();
-    }
+      clearConsole();
+      const homeDir = this.runCommand('echo $HOME');
+      console.log('Extracting Nextcloud package...');
+      this.runCommand(`sudo -u www-data unzip ${homeDir}/nextcloud-latest.zip -d /var/www`);
+      console.log(GREEN('Extraction completed into /var/www.'));
+      await this.awaitContinue();
+  }
 
     /**
-     * Runs the Nextcloud upgrade using the OCC command.
+     * Runs the Nextcloud upgrade using the OCC command as www-data.
      */
     async upgradeNextcloud() {
-        clearConsole();
-        console.log('Running Nextcloud upgrade...');
-        this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ upgrade`);
-        console.log(GREEN('Nextcloud upgrade completed.'));
-        await this.awaitContinue();
-    }
+      clearConsole();
+      console.log('Running Nextcloud upgrade...');
+      this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ upgrade`);
+      console.log(GREEN('Nextcloud upgrade completed.'));
+      await this.awaitContinue();
+  }
 
     /**
-     * Cleans up downloaded files and temporary files.
+     * Cleans up downloaded files and temporary files from the user's home directory.
      */
     async cleanup() {
-        clearConsole();
-        console.log('Cleaning up...');
-        fs.unlinkSync('nextcloud-latest.zip');
-        console.log(GREEN('Cleanup completed.'));
-        await this.awaitContinue();
-    }
+      clearConsole();
+      const homeDir = this.runCommand('echo $HOME');
+      console.log('Cleaning up downloaded files...');
+      if (fs.existsSync(`${homeDir}/nextcloud-latest.zip`)) {
+          fs.unlinkSync(`${homeDir}/nextcloud-latest.zip`);
+          console.log(GREEN('Cleanup completed.'));
+      } else {
+          console.log(RED('No downloaded files found to clean.'));
+      }
+      await this.awaitContinue();
+  }
 
     /**
      * Runs the full Nextcloud update process.
