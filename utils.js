@@ -21,7 +21,7 @@ export function checkComponent(command) {
         return execSync(command, { encoding: 'utf8' }).toString().trim(); // Return output of command
     } catch (error) {
         console.error(`Error executing command: ${command}`, error);
-        return false; // Return false on failure
+        return false; 
     }
 }
 

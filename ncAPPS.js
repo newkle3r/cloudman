@@ -3,9 +3,11 @@ import { GREEN, RED } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 
+// Needs splash, maybe not fully async?
+
 class ncAPPS {
     constructor(nextcloudPath = '/var/www/nextcloud') {
-        this.occCommand = `${nextcloudPath}/occ`; // Path to the Nextcloud occ CLI
+        this.occCommand = `${nextcloudPath}/occ`; 
     }
 
     async manageApps(mainMenu) {
@@ -52,7 +54,7 @@ class ncAPPS {
                 case 'Go Back':
                     continueMenu = false;
                     if (typeof mainMenu === 'function') {
-                        mainMenu(); // Make sure mainMenu is passed correctly
+                        mainMenu(); 
                     }
                     break;
             }
