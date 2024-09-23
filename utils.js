@@ -1,6 +1,7 @@
 import chalkAnimation from 'chalk-animation';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
+import {execSync} from 'child_process';
 import { GREEN, BLUE, YELLOW } from './color.js';  
 
 /**
@@ -9,13 +10,18 @@ import { GREEN, BLUE, YELLOW } from './color.js';
 export function clearConsole() {
     console.clear();
 }
-// dublett, ska bort
-export async function checkComponent(command) {
+
+/**
+ * Checks the execution of a command and returns its output.
+ * @param {string} command - The shell command to execute.
+ * @returns {string|boolean} - The command's output if successful, false if there was an error.
+ */
+export function checkComponent(command) {
     try {
-        execSync(command);
-        return true; 
+        return execSync(command, { encoding: 'utf8' }).toString().trim(); // Return output of command
     } catch (error) {
-        return false; 
+        console.error(`Error executing command: ${command}`, error);
+        return false; // Return false on failure
     }
 }
 
