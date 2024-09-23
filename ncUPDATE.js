@@ -52,14 +52,13 @@ class ncUPDATE {
                     message: 'Nextcloud Update Management:',
                     choices: [
                         'Run Full Update',
-                        'Enable Maintenance Mode',
+                        'Manage Maintenance Mode',
                         'Check Free Space',
                         'Create Backup',
                         'Download Nextcloud',
                         'Extract Nextcloud',
                         'Run Nextcloud Upgrade',
                         'Cleanup',
-                        'Disable Maintenance Mode',
                         'Exit'
                     ],
                 }
