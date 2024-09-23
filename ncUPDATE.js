@@ -250,16 +250,13 @@ class ncUPDATE {
       await this.awaitContinue();
     }
 
-    /**
-     * Downloads the latest Nextcloud release to the home directory of the current user with a progress bar.
-     */
     async downloadNextcloud() {
       clearConsole();
       const homeDir = this.runCommand('echo $HOME');
       console.log('Downloading the latest Nextcloud release to your home directory...');
   
       try {
-          await runCommandWithProgress(`curl -o ${homeDir}/nextcloud-latest.zip https://download.nextcloud.com/server/releases/latest.zip`, 100);
+          await runCommandWithProgress(`curl --progress-bar -o ${homeDir}/nextcloud-latest.zip https://download.nextcloud.com/server/releases/latest.zip`, 100);
           console.log(GREEN('Nextcloud package downloaded to your home directory.'));
       } catch (error) {
           console.error(RED('Failed to download Nextcloud package.'));
@@ -268,6 +265,7 @@ class ncUPDATE {
   
       await this.awaitContinue();
   }
+  
 
     /**
    * Extracts the downloaded Nextcloud package into the /var/www/nextcloud directory with www-data permissions.

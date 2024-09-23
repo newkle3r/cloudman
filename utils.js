@@ -44,7 +44,7 @@ export function loadVariables() {
 
 
 /**
- * Runs a command with progress tracking.
+ * Runs a command with progress tracking, specifically for commands like `curl` that output progress on `stderr`.
  * @param {string} command - The command to run.
  * @param {number} [total=100] - The total amount for progress bar.
  * @returns {Promise<void>} - Resolves when the command is done.
@@ -57,14 +57,16 @@ export function runCommandWithProgress(command, total = 100) {
 
         progressBar.start(total, 0);
 
+        let progress = 0;
         const process = exec(command);
 
-        let progress = 0;
-
-        process.stdout.on('data', (data) => {
-            // Increment progress based on output.
-            progress += 10; 
-            progressBar.update(progress > total ? total : progress);
+        process.stderr.on('data', (data) => {
+            // Parse `curl`'s progress output
+            const match = data.toString().match(/([0-9]+)%/);
+            if (match && match[1]) {
+                progress = parseInt(match[1], 10);
+                progressBar.update(progress > total ? total : progress);
+            }
         });
 
         process.on('close', (code) => {
