@@ -68,6 +68,8 @@ class ncVARS {
         }
         this.redisStatus = YELLOW(redisStatus) === 'active' ? RED(redisStatus) : GREEN(redisStatus);
 
+
+
         let apache2Status;
         try {
             apache2Status = execSync("systemctl status apache2 | grep Active | awk '{print $2}'").toString().trim();
@@ -77,7 +79,8 @@ class ncVARS {
         } catch (error) {
             apache2Status = 'disabled';  // Sätt till 'disabled' om det uppstår ett fel (t.ex. tjänsten hittas inte)
         }
-        this.apache2Status = apache2Status === 'active' ? RED(apache2Status) : GREEN(apache2Status);
+        this.apache2Status = apache2Status === 'active' ? GREEN(apache2Status) : RED(apache2Status);
+
         
 
 
@@ -123,31 +126,33 @@ class ncVARS {
 
                 
 
-    let appUpdateStatus;
+        let appUpdateStatus;
 
-    try {
-        // Fetch available updates from the ncAPPS.js module
-        const availableUpdates = getAvailableUpdates();
-
-        // Count how many apps have updates available
-        const updateCount = availableUpdates.length;
-
-        // If there are updates, format the status
-        if (updateCount > 0) {
-            const appNames = availableUpdates.map(app => app.name).join(', ');
-            appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);  // Use GREEN for success
-        } else {
-            appUpdateStatus = YELLOW('No apps have available updates');  // Use YELLOW for no updates
+        try {
+            // Fetch list of apps from the Nextcloud OCC command
+            const appListOutput = execSync("sudo -u www-data php /var/www/nextcloud/occ app:list").toString().trim();
+            
+            // Use regex to find apps that need updates (this assumes a specific output format)
+            const updatesAvailable = appListOutput.match(/(\w+):\s*update available/gi) || [];
+        
+            // Count how many apps have updates available
+            const updateCount = updatesAvailable.length;
+        
+            // If there are updates, format the status
+            if (updateCount > 0) {
+                // Extract app names from the match results
+                const appNames = updatesAvailable.map(line => line.split(':')[0]).join(', ');
+                appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);  // Success message in green
+            } else {
+                appUpdateStatus = YELLOW('No apps have available updates');  // Message for no updates
+            }
+        } catch (error) {
+            appUpdateStatus = RED('Error fetching app updates or no apps available');  // Error message in red
         }
-    } catch (error) {
-        appUpdateStatus = 'Error fetching app updates or no apps available';  // Use RED for error
-    }
-
-    // Log the colored app update status
-    //console.log(appUpdateStatus);
-
-    // Store the app update status for later use (optional)
-    this.appUpdateStatus = appUpdateStatus;
+        
+        // Output or store the app update status
+        console.log(appUpdateStatus);
+        this.appUpdateStatus = appUpdateStatus;
 
                     
 
@@ -215,7 +220,7 @@ class ncVARS {
             const data = fs.readFileSync(this.filePath, 'utf8');
             const loadedVars = JSON.parse(data);
             Object.assign(this, loadedVars);
-            console.log(`Variables loaded from ${this.filePath}`);
+            // console.log(`Variables loaded from ${this.filePath}`);
         } else {
             console.error(`File not found: ${this.filePath}`);
         }

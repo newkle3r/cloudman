@@ -1,7 +1,7 @@
 
     import ncVARS from "./ncVARS";
   
-
+/*
     function loadVariables() {
         try {
             const data = fs.readFileSync('./variables.json', 'utf8');
@@ -15,7 +15,7 @@
     const varsclass = ncVARS();
     const vars = loadVariables();
 
-/*
+
     const distro = varsclass.DISTRO;
     console.log(distro)
     const address = varsclass.ADDRESS;
