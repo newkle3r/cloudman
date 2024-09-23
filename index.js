@@ -97,7 +97,7 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  */
 async function mainMenu() {
     clearConsole();
-    welcome();
+    await welcome();
 
     const answers = await inquirer.prompt([
         {
@@ -206,6 +206,5 @@ function exitProgram() {
 }
 
 (async () => {
-    await welcome();
     await mainMenu();
 })();
