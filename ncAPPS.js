@@ -1,3 +1,4 @@
+import { clearConsole,welcome } from './utils.js';
 import { GREEN, RED } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';

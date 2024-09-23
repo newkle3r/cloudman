@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { clearConsole,welcome } from './utils.js';
 import fs from 'fs';
 import readlineSync from 'readline-sync';
 

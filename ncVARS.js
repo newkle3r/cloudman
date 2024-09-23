@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import { execSync } from 'child_process';
 import { RED,GREEN,BLUE,YELLOW,PURPLE } from './color.js';
+import { clearConsole,welcome } from './utils.js';
 
 
 /**

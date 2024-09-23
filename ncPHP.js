@@ -1,3 +1,4 @@
+import { clearConsole,welcome } from './utils.js';
 import fs from 'fs';
 import { execSync } from 'child_process';
 import { createSpinner } from 'nanospinner';

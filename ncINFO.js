@@ -1,5 +1,4 @@
-
-    import ncVARS from "./ncVARS";
+import ncVARS from "./ncVARS";
   
 /*
     function loadVariables() {

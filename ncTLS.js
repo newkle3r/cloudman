@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { clearConsole,welcome } from './utils.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 

@@ -1,4 +1,5 @@
 import { RED,GREEN } from './color.js';
+import { clearConsole,welcome } from './utils.js';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import readlineSync from 'readline-sync';

@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { clearConsole,welcome } from './utils.js';
 import { createSpinner } from 'nanospinner';
 import inquirer from 'inquirer';
 import chalk from 'chalk';

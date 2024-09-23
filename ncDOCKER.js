@@ -1,14 +1,10 @@
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
+import { clearConsole,welcome } from './utils.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 
-
-function clearConsole() {
-    console.clear();  
-    // process.stdout.write('\x1Bc')
-}
 
 
 /**
@@ -53,6 +49,7 @@ class ncDOCKER {
 
         let continueMenu = true;
         clearConsole();
+        await welcome(); // temporary use of main splash, passed from index.js
 
         while (continueMenu === true) {
 
@@ -102,6 +99,7 @@ class ncDOCKER {
         }
     }
     }
+    
     /**
      * Lists all running and stopped Docker containers.
      */

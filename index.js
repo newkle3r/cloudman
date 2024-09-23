@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-
+import { clearConsole,welcome,loadVariables } from './utils.js';
 import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
 import ncPHP from './ncPHP.js';
@@ -12,12 +12,7 @@ import ncLDAP from './ncLDAP.js';
 import ncREDIS from './ncREDIS.js';
 import noVMNC from './nextcloud.js';
 import ncTLS from './ncTLS.js';
-// import { getAvailableUpdates } from 'ncAPPS.js';  // Ensure your file is named 'ncAPPS.js' with the `.js` extension
 import ncVARS from './ncVARS.js';
-
-
-
-
 import fs from 'fs';
 import chalk, { colorNames } from 'chalk';
 import chalkAnimation from 'chalk-animation';
@@ -27,34 +22,13 @@ import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 
 
-
 async function sleep(ms = 2000) {
     return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function checkComponent(command) {
-    try {
-        execSync(command);
-        return true; 
-    } catch (error) {
-        return false; 
-    }
-}
-function loadVariables() {
-    try {
-        const data = fs.readFileSync('./variables.json', 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading variables.json:', error);
-        return {};
-    }
 }
 
   // Load variables from variables.json
   const varsclass = new ncVARS();
   const vars = loadVariables();
-  
-
   
   const version = varsclass.DISTRO;
   const ipv4 = varsclass.WANIP4;
@@ -67,17 +41,13 @@ function loadVariables() {
   const SMTPStatus = varsclass.SMTPStatus;
   const dockerStatus = varsclass.dockerStatus;
   const appUpdates = varsclass.getAvailableUpdates;
-  
 
-  
-  
-  
-  
-  
-  
-
-
+  /**
+   * Main splash, moved to utils.js, remove after debug
+   */
 async function welcome() {
+    clearConsole();
+    
 
 
     console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
@@ -111,20 +81,21 @@ async function welcome() {
 let activeMenu = null;
 /**
  * Clear any active prompts or actions before going back to the main menu
+ * Needs activeMenu variable to track active instance.
+ * Should move to utils after debug
  */
 function resetActiveMenu() {
     activeMenu = null;
 }
+
 const linkText = 'Want a professional to just fix it for you? Click here!';
 const url = 'https://shop.hanssonit.se/product-category/support/';
-// Klickbar länk i terminalen (fungerar i terminaler som stöder detta)
 
 
+/**
+ * Main menu system from which all others branch
+ */
 async function mainMenu() {
-
-    
-    
-    
 
     const answers = await inquirer.prompt([
         {
@@ -190,7 +161,7 @@ async function mainMenu() {
 
         case 'Manage Docker':
             const dockerManager = new ncDOCKER();
-            return dockerManager.manageDocker(mainMenu);
+            return dockerManager.manageDocker(mainMenu,welcome);
 
         case 'Manage Redis':
             const redisManager = new ncREDIS();
@@ -221,6 +192,7 @@ async function mainMenu() {
 }
 
 /**
+ * Should move to utils.js after debug!
  * Make sure to reset the active menu before exiting or transitioning
  */
 function exitProgram() {
