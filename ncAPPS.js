@@ -6,7 +6,7 @@ import { execSync } from 'child_process';
 
 class ncAPPS {
     constructor(nextcloudPath = '/var/www/nextcloud') {
-        this.occCommand = `${nextcloudPath}/occ`;  // Path to the Nextcloud occ CLI
+        this.occCommand = `${nextcloudPath}/occ`; 
     }
 
     async manageApps(mainMenu) {
@@ -98,16 +98,18 @@ class ncAPPS {
         ]);
     
         if (appName === 'Abort') {
-            return this.manageApps(); 
+            return this.manageApps();
         }
     
-        const spinner = createSpinner(`Enabling app ${appName}...`).start();
+        const appId = appName.split(':')[0]; 
+    
+        const spinner = createSpinner(`Enabling app ${appId}...`).start();
     
         try {
-            checkComponent(`sudo -u www-data php ${this.occCommand} app:enable ${appName}`);
-            spinner.success({ text: `${GREEN(`App '${appName}' has been enabled!`)}` });
+            checkComponent(`sudo -u www-data php ${this.occCommand} app:enable ${appId}`);
+            spinner.success({ text: `${GREEN(`App '${appId}' has been enabled!`)}` });
         } catch (error) {
-            spinner.error({ text: `${RED(`Failed to enable app '${appName}'.`)}` });
+            spinner.error({ text: `${RED(`Failed to enable app '${appId}'.`)}` });
             console.error(error);
         }
     
@@ -178,13 +180,16 @@ class ncAPPS {
             return this.manageApps();
         }
     
-        const spinner = createSpinner(`Removing app ${appName}...`).start();
-        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:remove ${appName}`);
+        const appId = appName.split(':')[0];  // Extract only the app ID (e.g., sociallogin)
     
-        if (output) {
-            spinner.success({ text: `${GREEN(`App '${appName}' has been removed!`)}` });
-        } else {
-            spinner.error({ text: `${RED(`Failed to remove app '${appName}'.`)}` });
+        const spinner = createSpinner(`Removing app ${appId}...`).start();
+        
+        try {
+            checkComponent(`sudo -u www-data php ${this.occCommand} app:remove ${appId}`);
+            spinner.success({ text: `${GREEN(`App '${appId}' has been removed!`)}` });
+        } catch (error) {
+            spinner.error({ text: `${RED(`Failed to remove app '${appId}'.`)}` });
+            console.error(error);
         }
     
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
@@ -267,7 +272,7 @@ class ncAPPS {
             const availableUpdates = await this.getAvailableUpdates();
     
             if (availableUpdates.length === 0) {
-                spinner.stop(); // Stop spinner before returning to menu
+                spinner.stop(); 
                 console.log(RED('No apps with available updates.'));
                 await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
                 return this.manageApps();
@@ -284,7 +289,7 @@ class ncAPPS {
             ]);
     
             if (appsToUpdate.length === 0) {
-                spinner.stop(); // Stop spinner if no apps are selected
+                spinner.stop(); 
                 console.log(RED('No apps selected for update.'));
                 return this.manageApps();
             }
@@ -315,12 +320,12 @@ class ncAPPS {
     
         try {
             const output = execSync(`sudo -u www-data php ${this.occCommand} update:check`, { encoding: 'utf8' });
-            spinner.stop(); // Stop spinner when the check is done
+            spinner.stop();
     
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
         } catch (error) {
-            spinner.stop(); // Stop spinner in case of error
+            spinner.stop(); 
             console.error(RED('Failed to fetch available updates.'));
             return [];
         }
