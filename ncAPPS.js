@@ -2,6 +2,7 @@ import { clearConsole, checkComponent } from './utils.js';
 import { GREEN, RED } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
+import { execSync } from 'child_process'; 
 
 class ncAPPS {
     constructor(nextcloudPath = '/var/www/nextcloud') {
@@ -162,7 +163,7 @@ class ncAPPS {
             return this.manageApps();
         }
     
-        installedApps.push('Abort'); // Add an 'Abort' option
+        installedApps.push('Abort');
     
         const { appName } = await inquirer.prompt([
             {
@@ -174,7 +175,7 @@ class ncAPPS {
         ]);
     
         if (appName === 'Abort') {
-            return this.manageApps(); // Return to app management menu if 'Abort' is selected
+            return this.manageApps();
         }
     
         const spinner = createSpinner(`Removing app ${appName}...`).start();
@@ -262,10 +263,11 @@ class ncAPPS {
                 console.error(error);
             }
         } else if (updateChoice === 'Update Specific App') {
-            // Get a list of apps with available updates
+            // Get a list of apps with available updates using the `update:check` command
             const availableUpdates = await this.getAvailableUpdates();
     
             if (availableUpdates.length === 0) {
+                spinner.stop(); // Stop spinner before returning to menu
                 console.log(RED('No apps with available updates.'));
                 await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
                 return this.manageApps();
@@ -282,6 +284,7 @@ class ncAPPS {
             ]);
     
             if (appsToUpdate.length === 0) {
+                spinner.stop(); // Stop spinner if no apps are selected
                 console.log(RED('No apps selected for update.'));
                 return this.manageApps();
             }
@@ -308,15 +311,21 @@ class ncAPPS {
      * @returns {Array<string>} - List of app names with available updates.
      */
     async getAvailableUpdates() {
+        const spinner = createSpinner('Checking for available Nextcloud app updates...').start();
+    
         try {
-            const output = execSync(`sudo -u www-data php ${this.occCommand} app:update --list`, { encoding: 'utf8' });
+            const output = execSync(`sudo -u www-data php ${this.occCommand} update:check`, { encoding: 'utf8' });
+            spinner.stop(); // Stop spinner when the check is done
+    
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
         } catch (error) {
+            spinner.stop(); // Stop spinner in case of error
             console.error(RED('Failed to fetch available updates.'));
             return [];
         }
     }
+    
 }
 
 export default ncAPPS;
