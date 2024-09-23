@@ -82,17 +82,23 @@ class ncAPPS {
         if (availableApps.length === 0) {
             console.log(RED('No available apps to enable.'));
             await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-            return this.manageApps(); // Return to the app management menu
+            return this.manageApps();
         }
+    
+        availableApps.push('Abort');
     
         const { appName } = await inquirer.prompt([
             {
                 type: 'list',
                 name: 'appName',
-                message: 'Select the app to enable:',
+                message: 'Select the app to enable (or choose Abort to go back):',
                 choices: availableApps
             }
         ]);
+    
+        if (appName === 'Abort') {
+            return this.manageApps(); 
+        }
     
         const spinner = createSpinner(`Enabling app ${appName}...`).start();
     
@@ -107,73 +113,85 @@ class ncAPPS {
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.manageApps();
     }
-
+    
     async disableApp() {
         clearConsole();
         const installedApps = await this.getInstalledApps();
-
+    
         if (installedApps.length === 0) {
             console.log(RED('No installed apps to disable.'));
             await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
             return this.manageApps();
         }
-
+    
+        installedApps.push('Abort'); 
+    
         const { appName } = await inquirer.prompt([
             {
                 type: 'list',
                 name: 'appName',
-                message: 'Select the app to disable:',
+                message: 'Select the app to disable (or choose Abort to go back):',
                 choices: installedApps
             }
         ]);
-
+    
+        if (appName === 'Abort') {
+            return this.manageApps();
+        }
+    
         const spinner = createSpinner(`Disabling app ${appName}...`).start();
         const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:disable ${appName}`);
-
+    
         if (output) {
             spinner.success({ text: `${GREEN(`App '${appName}' has been disabled!`)}` });
         } else {
             spinner.error({ text: `${RED(`Failed to disable app '${appName}'.`)}` });
         }
-
+    
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.manageApps();
     }
-
+    
     async removeApp() {
         clearConsole();
         const installedApps = await this.getInstalledApps();
-
+    
         if (installedApps.length === 0) {
             console.log(RED('No installed apps to remove.'));
             await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
             return this.manageApps();
         }
-
+    
+        installedApps.push('Abort'); // Add an 'Abort' option
+    
         const { appName } = await inquirer.prompt([
             {
                 type: 'list',
                 name: 'appName',
-                message: 'Select the app to remove:',
+                message: 'Select the app to remove (or choose Abort to go back):',
                 choices: installedApps
             }
         ]);
-
+    
+        if (appName === 'Abort') {
+            return this.manageApps(); // Return to app management menu if 'Abort' is selected
+        }
+    
         const spinner = createSpinner(`Removing app ${appName}...`).start();
         const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:remove ${appName}`);
-
+    
         if (output) {
             spinner.success({ text: `${GREEN(`App '${appName}' has been removed!`)}` });
         } else {
             spinner.error({ text: `${RED(`Failed to remove app '${appName}'.`)}` });
         }
-
+    
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.manageApps();
     }
 
     async getInstalledApps() {
-        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list --shipped=true`);
+        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list`);
         if (output) {
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
@@ -194,6 +212,108 @@ class ncAPPS {
             }
         } else {
             console.error(RED('Failed to fetch available apps.'));
+            return [];
+        }
+    }
+
+    async listUpdates() {
+        clearConsole();
+        const spinner = createSpinner('Checking for available Nextcloud app updates...').start();
+    
+        try {
+            const output = execSync(`sudo -u www-data php ${this.occCommand} update:check`, { encoding: 'utf8' });
+            spinner.success({ text: `${GREEN('Available Nextcloud app updates:')}` });
+            console.log(output);
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to check for app updates.')}` });
+            console.error(error);
+        }
+    
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
+    }
+    
+    async updateApps() {
+        clearConsole();
+    
+        // Prompt the user to update all apps or a specific app
+        const { updateChoice } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'updateChoice',
+                message: 'Do you want to update all apps or a specific app?',
+                choices: ['Update All Apps', 'Update Specific App', 'Abort']
+            }
+        ]);
+    
+        if (updateChoice === 'Abort') {
+            return this.manageApps();
+        }
+    
+        const spinner = createSpinner('Updating Nextcloud apps...').start();
+    
+        if (updateChoice === 'Update All Apps') {
+            // Update all apps
+            try {
+                execSync(`sudo -u www-data php ${this.occCommand} app:update --all`, { encoding: 'utf8' });
+                spinner.success({ text: `${GREEN('All Nextcloud apps updated successfully!')}` });
+            } catch (error) {
+                spinner.error({ text: `${RED('Failed to update all apps.')}` });
+                console.error(error);
+            }
+        } else if (updateChoice === 'Update Specific App') {
+            // Get a list of apps with available updates
+            const availableUpdates = await this.getAvailableUpdates();
+    
+            if (availableUpdates.length === 0) {
+                console.log(RED('No apps with available updates.'));
+                await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+                return this.manageApps();
+            }
+    
+            // Allow the user to choose which app(s) to update
+            const { appsToUpdate } = await inquirer.prompt([
+                {
+                    type: 'checkbox',
+                    name: 'appsToUpdate',
+                    message: 'Select the app(s) to update:',
+                    choices: availableUpdates
+                }
+            ]);
+    
+            if (appsToUpdate.length === 0) {
+                console.log(RED('No apps selected for update.'));
+                return this.manageApps();
+            }
+    
+            // Update selected apps
+            try {
+                for (const appName of appsToUpdate) {
+                    execSync(`sudo -u www-data php ${this.occCommand} app:update ${appName}`, { encoding: 'utf8' });
+                    console.log(GREEN(`App '${appName}' updated successfully!`));
+                }
+                spinner.success({ text: `${GREEN('Selected apps updated successfully!')}` });
+            } catch (error) {
+                spinner.error({ text: `${RED('Failed to update one or more apps.')}` });
+                console.error(error);
+            }
+        }
+    
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
+    }
+    
+    /**
+     * Method to get a list of apps with available updates.
+     * @returns {Array<string>} - List of app names with available updates.
+     */
+    async getAvailableUpdates() {
+        try {
+            const output = execSync(`sudo -u www-data php ${this.occCommand} app:update --list`, { encoding: 'utf8' });
+            const appList = output.match(/- (.*?)$/gm);
+            return appList ? appList.map(app => app.replace('- ', '')) : [];
+        } catch (error) {
+            console.error(RED('Failed to fetch available updates.'));
             return [];
         }
     }
