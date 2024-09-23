@@ -29,7 +29,6 @@ async function sleep(ms = 2000) {
   // Load variables from variables.json
   const varsclass = new ncVARS();
   const vars = loadVariables();
-  
   const version = varsclass.DISTRO;
   const ipv4 = varsclass.WANIP4;
   const address = varsclass.ADDRESS;
@@ -47,6 +46,7 @@ async function sleep(ms = 2000) {
    */
 async function welcome() {
     clearConsole();
+
     
 
 

@@ -3,6 +3,10 @@ import figlet from 'figlet';
 import gradient from 'gradient-string';
 import {execSync} from 'child_process';
 import { GREEN, BLUE, YELLOW } from './color.js';  
+import { exec } from 'child_process';
+import cliProgress from 'cli-progress';
+
+export { runCommandWithProgress };
 
 /**
  * Clears the console screen.
@@ -36,6 +40,48 @@ export function loadVariables() {
     }
 }
 
+
+
+
+/**
+ * Runs a command with progress tracking.
+ * @param {string} command - The command to run.
+ * @param {number} [total=100] - The total amount for progress bar.
+ * @returns {Promise<void>} - Resolves when the command is done.
+ */
+export function runCommandWithProgress(command, total = 100) {
+    return new Promise((resolve, reject) => {
+        const progressBar = new cliProgress.SingleBar({
+            format: 'Progress [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}'
+        }, cliProgress.Presets.shades_classic);
+
+        progressBar.start(total, 0);
+
+        const process = exec(command);
+
+        let progress = 0;
+
+        process.stdout.on('data', (data) => {
+            // Increment progress based on output.
+            progress += 10; 
+            progressBar.update(progress > total ? total : progress);
+        });
+
+        process.on('close', (code) => {
+            progressBar.stop();
+            if (code === 0) {
+                resolve();
+            } else {
+                reject(new Error(`Command failed with exit code ${code}`));
+            }
+        });
+
+        process.on('error', (error) => {
+            progressBar.stop();
+            reject(error);
+        });
+    });
+}
 
 /**
  * For index.js

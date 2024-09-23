@@ -1,8 +1,9 @@
-import { RED, GREEN } from './color.js';
+import { RED, GREEN,YELLOW } from './color.js';
 import { clearConsole, welcome } from './utils.js';
 import { execSync,spawn } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
+import { runCommandWithProgress } from './utils.js';
 
 /**
  * Class to handle the Nextcloud update process.
@@ -11,7 +12,7 @@ import inquirer from 'inquirer';
  * @class ncUPDATE
  */
 class ncUPDATE {
-    constructor() {
+    constructor(mainMenu) {
         this.SCRIPTS = '/var/scripts';
         this.BACKUP = '/mnt/NCBACKUP/';
         this.NCPATH = '/var/www/nextcloud';
@@ -213,11 +214,13 @@ class ncUPDATE {
         await this.awaitContinue();
     }
 
-  /**
-   * Creates a backup of Nextcloud's config and apps directories.
-   */
+ /**
+ * Creates a backup of Nextcloud's config and apps directories.
+ */
   async createBackup() {
       clearConsole();
+      const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+
       if (!fs.existsSync(this.BACKUP)) {
           console.log(RED(`${this.BACKUP} does not exist. Creating backup directory...`));
           this.runCommand(`sudo mkdir -p ${this.BACKUP}`);
@@ -226,18 +229,26 @@ class ncUPDATE {
 
       console.log('Creating a backup of Nextcloud files...');
 
-      // Use sudo to handle both reading and writing permissions
       try {
-          this.runCommand(`sudo rsync -Aax ${this.NCPATH}/config ${this.BACKUP}`);
-          this.runCommand(`sudo rsync -Aax ${this.NCPATH}/apps ${this.BACKUP}`);
+          // Start the progress bar
+          progressBar.start(100, 0); // Assuming 100 is the total progress percentage
+
+          // Use sudo to handle permissions and capture rsync progress
+          this.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
+          this.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
+
+          progressBar.update(100); // Update to 100% once completed
+          progressBar.stop();
+
           console.log(GREEN('Backup completed.'));
       } catch (error) {
+          progressBar.stop();
           console.error(RED('Failed to create a backup. Please check permissions and try again.'));
           console.error(error.message);
       }
 
       await this.awaitContinue();
-  }
+    }
 
     /**
      * Downloads the latest Nextcloud release to the home directory of the current user with a progress bar.
@@ -245,35 +256,17 @@ class ncUPDATE {
     async downloadNextcloud() {
       clearConsole();
       const homeDir = this.runCommand('echo $HOME');
-      console.log(GREEN('Downloading the latest Nextcloud release to your home directory...'));
-
-      return new Promise((resolve, reject) => {
-          const downloadProcess = spawn('curl', [
-              '-#', // progress bar  for curl
-              '-o', `${homeDir}/nextcloud-latest.zip`,
-              'https://download.nextcloud.com/server/releases/latest.zip'
-          ]);
-
-          downloadProcess.stdout.on('data', (data) => {
-              process.stdout.write(data); // Write progress bar to stdout
-          });
-
-          downloadProcess.stderr.on('data', (data) => {
-              process.stderr.write(data);
-          });
-
-          downloadProcess.on('close', (code) => {
-              if (code === 0) {
-                  console.log(GREEN('\nNextcloud package downloaded successfully.'));
-                  resolve();
-              } else {
-                  console.error(RED('\nFailed to download Nextcloud package.'));
-                  reject(new Error(`Download process exited with code ${code}`));
-              }
-          });
-      }).finally(async () => {
-          await this.awaitContinue();
-      });
+      console.log('Downloading the latest Nextcloud release to your home directory...');
+  
+      try {
+          await runCommandWithProgress(`curl -o ${homeDir}/nextcloud-latest.zip https://download.nextcloud.com/server/releases/latest.zip`, 100);
+          console.log(GREEN('Nextcloud package downloaded to your home directory.'));
+      } catch (error) {
+          console.error(RED('Failed to download Nextcloud package.'));
+          console.error(error.message);
+      }
+  
+      await this.awaitContinue();
   }
 
     /**
