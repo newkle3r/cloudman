@@ -1,9 +1,7 @@
 import fs from 'fs';
-import os from 'os';
 import { execSync } from 'child_process';
-import { RED,GREEN,BLUE,YELLOW,PURPLE } from './color.js';
-import { clearConsole,welcome } from './utils.js';
-
+import { RED, GREEN, BLUE, YELLOW, PURPLE } from './color.js';
+import { initialize } from './utils.js';
 
 /**
  * Class to manage Nextcloud configuration variables.
@@ -12,7 +10,17 @@ import { clearConsole,welcome } from './utils.js';
 class ncVARS {
     constructor(filePath = './variables.json') {
         this.filePath = filePath;
-        this.loadVariables(); // Load variables from file during initialization
+        this.lastAppUpdateCheck = null;
+        this.appUpdateStatus = null;
+
+        // Load variables from file during initialization
+        this.loadVariables();
+
+        // Fetch statuses
+        this.psqlStatus = this.getServiceStatus('postgresql');
+        this.redisStatus = this.getServiceStatus('redis-server');
+        this.apache2Status = this.getServiceStatus('apache2');
+        this.dockerStatus = this.getDockerStatus();
 
         // Default directories and paths
         this.SCRIPTS = '/var/scripts';
@@ -46,141 +54,91 @@ class ncVARS {
         // Domain and TLS configuration
         this.DEDYNDOMAIN = this.getCommandOutput("hostname -f");
         this.TLSDOMAIN = this.getCommandOutput("hostname -f");
-        this.TLS_CONF = `/etc/apache2/sites-available/${this.TSLDOMAIN}.conf`;
+        this.TLS_CONF = `/etc/apache2/sites-available/${this.TLSDOMAIN}.conf`;
         this.HTTP_CONF = `/etc/apache2/sites-available/${this.DEDYNDOMAIN}.conf`;
         this.PHPVER = this.getCommandOutput("php -v | grep '^PHP' | awk '{print $2}'");
-        // Certificate files
-        this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'"); // Can store multiple paths if multiple cerificates are registered
+        this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
-        // Proxy settings for specific Ubuntu versions
-        this.SETENVPROXY = 'proxy-sendcl';  // Typically set based on Ubuntu version
-        // Custom port for public access
-        this.DEDYNPORT = '443';  // Nextcloud only allows 443 for security
+        this.SETENVPROXY = 'proxy-sendcl';
+        this.DEDYNPORT = '443';
+    }
 
+    async manageVars() {
+        // Initialize and fetch updates if necessary
+        await initialize(this.getAvailableUpdates, 'lastAppUpdateCheck', this);
+       
+    }
 
+   
 
-
-
-
-
-        
-        let postgresqlStatus;
+    /**
+     * Asynchronously fetch the available app updates.
+     */
+    async getAvailableUpdates() {
+        let appUpdateStatus;
         try {
-            postgresqlStatus = execSync("systemctl status postgresql | grep Active | awk '{print $2}'").toString().trim();
-            if (!postgresqlStatus) {
-                postgresqlStatus = 'disabled';  
+            const appListOutput = execSync("sudo -u www-data php /var/www/nextcloud/occ app:list").toString().trim();
+            const updatesAvailable = appListOutput.match(/(\w+):\s*update available/gi) || [];
+            const updateCount = updatesAvailable.length;
+            
+            if (updateCount > 0) {
+                const appNames = updatesAvailable.map(line => line.split(':')[0]).join(', ');
+                appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);
+            } else {
+                appUpdateStatus = YELLOW('No apps have available updates');
             }
         } catch (error) {
-            postgresqlStatus = 'disabled'; 
+            appUpdateStatus = RED('Error fetching app updates or no apps available');
         }
-        
-        this.psqlStatus = YELLOW(postgresqlStatus) === 'active' ? RED(postgresqlStatus) : GREEN(postgresqlStatus);
+
+        this.appUpdateStatus = appUpdateStatus;
+        return appUpdateStatus;
+    }
 
 
-        let redisStatus;
+
+    /**
+     * Fetch the status of a system service like PostgreSQL, Redis, or Apache.
+     * @param {string} service - The name of the service (e.g., 'postgresql', 'redis-server').
+     * @returns {string} - Formatted service status.
+     */
+    getServiceStatus(service) {
+        let status;
         try {
-            redisStatus = execSync("systemctl status redis-server | grep Active | awk '{print $2}'").toString().trim();
-            if (!redisStatus) {
-                redisStatus = 'disabled';  
+            status = execSync(`systemctl status ${service} | grep Active | awk '{print $2}'`).toString().trim();
+            if (!status) {
+                status = 'disabled';
             }
         } catch (error) {
-            redisStatus = 'disabled'; 
+            status = 'disabled';
         }
-        this.redisStatus = YELLOW(redisStatus) === 'active' ? RED(redisStatus) : GREEN(redisStatus);
+        return status === 'active' ? GREEN(status) : RED(status);
+    }
 
-
-
-        let apache2Status;
-        try {
-            apache2Status = execSync("systemctl status apache2 | grep Active | awk '{print $2}'").toString().trim();
-            if (!apache2Status) {
-                apache2Status = 'disabled';  
-            }
-        } catch (error) {
-            apache2Status = 'disabled'; 
-        }
-        this.apache2Status = apache2Status === 'active' ? GREEN(apache2Status) : RED(apache2Status);
-
-        
-
-
+    /**
+     * Fetch Docker container status and format the output.
+     */
+    getDockerStatus() {
         let dockerStatus;
-
         try {
-            // List active containers with their names and ports
             const containerInfo = execSync("docker ps --format '{{.Names}} {{.Ports}}'").toString().trim();
-
             if (containerInfo) {
-                // Process each container's information
                 const containers = containerInfo.split('\n').map(container => {
                     const [name, ports] = container.split(' ');
-                    
-                    // Simplify the container name by taking the first part before '_' or '-'
                     const simplifiedName = name.split(/[_-]/)[0];
-
-                    // Fetch IP address of the container (without coloring in execSync command)
                     const ipInfo = execSync(`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${name}`).toString().trim();
-
-                    // Return colored information for name, ip, and ports
                     return { name: PURPLE(simplifiedName), ip: ipInfo, ports };
                 });
-
-                // Format the result for all containers
                 dockerStatus = containers.map(container => {
                     return `${BLUE('Container:')} ${PURPLE(container.name)}, ${BLUE('IP:')} ${GREEN(container.ip)}, ${BLUE('Ports:')} ${GREEN(container.ports)}`;
                 }).join('\n');
             } else {
-                dockerStatus = 'No active containers'; 
+                dockerStatus = 'No active containers';
             }
         } catch (error) {
-            console.error('Error while fetching Docker containers:', error.message);  // Log the error for debugging
-            dockerStatus = PURPLE('Docker is not running or an error occurred');  // Handle error
+            dockerStatus = PURPLE('Docker is not running or an error occurred');
         }
-
-        this.dockerStatus = dockerStatus;
-
- 
-
-
-
-                
-
-        let appUpdateStatus;
-
-        try {
-            // Fetch list of apps from the Nextcloud OCC command
-            const appListOutput = execSync("sudo -u www-data php /var/www/nextcloud/occ app:list").toString().trim();
-            
-            // Use regex to find apps that need updates (this assumes a specific output format)
-            const updatesAvailable = appListOutput.match(/(\w+):\s*update available/gi) || [];
-        
-            // Count how many apps have updates available
-            const updateCount = updatesAvailable.length;
-        
-            // If there are updates, format the status
-            if (updateCount > 0) {
-                // Extract app names from the match results
-                const appNames = updatesAvailable.map(line => line.split(':')[0]).join(', ');
-                appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`); 
-            } else {
-                appUpdateStatus = YELLOW('No apps have available updates');  
-            }
-        } catch (error) {
-            appUpdateStatus = RED('Error fetching app updates or no apps available'); 
-        }
-        
-        console.log(appUpdateStatus);
-        this.appUpdateStatus = appUpdateStatus;
-
-
-        // DNS and ports
-        this.INTERNET_DNS = '9.9.9.9';
-        this.DNS1 = '9.9.9.9';
-        this.DNS2 = '149.112.112.112';
-        this.NONO_PORTS = [
-            22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5179,
-            5432, 7867, 7983, 8983, 10000, 8081, 8443, 9443, 9000, 9980, 9090, 9200, 9600, 1234
-        ];
+        return dockerStatus;
     }
 
     /**
@@ -202,7 +160,13 @@ class ncVARS {
      */
     saveVariables() {
         try {
-            const data = JSON.stringify(this, null, 2);
+            const properties = Object.keys(this).reduce((acc, key) => {
+                if (typeof this[key] !== 'function') {
+                    acc[key] = this[key];
+                }
+                return acc;
+            }, {});
+            const data = JSON.stringify(properties, null, 2);
             fs.writeFileSync(this.filePath, data, 'utf8');
             console.log(`Variables saved to ${this.filePath}`);
         } catch (error) {
@@ -215,10 +179,18 @@ class ncVARS {
      */
     loadVariables() {
         if (fs.existsSync(this.filePath)) {
-            const data = fs.readFileSync(this.filePath, 'utf8');
-            const loadedVars = JSON.parse(data);
-            Object.assign(this, loadedVars);
-            // console.log(`Variables loaded from ${this.filePath}`);
+            try {
+                const data = fs.readFileSync(this.filePath, 'utf8');
+                const loadedVars = JSON.parse(data);
+                Object.keys(loadedVars).forEach(key => {
+                    if (typeof loadedVars[key] !== 'function') {
+                        this[key] = loadedVars[key];
+                    }
+                });
+                console.log(`Variables loaded from ${this.filePath}`);
+            } catch (error) {
+                console.error(`Error loading variables from ${this.filePath}:`, error);
+            }
         } else {
             console.error(`File not found: ${this.filePath}`);
         }
@@ -226,14 +198,23 @@ class ncVARS {
 
     /**
      * Update a specific variable in the JSON and class property.
+     * Only data properties will be updated, excluding functions.
      * @param {string} key - The variable name to update.
      * @param {any} value - The new value to set for the variable.
      */
     updateVariable(key, value) {
-        this[key] = value;
-        this.saveVariables();
-        console.log(`Updated ${key} to ${value}`);
+        if (typeof this[key] !== 'function') {
+            this[key] = value;  // Update the in-memory value
+            this.saveVariables();  // Save the updated variables back to the file
+            console.log(`Updated ${key} to ${value}`);
+        } else {
+            console.error(`Cannot update '${key}' because it is a method, not a variable.`);
+        }
     }
+
+
+
+
 
     /**
      * Print the current variables to the console.

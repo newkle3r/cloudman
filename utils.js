@@ -6,7 +6,6 @@ import { GREEN, BLUE, YELLOW } from './color.js';
 import { exec } from 'child_process';
 import cliProgress from 'cli-progress';
 
-export { runCommandWithProgress };
 
 /**
  * Clears the console screen.
@@ -40,7 +39,23 @@ export function loadVariables() {
     }
 }
 
+/**
+ * Generalized initialization function to fetch updates/statuses
+ * @param {function} fetchFunction - The function to call (e.g. getAvailableUpdates) for fetching updates.
+ * @param {string} lastCheckKey - A unique key to track the last time this specific update was fetched.
+ * @param {object} context - The context (like the class instance) to store lastCheck timestamps.
+ * @param {number} threshold - The time threshold (in milliseconds) to determine if an update is needed.
+ */
+export const UPDATE_THRESHOLD = 60000;
 
+export async function initialize(fetchFunction, lastCheckKey, context, UPDATE_THRESHOLD) {
+    const now = new Date().getTime();
+    
+    if (!context[lastCheckKey] || now - context[lastCheckKey] > threshold) {
+        await fetchFunction();
+        context[lastCheckKey] = now; // Save the timestamp of the last update check
+    }
+}
 
 
 /**

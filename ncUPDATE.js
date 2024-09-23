@@ -3,7 +3,8 @@ import { clearConsole, welcome } from './utils.js';
 import { execSync,spawn } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
-import { runCommandWithProgress } from './utils.js';
+import { runCommandWithProgress, initialize } from './utils.js';
+import cliProgress from 'cli-progress';
 
 /**
  * Class to handle the Nextcloud update process.
@@ -20,6 +21,7 @@ class ncUPDATE {
         this.CURRENTVERSION = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
         this.DISTRO = this.runCommand('lsb_release -sr');
         this.mainMenu = mainMenu; 
+        this.lastCheck = null;
     }
 
     /**
@@ -57,6 +59,7 @@ class ncUPDATE {
      * @returns {Promise<void>} - Resolves when the user action is completed.
      */
     async manageUpdate(mainMenu) {
+      await initialize(this.checkForUpdates, 'lastCheck', this, UPDATE_THRESHOLD);
         let continueMenu = true;
 
         while (continueMenu) {
@@ -231,13 +234,13 @@ class ncUPDATE {
 
       try {
           // Start the progress bar
-          progressBar.start(100, 0); // Assuming 100 is the total progress percentage
+          progressBar.start(100, 0); 
 
           // Use sudo to handle permissions and capture rsync progress
-          this.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
-          this.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
+          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
+          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
 
-          progressBar.update(100); // Update to 100% once completed
+          progressBar.update(100);
           progressBar.stop();
 
           console.log(GREEN('Backup completed.'));

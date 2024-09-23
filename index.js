@@ -41,9 +41,17 @@ async function sleep(ms = 2000) {
   const dockerStatus = varsclass.dockerStatus;
   const appUpdates = varsclass.getAvailableUpdates;
 
-  /**
-   * Main splash, moved to utils.js, remove after debug
-   */
+// Fetch app update information
+let appUpdateStatus;
+try {
+    appUpdateStatus = await getAvailableUpdates();
+} catch (error) {
+    appUpdateStatus = RED('Error fetching app updates');
+}
+
+/**
+ * Main splash, moved to utils.js, remove after debug
+ */
 async function welcome() {
     clearConsole();
 
@@ -199,7 +207,7 @@ async function mainMenu() {
  * Make sure to reset the active menu before exiting or transitioning
  */
 function exitProgram() {
-    VARS.saveVariables('./variables.json');
+    varsclass.saveVariables('./variables.json');
     resetActiveMenu();  // Clear any active states before exiting
     console.log(chalk.green('Goodbye!'));
     process.exit(0);
