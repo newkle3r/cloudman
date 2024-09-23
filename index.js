@@ -11,6 +11,7 @@ import ncBAK from './ncBAK.js';
 import ncLDAP from './ncLDAP.js';
 import ncREDIS from './ncREDIS.js';
 import noVMNC from './nextcloud.js';
+import ncTLS from './ncTLS.js';
 // import { getAvailableUpdates } from 'ncAPPS.js';  // Ensure your file is named 'ncAPPS.js' with the `.js` extension
 import ncVARS from './ncVARS.js';
 

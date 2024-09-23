@@ -42,16 +42,35 @@ class ncVARS {
         this.INTERFACES = '/etc/netplan/nextcloud.yaml';
         this.GATEWAY = this.getCommandOutput("ip route | grep default | awk '{print $3}'");
 
-            // Extract the PostgreSQL status or set to 'disabled' if empty
+        // Domain and TLS configuration
+        this.DEDYNDOMAIN = this.getCommandOutput("hostname -f");
+        this.TLSDOMAIN = this.getCommandOutput("hostname -f");
+        this.TLS_CONF = `/etc/apache2/sites-available/${this.TSLDOMAIN}.conf`;
+        this.HTTP_CONF = `/etc/apache2/sites-available/${this.DEDYNDOMAIN}.conf`;
+        this.PHPVER = this.getCommandOutput("php -v | grep '^PHP' | awk '{print $2}'");
+        // Certificate files
+        this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'"); // Can store multiple paths if multiple cerificates are registered
+        this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
+        // Proxy settings for specific Ubuntu versions
+        this.SETENVPROXY = 'proxy-sendcl';  // Typically set based on Ubuntu version
+        // Custom port for public access
+        this.DEDYNPORT = '443';  // Nextcloud only allows 443 for security
+
+
+
+
+
+
+
         
         let postgresqlStatus;
         try {
             postgresqlStatus = execSync("systemctl status postgresql | grep Active | awk '{print $2}'").toString().trim();
             if (!postgresqlStatus) {
-                postgresqlStatus = 'disabled';  // Set to 'disabled' if status is empty
+                postgresqlStatus = 'disabled';  
             }
         } catch (error) {
-            postgresqlStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
+            postgresqlStatus = 'disabled'; 
         }
         
         this.psqlStatus = YELLOW(postgresqlStatus) === 'active' ? RED(postgresqlStatus) : GREEN(postgresqlStatus);
@@ -61,10 +80,10 @@ class ncVARS {
         try {
             redisStatus = execSync("systemctl status redis-server | grep Active | awk '{print $2}'").toString().trim();
             if (!redisStatus) {
-                redisStatus = 'disabled';  // Set to 'disabled' if status is empty
+                redisStatus = 'disabled';  
             }
         } catch (error) {
-            redisStatus = 'disabled';  // Set to 'disabled' in case of an error (e.g., service not found)
+            redisStatus = 'disabled'; 
         }
         this.redisStatus = YELLOW(redisStatus) === 'active' ? RED(redisStatus) : GREEN(redisStatus);
 
@@ -74,10 +93,10 @@ class ncVARS {
         try {
             apache2Status = execSync("systemctl status apache2 | grep Active | awk '{print $2}'").toString().trim();
             if (!apache2Status) {
-                apache2Status = 'disabled';  // Sätt till 'disabled' om statusen är tom
+                apache2Status = 'disabled';  
             }
         } catch (error) {
-            apache2Status = 'disabled';  // Sätt till 'disabled' om det uppstår ett fel (t.ex. tjänsten hittas inte)
+            apache2Status = 'disabled'; 
         }
         this.apache2Status = apache2Status === 'active' ? GREEN(apache2Status) : RED(apache2Status);
 
@@ -110,14 +129,13 @@ class ncVARS {
                     return `${BLUE('Container:')} ${PURPLE(container.name)}, ${BLUE('IP:')} ${GREEN(container.ip)}, ${BLUE('Ports:')} ${GREEN(container.ports)}`;
                 }).join('\n');
             } else {
-                dockerStatus = 'No active containers';  // If no containers are running
+                dockerStatus = 'No active containers'; 
             }
         } catch (error) {
             console.error('Error while fetching Docker containers:', error.message);  // Log the error for debugging
             dockerStatus = PURPLE('Docker is not running or an error occurred');  // Handle error
         }
 
-        // Store dockerStatus for later use
         this.dockerStatus = dockerStatus;
 
  
@@ -142,38 +160,17 @@ class ncVARS {
             if (updateCount > 0) {
                 // Extract app names from the match results
                 const appNames = updatesAvailable.map(line => line.split(':')[0]).join(', ');
-                appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);  // Success message in green
+                appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`); 
             } else {
-                appUpdateStatus = YELLOW('No apps have available updates');  // Message for no updates
+                appUpdateStatus = YELLOW('No apps have available updates');  
             }
         } catch (error) {
-            appUpdateStatus = RED('Error fetching app updates or no apps available');  // Error message in red
+            appUpdateStatus = RED('Error fetching app updates or no apps available'); 
         }
         
-        // Output or store the app update status
         console.log(appUpdateStatus);
         this.appUpdateStatus = appUpdateStatus;
 
-                    
-
-
-                
-
-        // Let's encrypt - TLS cert
-        
-/*
-        "DEDYNDOMAIN": "The domain name used for TLS activation.",
-        "TLSDOMAIN": "The domain to be set for the Nextcloud TLS configuration.",
-        "TLS_CONF": "TLS configuration file.",
-        "HTTP_CONF": "HTTP configuration file.",
-        "PHPVER": "Current PHP version in use for Apache conf file.",
-        "CERTFILES": "Directory where SSL certificates are stored.",
-        "DHPARAMS_TLS": "DHParams file for TLS configuration.",
-        "SETENVPROXY": "SetEnv proxy-sendcl variable for specific Ubuntu versions.",
-        "DEDYNPORT": "Custom port for public access if the user decides to change it."
-
-*/
-        this.redis = execSync("systemctl status redis | grep Active | awk '{print $2, $3}'").toString().trim();
 
         // DNS and ports
         this.INTERNET_DNS = '9.9.9.9';

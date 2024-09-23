@@ -5,6 +5,12 @@ import { execSync } from 'child_process';
 import chalk from 'chalk';
 
 
+function clearConsole() {
+    console.clear();  
+    // process.stdout.write('\x1Bc')
+}
+
+
 /**
  * Class to manage Docker containers and images using Docker CLI.
  */
@@ -46,6 +52,7 @@ class ncDOCKER {
     async manageDocker(mainMenu) {
 
         let continueMenu = true;
+        clearConsole();
 
         while (continueMenu === true) {
 
@@ -99,6 +106,7 @@ class ncDOCKER {
      * Lists all running and stopped Docker containers.
      */
     async listContainers() {
+        clearConsole();
         const spinner = createSpinner('Fetching Docker containers...').start();
 
         try {
@@ -109,6 +117,7 @@ class ncDOCKER {
             spinner.error({ text: `${RED('Failed to list Docker containers.')}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         await this.manageDocker();
     }
@@ -117,6 +126,7 @@ class ncDOCKER {
      * Lists all Docker images.
      */
     async listImages() {
+        clearConsole();
         const spinner = createSpinner('Fetching Docker images...').start();
 
         try {
@@ -128,6 +138,8 @@ class ncDOCKER {
             console.error(error);
         }
 
+        await this.inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...'}])
+
         await this.manageDocker();
     }
 
@@ -135,6 +147,8 @@ class ncDOCKER {
      * Starts a specified Docker container.
      */
     async startContainer() {
+        clearConsole();
+
         const { containerName } = await inquirer.prompt([
             {
                 type: 'input',
@@ -153,6 +167,8 @@ class ncDOCKER {
             console.error(error);
         }
 
+        
+
         await this.manageDocker();
     }
 
@@ -160,6 +176,7 @@ class ncDOCKER {
      * Stops a specified Docker container.
      */
     async stopContainer() {
+        clearConsole();
         const { containerName } = await inquirer.prompt([
             {
                 type: 'input',
@@ -178,6 +195,8 @@ class ncDOCKER {
             console.error(error);
         }
 
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+
         await this.manageDocker();
     }
 
@@ -185,6 +204,7 @@ class ncDOCKER {
      * Removes a specified Docker container.
      */
     async removeContainer() {
+        clearConsole();
         const { containerName } = await inquirer.prompt([
             {
                 type: 'input',
@@ -202,6 +222,7 @@ class ncDOCKER {
             spinner.error({ text: `${RED(`Failed to remove Docker container '${containerName}'.`)}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         await this.manageDocker();
     }
@@ -210,6 +231,7 @@ class ncDOCKER {
      * Removes a specified Docker image.
      */
     async removeImage() {
+        clearConsole();
         const { imageName } = await inquirer.prompt([
             {
                 type: 'input',
@@ -227,6 +249,7 @@ class ncDOCKER {
             spinner.error({ text: `${RED(`Failed to remove Docker image '${imageName}'.`)}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         await this.manageDocker();
     }
@@ -235,6 +258,7 @@ class ncDOCKER {
      * View Docker networks.
      */
     async viewNetworks() {
+        clearConsole();
         const spinner = createSpinner('Fetching Docker networks...').start();
 
         try {
@@ -245,6 +269,7 @@ class ncDOCKER {
             spinner.error({ text: `${RED('Failed to fetch Docker networks.')}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         await this.manageDocker();
     }
