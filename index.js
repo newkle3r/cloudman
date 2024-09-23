@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { clearConsole,welcome,loadVariables } from './utils.js';
+import { clearConsole,loadVariables } from './utils.js';
 import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
 import ncPHP from './ncPHP.js';
