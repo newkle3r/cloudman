@@ -3,11 +3,9 @@ import { GREEN, RED } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 
-// Needs splash, maybe not fully async?
-
 class ncAPPS {
     constructor(nextcloudPath = '/var/www/nextcloud') {
-        this.occCommand = `${nextcloudPath}/occ`; 
+        this.occCommand = `${nextcloudPath}/occ`;  // Path to the Nextcloud occ CLI
     }
 
     async manageApps(mainMenu) {
@@ -54,7 +52,7 @@ class ncAPPS {
                 case 'Go Back':
                     continueMenu = false;
                     if (typeof mainMenu === 'function') {
-                        mainMenu(); 
+                        mainMenu();
                     }
                     break;
             }
@@ -80,6 +78,13 @@ class ncAPPS {
     async enableApp() {
         clearConsole();
         const availableApps = await this.getAvailableApps();
+    
+        if (availableApps.length === 0) {
+            console.log(RED('No available apps to enable.'));
+            await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+            return this.manageApps(); // Return to the app management menu
+        }
+    
         const { appName } = await inquirer.prompt([
             {
                 type: 'list',
@@ -88,16 +93,17 @@ class ncAPPS {
                 choices: availableApps
             }
         ]);
-
+    
         const spinner = createSpinner(`Enabling app ${appName}...`).start();
-        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:enable ${appName}`);
-
-        if (output) {
+    
+        try {
+            checkComponent(`sudo -u www-data php ${this.occCommand} app:enable ${appName}`);
             spinner.success({ text: `${GREEN(`App '${appName}' has been enabled!`)}` });
-        } else {
+        } catch (error) {
             spinner.error({ text: `${RED(`Failed to enable app '${appName}'.`)}` });
+            console.error(error);
         }
-
+    
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.manageApps();
     }
@@ -105,6 +111,13 @@ class ncAPPS {
     async disableApp() {
         clearConsole();
         const installedApps = await this.getInstalledApps();
+
+        if (installedApps.length === 0) {
+            console.log(RED('No installed apps to disable.'));
+            await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+            return this.manageApps();
+        }
+
         const { appName } = await inquirer.prompt([
             {
                 type: 'list',
@@ -130,6 +143,13 @@ class ncAPPS {
     async removeApp() {
         clearConsole();
         const installedApps = await this.getInstalledApps();
+
+        if (installedApps.length === 0) {
+            console.log(RED('No installed apps to remove.'));
+            await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+            return this.manageApps();
+        }
+
         const { appName } = await inquirer.prompt([
             {
                 type: 'list',
@@ -163,11 +183,17 @@ class ncAPPS {
     }
 
     async getAvailableApps() {
-        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list --shipped`);
+        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list --shipped=true`);
         if (output) {
             const appList = output.match(/- (.*?)$/gm);
-            return appList ? appList.map(app => app.replace('- ', '')) : [];
+            if (appList && appList.length > 0) {
+                return appList.map(app => app.replace('- ', ''));
+            } else {
+                console.error(RED('No available apps found.'));
+                return [];
+            }
         } else {
+            console.error(RED('Failed to fetch available apps.'));
             return [];
         }
     }
