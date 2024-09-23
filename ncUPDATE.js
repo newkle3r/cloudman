@@ -27,12 +27,26 @@ class ncUPDATE {
      */
     runCommand(command) {
         try {
-            return execSync(command).toString().trim();
+            return execSync(command, { shell: '/bin/bash' }).toString().trim();
         } catch (error) {
             console.error(`Error executing command: ${command}`, error);
             return '';
         }
     }
+
+    /**
+     * Checks whether maintenance mode is enabled or disabled.
+     * @returns {boolean} - Returns true if maintenance mode is enabled, otherwise false.
+     */
+    isMaintenanceModeEnabled() {
+      try {
+          const result = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode`);
+          return result.includes('enabled: true');
+      } catch (error) {
+          console.error(RED('Failed to check maintenance mode status.'));
+          return false;
+      }
+  }
 
     /**
      * Displays a menu for managing the Nextcloud update process.
@@ -112,58 +126,68 @@ class ncUPDATE {
     }
 
     /**
-     * Displays a menu to manage maintenance mode in Nextcloud.
-     * The menu will show whether maintenance mode is currently enabled or disabled.
+     * Displays the Maintenance Mode Management menu and allows the user to enable or disable maintenance mode.
      */
     async manageMaintenanceMode() {
       clearConsole();
+      
+      // Check if maintenance mode is enabled or not
+      const maintenanceEnabled = this.isMaintenanceModeEnabled();
+      const menuOptions = [];
 
-      // Check current status of maintenance mode
-      const isMaintenanceEnabled = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode | grep -c "enabled: true"`);
-
-      // Menu options with a clear indication of current state
-      const choices = [
-          { name: `Enable Maintenance Mode ${isMaintenanceEnabled ? '(Currently Active)' : ''}`, value: 'enable' },
-          { name: `Disable Maintenance Mode ${!isMaintenanceEnabled ? '(Currently Inactive)' : ''}`, value: 'disable' },
-          { name: 'Abort and Go Back', value: 'abort' }
-      ];
+      // Add options to the menu based on the current maintenance mode state
+      if (maintenanceEnabled) {
+          menuOptions.push('✔ Enable Maintenance Mode', 'Disable Maintenance Mode', 'Abort and Go Back');
+      } else {
+          menuOptions.push('Enable Maintenance Mode', '✔ Disable Maintenance Mode', 'Abort and Go Back');
+      }
 
       const { action } = await inquirer.prompt([
           {
               type: 'list',
               name: 'action',
               message: 'Maintenance Mode Management:',
-              choices: choices
+              choices: menuOptions
           }
       ]);
 
+      // Handle the selected action
       switch (action) {
-          case 'enable':
-              if (isMaintenanceEnabled) {
-                  console.log(GREEN('Maintenance mode is already enabled.'));
-              } else {
-                  this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`);
-                  console.log(GREEN('Maintenance mode enabled.'));
-              }
+          case '✔ Enable Maintenance Mode':
+          case 'Enable Maintenance Mode':
+              await this.setMaintenanceMode(true);
               break;
 
-          case 'disable':
-              if (!isMaintenanceEnabled) {
-                  console.log(GREEN('Maintenance mode is already disabled.'));
-              } else {
-                  this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
-                  console.log(GREEN('Maintenance mode disabled.'));
-              }
+          case '✔ Disable Maintenance Mode':
+          case 'Disable Maintenance Mode':
+              await this.setMaintenanceMode(false);
               break;
 
-          case 'abort':
-              console.log(GREEN('Returning to the previous menu...'));
-              break;
+          case 'Abort and Go Back':
+              return;
       }
-
-      await this.awaitContinue();
-      return this.manageUpdate(); // Assuming you want to return to the update management menu.
   }
+
+  /**
+     * Enables or disables maintenance mode in Nextcloud.
+     * @param {boolean} enable - True to enable, false to disable.
+     */
+  async setMaintenanceMode(enable) {
+    clearConsole();
+    const command = enable
+        ? `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`
+        : `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`;
+    
+    try {
+        this.runCommand(command);
+        console.log(GREEN(`Maintenance mode ${enable ? 'enabled' : 'disabled'}.`));
+    } catch (error) {
+        console.error(RED(`Failed to ${enable ? 'enable' : 'disable'} maintenance mode.`));
+    }
+
+    await this.awaitContinue();
+}
+
 
   /**
    * Prompts user to press Enter to continue.
@@ -188,20 +212,27 @@ class ncUPDATE {
         await this.awaitContinue();
     }
 
-    /**
-     * Creates a backup of Nextcloud's config and apps directories.
-     */
-    async createBackup() {
-        clearConsole();
-        if (!fs.existsSync(this.BACKUP)) {
-            fs.mkdirSync(this.BACKUP, { recursive: true });
-        }
-        console.log('Creating a backup of Nextcloud files...');
-        this.runCommand(`rsync -Aax ${this.NCPATH}/config ${this.BACKUP}`);
-        this.runCommand(`rsync -Aax ${this.NCPATH}/apps ${this.BACKUP}`);
-        console.log(GREEN('Backup completed.'));
-        await this.awaitContinue();
+      /**
+   * Creates a backup of Nextcloud's config and apps directories.
+   */
+  async createBackup() {
+    clearConsole();
+    if (!fs.existsSync(this.BACKUP)) {
+        fs.mkdirSync(this.BACKUP, { recursive: true });
     }
+    console.log('Creating a backup of Nextcloud files...');
+
+    // Use sudo -u www-data for accessing the /var/www/nextcloud directory
+    try {
+        this.runCommand(`sudo -u www-data rsync -Aax ${this.NCPATH}/config ${this.BACKUP}`);
+        this.runCommand(`sudo -u www-data rsync -Aax ${this.NCPATH}/apps ${this.BACKUP}`);
+        console.log(GREEN('Backup completed.'));
+    } catch (error) {
+        console.error(RED('Backup failed.'), error);
+    }
+
+    await this.awaitContinue();
+  }
 
     /**
      * Downloads the latest Nextcloud release to the home directory of the current user with a progress bar.
