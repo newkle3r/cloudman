@@ -18,6 +18,7 @@ class ncUPDATE {
         this.VMLOGS = '/var/log/nextcloud-vm';
         this.CURRENTVERSION = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
         this.DISTRO = this.runCommand('lsb_release -sr');
+        this.mainMenu = mainMenu; 
     }
 
     /**
@@ -106,7 +107,7 @@ class ncUPDATE {
                 case 'Exit':
                     console.log(GREEN('Returning to main menu...'));
                     continueMenu = false;
-                    mainMenu();
+                    this.mainMenu();
                     break;
             }
         }
@@ -212,26 +213,30 @@ class ncUPDATE {
         await this.awaitContinue();
     }
 
-      /**
+  /**
    * Creates a backup of Nextcloud's config and apps directories.
    */
   async createBackup() {
-    clearConsole();
-    if (!fs.existsSync(this.BACKUP)) {
-        fs.mkdirSync(this.BACKUP, { recursive: true });
-    }
-    console.log('Creating a backup of Nextcloud files...');
+      clearConsole();
+      if (!fs.existsSync(this.BACKUP)) {
+          console.log(RED(`${this.BACKUP} does not exist. Creating backup directory...`));
+          this.runCommand(`sudo mkdir -p ${this.BACKUP}`);
+          console.log(GREEN('Backup directory created.'));
+      }
 
-    // Use sudo -u www-data for accessing the /var/www/nextcloud directory
-    try {
-        this.runCommand(`sudo -u www-data rsync -Aax ${this.NCPATH}/config ${this.BACKUP}`);
-        this.runCommand(`sudo -u www-data rsync -Aax ${this.NCPATH}/apps ${this.BACKUP}`);
-        console.log(GREEN('Backup completed.'));
-    } catch (error) {
-        console.error(RED('Backup failed.'), error);
-    }
+      console.log('Creating a backup of Nextcloud files...');
 
-    await this.awaitContinue();
+      // Use sudo to handle both reading and writing permissions
+      try {
+          this.runCommand(`sudo rsync -Aax ${this.NCPATH}/config ${this.BACKUP}`);
+          this.runCommand(`sudo rsync -Aax ${this.NCPATH}/apps ${this.BACKUP}`);
+          console.log(GREEN('Backup completed.'));
+      } catch (error) {
+          console.error(RED('Failed to create a backup. Please check permissions and try again.'));
+          console.error(error.message);
+      }
+
+      await this.awaitContinue();
   }
 
     /**
@@ -244,13 +249,13 @@ class ncUPDATE {
 
       return new Promise((resolve, reject) => {
           const downloadProcess = spawn('curl', [
-              '-#', // This is the progress bar option for curl
+              '-#', // progress bar  for curl
               '-o', `${homeDir}/nextcloud-latest.zip`,
               'https://download.nextcloud.com/server/releases/latest.zip'
           ]);
 
           downloadProcess.stdout.on('data', (data) => {
-              process.stdout.write(data); // Write curl's progress bar to stdout
+              process.stdout.write(data); // Write progress bar to stdout
           });
 
           downloadProcess.stderr.on('data', (data) => {
@@ -272,15 +277,45 @@ class ncUPDATE {
   }
 
     /**
-     * Extracts the downloaded Nextcloud package into the /var/www/nextcloud directory with www-data permissions.
-     */
-    async extractNextcloud() {
-      clearConsole();
-      const homeDir = this.runCommand('echo $HOME');
-      console.log('Extracting Nextcloud package...');
-      this.runCommand(`sudo -u www-data unzip ${homeDir}/nextcloud-latest.zip -d /var/www`);
-      console.log(GREEN('Extraction completed into /var/www.'));
-      await this.awaitContinue();
+   * Extracts the downloaded Nextcloud package into the /var/www/nextcloud directory with www-data permissions.
+   * Warns the user that this operation will overwrite all files in their Nextcloud installation and prompts for confirmation.
+   */
+  async extractNextcloud() {
+    clearConsole();
+    const homeDir = this.runCommand('echo $HOME');
+    
+    // Display warning message
+    console.log(RED('WARNING: You are about to overwrite ALL files in your Nextcloud installation.'));
+    console.log(RED('It is strongly recommended to run a backup before proceeding.'));
+    
+    // Prompt user for confirmation
+    const { proceed } = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'proceed',
+            message: 'Have you run a backup and do you wish to proceed with the extraction?',
+            default: false
+        }
+    ]);
+    
+    // If user chooses not to proceed, abort the extraction
+    if (!proceed) {
+        console.log(YELLOW('Operation aborted. Please run a backup and try again.'));
+        await this.awaitContinue();
+        return this.manageUpdate();  
+    }
+
+    // Proceed with the extraction
+    console.log('Extracting Nextcloud package into /var/www/nextcloud...');
+    try {
+        this.runCommand(`sudo -u www-data unzip ${homeDir}/nextcloud-latest.zip -d /var/www`);
+        console.log(GREEN('Extraction completed into /var/www/nextcloud.'));
+    } catch (error) {
+        console.error(RED('Failed to extract Nextcloud package.'));
+        console.error(error.message);
+    }
+
+    await this.awaitContinue();
   }
 
     /**
