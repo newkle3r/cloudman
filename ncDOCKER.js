@@ -5,7 +5,7 @@ import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
 
-
+// Needs new splash
 
 /**
  * Class to manage Docker containers and images using Docker CLI.
@@ -99,7 +99,7 @@ class ncDOCKER {
         }
     }
     }
-    
+
     /**
      * Lists all running and stopped Docker containers.
      */
@@ -136,7 +136,7 @@ class ncDOCKER {
             console.error(error);
         }
 
-        await this.inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...'}])
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...'}])
 
         await this.manageDocker();
     }
@@ -164,6 +164,8 @@ class ncDOCKER {
             spinner.error({ text: `${RED(`Failed to start Docker container '${containerName}'.`)}` });
             console.error(error);
         }
+
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         
 

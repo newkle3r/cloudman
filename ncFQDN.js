@@ -1,9 +1,11 @@
 import { RED, GREEN, YELLOW } from './color.js';
-import { clearConsole,welcome } from './utils.js';
+import { clearConsole,welcome,checkComponent } from './utils.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
+
+// Needs suitable splash
 
 /**
  * Class for managing DNS, FQDN, and ports using CLI commands.
@@ -17,6 +19,7 @@ class ncFQDN {
     async manageFQDN(mainMenu) {
 
         let continueMenu = true;
+        clearConsole();
         while (continueMenu === true) {
 
         const answers = await inquirer.prompt([
@@ -64,6 +67,7 @@ class ncFQDN {
      * Identifies the Fully Qualified Domain Name (FQDN) of the current Ubuntu system.
      */
     async identifyFQDN() {
+        clearConsole();
         const spinner = createSpinner('Identifying Fully Qualified Domain Name...').start();
 
         try {
@@ -73,6 +77,7 @@ class ncFQDN {
             spinner.error({ text: `${RED('Failed to identify FQDN')}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         await this.manageFQDN();
     }
@@ -91,6 +96,8 @@ class ncFQDN {
                     return pass ? true : 'Please enter a valid FQDN (e.g., cloud.example.com)';
                 },
             }
+            
+            
         ]);
 
         const { confirm } = await inquirer.prompt([
@@ -131,6 +138,7 @@ class ncFQDN {
         } else {
             console.log(YELLOW('FQDN update canceled.'));
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         await this.manageFQDN();
     }
@@ -138,13 +146,14 @@ class ncFQDN {
     /**
      * Identifies the DNS settings of the current Ubuntu system.
      */
-    identifyDNS() {
+    async identifyDNS() {
+        clearConsole();
         const spinner = createSpinner('Identifying DNS settings...').start();
     
         try {
             // First, try using resolvectl (if available on the system)
             try {
-                const dnsSettings = execSync('resolvectl status | grep "DNS Servers"').toString().trim();
+                const dnsSettings = checkComponent('resolvectl status | grep "DNS Servers"').toString().trim();
                 spinner.success({ text: chalk.green('DNS settings identified via resolvectl:') });
                 console.log(dnsSettings);
             } catch {
@@ -159,16 +168,21 @@ class ncFQDN {
                     throw new Error('No DNS settings found in /etc/resolv.conf');
                 }
             }
+            
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to identify DNS settings.') });
             console.error(error.message);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageFQDN();
+        
     }
 
     /**
      * Updates DNS settings by modifying the Netplan configuration file.
      */
     async updateDNS() {
+        clearConsole();
         const { newDNS } = await inquirer.prompt([
             {
                 type: 'input',
@@ -192,7 +206,7 @@ class ncFQDN {
             spinner.error({ text: `${RED('Failed to update DNS settings')}` });
             console.error(error);
         }
-
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.manageFQDN();
     }
 
@@ -200,6 +214,7 @@ class ncFQDN {
      * Checks and forwards ports 80 (HTTP) and 443 (HTTPS) using UFW or iptables.
      */
     async forwardPorts() {
+        clearConsole();
         const spinner = createSpinner('Checking/forwarding ports...').start();
 
         try {
@@ -250,6 +265,7 @@ class ncFQDN {
             spinner.error({ text: `${RED('Failed to check/forward ports')}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
         await this.manageFQDN();
     }

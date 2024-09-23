@@ -10,7 +10,7 @@ export function clearConsole() {
     console.clear();
 }
 // dublett, ska bort
-async function checkComponent(command) {
+export async function checkComponent(command) {
     try {
         execSync(command);
         return true; 
@@ -19,7 +19,8 @@ async function checkComponent(command) {
     }
 }
 
-function loadVariables() {
+
+export function loadVariables() {
     try {
         const data = fs.readFileSync('./variables.json', 'utf8');
         return JSON.parse(data);
@@ -73,3 +74,4 @@ export async function welcome() {
     console.log(BLUE('app updates:'), appUpdates);
     console.log('');
 }
+

@@ -7,6 +7,8 @@ import { createSpinner } from 'nanospinner';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 
+// Menu needs clear function and suitable splash
+
 // Helper function to create a timestamp for backup files
 function getTimestamp() {
     return new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15);
@@ -106,7 +108,9 @@ class ncBAK {
 
     // Run backups
     async runBackups(mainMenu) {
-        let continueMenu = true; // Keep track if the user wants to keep using the backup menu
+        let continueMenu = true;
+        clearConsole();
+        
     
         while (continueMenu) {
             const choices = [

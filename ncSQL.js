@@ -19,8 +19,8 @@ const variablesPath = 'variables.json';
  */
 class ncSQL {
     constructor() {
-        // Add any necessary initialization if needed, e.g., paths or configurations
-        this.backupPath = '/var/backups/postgresql_backup.sql'; // Default backup location
+
+        this.backupPath = '/var/backups/postgresql_backup.sql';
         this.psqlVER = variables.PSQLVER;
     }
 
@@ -30,6 +30,7 @@ class ncSQL {
     async managePostgreSQL(mainMenu) {
 
         let continueMenu = true;
+        clearConsole();
         while (continueMenu === true) {
             const answers = await inquirer.prompt([
                 {
@@ -69,6 +70,7 @@ class ncSQL {
      * The backup is saved as a single file using pg_dumpall.
      */
     async backupDatabase() {
+        clearConsole();
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
         
         try {
@@ -79,7 +81,7 @@ class ncSQL {
             spinner.error({ text: `${RED('Failed to backup PostgreSQL database')}` });
             console.error(error);
         }
-
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.managePostgreSQL();
     }
 
@@ -87,6 +89,7 @@ class ncSQL {
      * Restores the PostgreSQL database from the backup file.
      */
     async restoreDatabase() {
+        clearConsole();
         const spinner = createSpinner('Restoring PostgreSQL database...').start();
         
         try {
@@ -97,7 +100,7 @@ class ncSQL {
             spinner.error({ text: `${RED('Failed to restore PostgreSQL database')}` });
             console.error(error);
         }
-
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.managePostgreSQL();
     }
 
@@ -105,6 +108,7 @@ class ncSQL {
      * Displays the status of the PostgreSQL service.
      */
     async viewDatabaseStatus() {
+        clearConsole();
         const spinner = createSpinner('Checking PostgreSQL status...').start();
         
         try {
@@ -116,7 +120,7 @@ class ncSQL {
             spinner.error({ text: `${RED('Failed to retrieve PostgreSQL status')}` });
             console.error(error);
         }
-
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.managePostgreSQL();
     }
 }

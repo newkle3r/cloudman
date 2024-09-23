@@ -3,6 +3,7 @@ import { clearConsole,welcome } from './utils.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 
+// Needs clear screen, splash, and is not async yet.
 
 /**
  * Class to manage TLS activation and configuration for Nextcloud.
@@ -74,6 +75,7 @@ class ncTLS {
      * Helper function to execute a shell command and return the output.
      * @param {string} command - The shell command to run.
      * @returns {string} - Output from the command.
+     * Basically checkComponent, but with stringify
      */
     getCommandOutput(command) {
         try {

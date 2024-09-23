@@ -1,4 +1,4 @@
-import { clearConsole,welcome } from './utils.js';
+import { clearConsole,welcome,checkComponent } from './utils.js';
 import { GREEN, RED } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
@@ -17,6 +17,7 @@ class ncAPPS {
      */
     async manageApps(mainMenu) {
         let continueMenu = true;
+        clearConsole();
 
         while (continueMenu) {
             const answers = await inquirer.prompt([
@@ -57,7 +58,7 @@ class ncAPPS {
                     break;
                 case 'Go Back':
                     continueMenu = false;
-                    mainMenu();  // Return to the main menu
+                    mainMenu(); 
                     break;
             }
         }
@@ -67,22 +68,26 @@ class ncAPPS {
      * Lists all installed Nextcloud apps.
      */
     async listInstalledApps() {
+        clearConsole();
         const spinner = createSpinner('Fetching installed Nextcloud apps...').start();
 
         try {
-            const output = execSync(`sudo -u www-data php ${this.occCommand} app:list`, { encoding: 'utf8' });
+            const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list`, { encoding: 'utf8' });
             spinner.success({ text: `${GREEN('Installed Nextcloud apps:')}` });
             console.log(output);
         } catch (error) {
             spinner.error({ text: `${RED('Failed to list Nextcloud apps.')}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
     }
 
     /**
      * Enables a specified Nextcloud app from a selectable list.
      */
     async enableApp() {
+        clearConsole();
         const availableApps = await this.getAvailableApps();
         const { appName } = await inquirer.prompt([
             {
@@ -96,18 +101,21 @@ class ncAPPS {
         const spinner = createSpinner(`Enabling app ${appName}...`).start();
 
         try {
-            execSync(`sudo -u www-data php ${this.occCommand} app:enable ${appName}`);
+            checkComponent(`sudo -u www-data php ${this.occCommand} app:enable ${appName}`);
             spinner.success({ text: `${GREEN(`App '${appName}' has been enabled!`)}` });
         } catch (error) {
             spinner.error({ text: `${RED(`Failed to enable app '${appName}'.`)}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
     }
 
     /**
      * Disables a specified Nextcloud app from a selectable list.
      */
     async disableApp() {
+        clearConsole();
         const installedApps = await this.getInstalledApps();
         const { appName } = await inquirer.prompt([
             {
@@ -127,12 +135,15 @@ class ncAPPS {
             spinner.error({ text: `${RED(`Failed to disable app '${appName}'.`)}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
     }
 
     /**
      * Removes a specified Nextcloud app from a selectable list.
      */
     async removeApp() {
+        clearConsole();
         const installedApps = await this.getInstalledApps();
         const { appName } = await inquirer.prompt([
             {
@@ -152,12 +163,15 @@ class ncAPPS {
             spinner.error({ text: `${RED(`Failed to remove app '${appName}'.`)}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
     }
 
     /**
      * Lists available app updates.
      */
     async listUpdates() {
+        clearConsole();
         const spinner = createSpinner('Checking for app updates...').start();
 
         try {
@@ -168,12 +182,15 @@ class ncAPPS {
             spinner.error({ text: `${RED('Failed to list app updates.')}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
     }
 
     /**
      * Updates apps from a selectable list of upgradable apps.
      */
     async updateApps() {
+        clearConsole();
         const availableUpdates = await this.getAvailableUpdates();
         const { appsToUpdate } = await inquirer.prompt([
             {
@@ -196,52 +213,92 @@ class ncAPPS {
             spinner.error({ text: `${RED('Failed to update one or more apps.')}` });
             console.error(error);
         }
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        await this.manageApps();
     }
 
-    /**
-     * Helper method to get a list of installed apps.
-     * @returns {Array<string>} - List of installed app names.
-     */
-    getInstalledApps() {
-        try {
-            const output = execSync(`sudo -u www-data php ${this.occCommand} app:list`, { encoding: 'utf8' });
+
+
+/**
+ * Method to get a list of installed apps.
+ * @returns {Array<string>} - List of installed app names.
+ */
+async getInstalledApps() {
+    clearConsole();
+    try {
+        const command = `sudo -u www-data php ${this.occCommand} app:list`;
+        const success = await checkComponent(command);
+
+        if (success) {
+            const output = execSync(command, { encoding: 'utf8' });
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
-        } catch (error) {
+        } else {
             console.error(RED('Failed to fetch installed apps.'));
-            return [];
+
         }
+    } catch (error) {
+        console.error(RED('Error executing command.'));
+
     }
 
-    /**
-     * Helper method to get a list of available apps (excluding installed ones).
-     * @returns {Array<string>} - List of available app names.
-     */
-    getAvailableApps() {
-        try {
-            const output = execSync(`sudo -u www-data php ${this.occCommand} app:list --shipped`, { encoding: 'utf8' });
+    await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+    await this.manageApps();
+}
+
+/**
+ * Method to get a list of available apps (excluding installed ones).
+ * @returns {Array<string>} - List of available app names.
+ */
+async getAvailableApps() {
+    clearConsole();
+    try {
+        const command = `sudo -u www-data php ${this.occCommand} app:list --shipped`;
+        const success = await checkComponent(command);
+
+        if (success) {
+            const output = execSync(command, { encoding: 'utf8' });
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
-        } catch (error) {
+        } else {
             console.error(RED('Failed to fetch available apps.'));
-            return [];
+
         }
+    } catch (error) {
+        console.error(RED('Error executing command.'));
+  
     }
 
-    /**
-     * Helper method to get a list of apps with available updates.
-     * @returns {Array<string>} - List of upgradable app names.
-     */
-    getAvailableUpdates() {
-        try {
-            const output = execSync(`sudo -u www-data php ${this.occCommand} app:update --list`, { encoding: 'utf8' });
+    await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+    await this.manageApps();
+}
+
+/**
+ * Method to get a list of apps with available updates.
+ * @returns {Array<string>} - List of upgradable app names.
+ */
+async getAvailableUpdates() {
+    try {
+        const command = `sudo -u www-data php ${this.occCommand} app:update --list`;
+        const success = await checkComponent(command);
+
+        if (success) {
+            const output = execSync(command, { encoding: 'utf8' });
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
-        } catch (error) {
+        } else {
             console.error(RED('Failed to fetch available updates.'));
-            return [];
+       
         }
+    } catch (error) {
+        console.error(RED('Error executing command.'));
+
     }
+
+    await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+    await this.manageApps();
+}
+    
 }
 
 export default ncAPPS;
