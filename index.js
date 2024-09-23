@@ -96,6 +96,8 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  * Main menu system from which all others branch
  */
 async function mainMenu() {
+    clearConsole();
+    welcome();
 
     const answers = await inquirer.prompt([
         {
@@ -153,7 +155,8 @@ async function mainMenu() {
 
         case 'Manage Nextcloud Apps':
             const appsManager = new ncAPPS();
-            return appsManager.manageApps(mainMenu);
+            appsManager.manageApps(mainMenu);
+            break;
 
         case 'Manage SMTP':
             const mailManager = new ncSMTP();

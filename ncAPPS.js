@@ -53,9 +53,9 @@ class ncAPPS {
                 case 'Go Back':
                     continueMenu = false;
                     if (typeof mainMenu === 'function') {
-                        mainMenu();
+                        await mainMenu();
                     }
-                    break;
+                    return;
             }
         }
     }
