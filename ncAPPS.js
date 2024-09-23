@@ -63,7 +63,7 @@ class ncAPPS {
         clearConsole();
         const spinner = createSpinner('Fetching installed Nextcloud apps...').start();
 
-        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list`);
+        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list --shipped=true`);
         if (output) {
             spinner.success({ text: `${GREEN('Installed Nextcloud apps:')}` });
             console.log(output);
@@ -173,7 +173,7 @@ class ncAPPS {
     }
 
     async getInstalledApps() {
-        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list`);
+        const output = checkComponent(`sudo -u www-data php ${this.occCommand} app:list --shipped=true`);
         if (output) {
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
