@@ -11,11 +11,11 @@ import chalk from 'chalk';
  * Class to manage Docker containers and images using Docker CLI.
  */
 class ncDOCKER {
-    constructor() {
-        this.mainMenu = this.mainMenu;
-        this.this.clearConsole = clearConsole;
+    constructor(mainMenu) {
+        this.mainMenu = mainMenu;
+        this.clearConsole = clearConsole;
         this.awaitContinue = awaitContinue;
-
+    
     }
 
     /**
@@ -91,6 +91,7 @@ class ncDOCKER {
                 break;
             case 'Stop Container':
                 this.stopContainer();
+                break;
             case 'Remove Container':
                 this.removeContainer();
                 break;
@@ -116,7 +117,14 @@ class ncDOCKER {
         const spinner = createSpinner('Fetching Docker containers...').start();
 
         try {
-            const output = execSync('docker ps -a', { encoding: 'utf8' });
+            const output = await new Promise((resolve, reject) => {
+                exec('docker ps -a', (error, stdout, stderr) => {
+                    if (error) {
+                        return reject(error);
+                    }
+                    resolve(stdout);
+                });
+            });
             spinner.success({ text: `${GREEN('Docker containers:')}` });
             console.log(output);
         } catch (error) {
