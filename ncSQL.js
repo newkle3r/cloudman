@@ -26,7 +26,7 @@ class ncSQL {
         this.psqlVER = variables.PSQLVER;
 
         const configFilePath = '/var/www/nextcloud/config/config.php';
-        const configFile = fs.readFileSync(configFilePath, 'utf8');
+        const configFile = execSync(`sudo -u www-data cat ${configFilePath}`, { encoding: 'utf8' });
         this.dbname = getConfigValue(configFile, 'dbname');
         this.dbuser = getConfigValue(configFile, 'dbuser');
         this.dbpassword = getConfigValue(configFile, 'dbpassword');
