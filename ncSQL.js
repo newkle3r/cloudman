@@ -26,17 +26,21 @@ class ncSQL {
         this.backupPath = `/home/${user}/backups`;
         this.psqlVER = variables.PSQLVER;
 
-        const configFilePath = '/var/www/nextcloud/config/config.php';
-        const configFile = execSync(`sudo -u www-data cat ${configFilePath}`, { encoding: 'utf8' });
-        this.dbname = getConfigValue(configFile, 'dbname');
-        this.dbuser = getConfigValue(configFile, 'dbuser');
-        this.dbpassword = getConfigValue(configFile, 'dbpassword');
+        try {
+            const configFilePath = '/var/www/nextcloud/config/config.php';
+            const configFile = execSync(`sudo -u www-data cat ${configFilePath}`, { encoding: 'utf8' });
+            this.dbname = getConfigValue(configFile, 'dbname');
+            this.dbuser = getConfigValue(configFile, 'dbuser');
+            this.dbpassword = getConfigValue(configFile, 'dbpassword');
+        } catch (error) {
+            console.error(`Error reading config.php file: ${error.message}`);
+        }
     }
 
     /**
      * Displays the menu for PostgreSQL management tasks.
      */
-    async managePostgreSQL(mainMenu) {
+    async managePostgreSQL() {
 
         let continueMenu = true;
         clearConsole();
@@ -67,7 +71,7 @@ class ncSQL {
                     break;
                 case 'Go Back':
                     continueMenu = false;
-                    this.mainMenu();
+                    if (this.mainMenu) this.mainMenu();
                     break;
                     
             }
