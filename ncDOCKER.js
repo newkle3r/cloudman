@@ -17,7 +17,7 @@ class ncDOCKER {
     /**
      * Displays the menu for Docker management.
      */
-    async manageDocker() {
+    async manageDocker(mainMenu) {
         let continueMenu = true;
         this.clearConsole();
 

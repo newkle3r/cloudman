@@ -85,14 +85,16 @@ export async function initialize(fetchFunction, lastCheckKey, context, threshold
         }
 
         export const awaitContinue = async () => {
-            console.log('\nPress any key to continue...');
-            process.stdin.setRawMode(true);
-            return new Promise((resolve) => process.stdin.once('data', () => {
+            return new Promise((resolve) => {
+                console.log('\nPress Enter to continue...');
+                process.stdin.resume();
                 process.stdin.setRawMode(false);
-                resolve();
-            }));
+                process.stdin.once('data', () => {
+                    process.stdin.pause();
+                    resolve();
+                });
+            });
         };
-
 /**
  * Runs a command with progress tracking, specifically for commands like `curl` that output progress on `stderr`.
  * @param {string} command - The command to run.
