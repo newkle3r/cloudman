@@ -14,6 +14,7 @@ import noVMNC from './nextcloud.js';
 import ncTLS from './ncTLS.js';
 import ncVARS from './ncVARS.js';
 import inquirer from 'inquirer';
+import ncREPAIR from './ncREPAIR.js';
 
 // Initialize global variables
 let varsclass;
@@ -81,11 +82,11 @@ async function mainMenu() {
     switch (answers.action) {
         case 'Update Nextcloud':
             const updateManager = new ncUPDATE(mainMenu);
-            return updateManager.manageUpdate(exitProgram, varsclass);
+            return updateManager.manageUpdate();
 
         case 'Repair Nextcloud':
-            const repairNC = new noVMNC();
-            return repairNC.repairNextcloud(mainMenu);
+            const repairNC = new ncREPAIR(mainMenu);
+            return repairNC.manageRepair();
 
         case 'Manage PostgreSQL':
             const sqlManager = new ncSQL();

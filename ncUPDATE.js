@@ -3,7 +3,7 @@ import { clearConsole, welcome } from './utils.js';
 import { execSync,spawn } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
-import { runCommandWithProgress, initialize, UPDATE_THRESHOLD } from './utils.js';
+import { runCommandWithProgress, initialize } from './utils.js';
 import cliProgress from 'cli-progress';
 
 /**
@@ -23,6 +23,71 @@ class ncUPDATE {
         this.mainMenu = mainMenu; 
         this.lastCheck = null;
     }
+
+    /**
+     * Displays a menu for managing the Nextcloud update process.
+     * 
+     * @param {Function} mainMenu - The main menu function from `index.js` to return back.
+     * @returns {Promise<void>} - Resolves when the user action is completed.
+     */
+    async manageUpdate(mainMenu) {
+
+      let continueMenu = true;
+
+      while (continueMenu) {
+          clearConsole();
+          const answers = await inquirer.prompt([
+              {
+                  type: 'list',
+                  name: 'action',
+                  message: 'Nextcloud Update Management:',
+                  choices: [
+                      'Run Full Update',
+                      'Manage Maintenance Mode',
+                      'Check Free Space',
+                      'Create Backup',
+                      'Download Nextcloud',
+                      'Extract Nextcloud',
+                      'Run Nextcloud Upgrade',
+                      'Cleanup',
+                      'Exit'
+                  ],
+              }
+          ]);
+
+          switch (answers.action) {
+              case 'Run Full Update':
+                  await this.runFullUpdate();
+                  break;
+              case 'Manage Maintenance Mode':
+                  await this.manageMaintenanceMode();
+                  break;
+              case 'Check Free Space':
+                  await this.checkFreeSpace();
+                  break;
+              case 'Create Backup':
+                  await this.createBackup();
+                  break;
+              case 'Download Nextcloud':
+                  await this.downloadNextcloud();
+                  break;
+              case 'Extract Nextcloud':
+                  await this.extractNextcloud();
+                  break;
+              case 'Run Nextcloud Upgrade':
+                  await this.upgradeNextcloud();
+                  break;
+              case 'Cleanup':
+                  await this.cleanup();
+                  break;
+              case 'Exit':
+                  console.log(GREEN('Returning to main menu...'));
+                  continueMenu = false;
+                  this.mainMenu();
+                  break;
+          }
+      }
+  }
 
     /**
      * Executes a shell command and returns the output as a string.
@@ -52,70 +117,7 @@ class ncUPDATE {
       }
   }
 
-    /**
-     * Displays a menu for managing the Nextcloud update process.
-     * 
-     * @param {Function} mainMenu - The main menu function from `index.js` to return back.
-     * @returns {Promise<void>} - Resolves when the user action is completed.
-     */
-    async manageUpdate(mainMenu) {
-      await initialize(this.checkForUpdates, 'lastCheck', this, UPDATE_THRESHOLD);
-        let continueMenu = true;
-
-        while (continueMenu) {
-            clearConsole();
-            const answers = await inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'action',
-                    message: 'Nextcloud Update Management:',
-                    choices: [
-                        'Run Full Update',
-                        'Manage Maintenance Mode',
-                        'Check Free Space',
-                        'Create Backup',
-                        'Download Nextcloud',
-                        'Extract Nextcloud',
-                        'Run Nextcloud Upgrade',
-                        'Cleanup',
-                        'Exit'
-                    ],
-                }
-            ]);
-
-            switch (answers.action) {
-                case 'Run Full Update':
-                    await this.runFullUpdate();
-                    break;
-                case 'Manage Maintenance Mode':
-                    await this.manageMaintenanceMode();
-                    break;
-                case 'Check Free Space':
-                    await this.checkFreeSpace();
-                    break;
-                case 'Create Backup':
-                    await this.createBackup();
-                    break;
-                case 'Download Nextcloud':
-                    await this.downloadNextcloud();
-                    break;
-                case 'Extract Nextcloud':
-                    await this.extractNextcloud();
-                    break;
-                case 'Run Nextcloud Upgrade':
-                    await this.upgradeNextcloud();
-                    break;
-                case 'Cleanup':
-                    await this.cleanup();
-                    break;
-                case 'Exit':
-                    console.log(GREEN('Returning to main menu...'));
-                    continueMenu = false;
-                    this.mainMenu();
-                    break;
-            }
-        }
-    }
+    
 
     /**
      * Checks if apt or dpkg processes are running.
@@ -192,14 +194,6 @@ class ncUPDATE {
 
     await this.awaitContinue();
 }
-
-
-  /**
-   * Prompts user to press Enter to continue.
-   */
-  async awaitContinue() {
-      await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-  }
 
  
 

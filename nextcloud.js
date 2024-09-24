@@ -11,6 +11,7 @@ import { execSync } from 'child_process';
 
 
 class noVMNC {
+
     
     async installNextcloud() {
         const spinner = createSpinner('Installing Nextcloud...').start();
