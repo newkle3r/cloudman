@@ -209,10 +209,10 @@ class ncREPAIR {
           // Use sudo to read the log file
           const logContent = execSync(`sudo cat ${logFilePath}`).toString(); // Fetch logs with sudo
           
-          const logLines = logContent.split('\n').filter(Boolean);
+          let logLines = logContent.split('\n').filter(Boolean);
   
-          // Cap the logs at 1000 lines (from the end of the log file)
-          this.tempLogStore = logLines.slice(-1000).map(line => this.extractRelevantLogData(line));
+          // Cap the logs at 1000 lines (from the end of the log file), and reverse the array to show latest first
+          this.tempLogStore = logLines.slice(-1000).reverse().map(line => this.extractRelevantLogData(line));
   
           return this.tempLogStore;
       } catch (error) {
