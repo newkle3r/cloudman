@@ -49,7 +49,7 @@ export function loadVariables() {
  */
 export const UPDATE_THRESHOLD = 60000;
 
-export async function initialize(fetchFunction, lastCheckKey, context) {
+export async function initialize(fetchFunction, lastCheckKey, context, threshold) {
     const now = new Date().getTime();
     
     if (!context[lastCheckKey] || now - context[lastCheckKey] > threshold) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { clearConsole, loadVariables, initialize, welcome } from './utils.js';
+import { clearConsole, loadVariables, initialize, welcome, UPDATE_THRESHOLD } from './utils.js';
 import { RED, BLUE, GREEN, YELLOW, PURPLE } from './color.js';
 import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
@@ -31,7 +31,7 @@ async function initializeVariables() {
     varsclass.loadVariables();
 
     // Fetch app updates and other system statuses using the initialize function
-    await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass);
+    await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass, UPDATE_THRESHOLD);
 }
 
 /**
