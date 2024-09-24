@@ -201,27 +201,24 @@ class ncREPAIR {
    * 
    * @returns {Promise<string[]>} - Returns an array of the last 1000 log lines.
    */
-  async fetchLogs() {
-    clearConsole();
-    const logFilePath = '/var/log/nextcloud/nextcloud.log';
-
-    try {
-      if (!fs.existsSync(logFilePath)) {
-        console.error(`Log file not found at ${logFilePath}`);
-        return [];
+    async fetchLogs() {
+      clearConsole();
+      const logFilePath = '/var/log/nextcloud/nextcloud.log';
+  
+      try {
+          // Use sudo to read the log file
+          const logContent = execSync(`sudo cat ${logFilePath}`).toString(); // Fetch logs with sudo
+          
+          const logLines = logContent.split('\n').filter(Boolean);
+  
+          // Cap the logs at 1000 lines (from the end of the log file)
+          this.tempLogStore = logLines.slice(-1000).map(line => this.extractRelevantLogData(line));
+  
+          return this.tempLogStore;
+      } catch (error) {
+          console.error('Failed to fetch logs with sudo:', error);
+          return [];
       }
-
-      const logContent = fs.readFileSync(logFilePath, 'utf8');
-      const logLines = logContent.split('\n').filter(Boolean);
-
-      // Cap the logs at 1000 lines (from the end of the log file)
-      this.tempLogStore = logLines.slice(-1000).map(line => this.extractRelevantLogData(line));
-
-      return this.tempLogStore;
-    } catch (error) {
-      console.error('Failed to fetch logs:', error);
-      return [];
-    }
   }
 
   /**
