@@ -69,6 +69,46 @@ class ncDOCKER {
         }
     }
 
+    /**
+     * Lists all running and stopped Docker containers.
+     */
+    async listContainers() {
+        this.clearConsole();
+        const spinner = createSpinner('Fetching Docker containers...').start();
+
+        try {
+            const output = execSync('docker ps -a', { encoding: 'utf8' });
+            spinner.success({ text: `${GREEN('Docker containers:')}` });
+            console.log(output);
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to list Docker containers.')}` });
+            console.error(error.message);
+        }
+
+        await this.awaitContinue();
+        await this.manageDocker();
+    }
+
+    /**
+     * Lists all Docker images.
+     */
+    async listImages() {
+        this.clearConsole();
+        const spinner = createSpinner('Fetching Docker images...').start();
+
+        try {
+            const output = execSync('docker images', { encoding: 'utf8' });
+            spinner.success({ text: `${GREEN('Docker images:')}` });
+            console.log(output);
+        } catch (error) {
+            spinner.error({ text: `${RED('Failed to list Docker images.')}` });
+            console.error(error.message);
+        }
+
+        await this.awaitContinue();
+        await this.manageDocker();
+    }
+
    /**
      * Starts a specified Docker container after listing available containers.
      */
