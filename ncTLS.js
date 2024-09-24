@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { RED, GREEN, YELLOW, BLUE } from './color.js';
-import { clearConsole,welcome,runCommand,awaitContinue } from './utils.js';
+import { clearConsole,welcome,runCommand,awaitContinue,getConfigValue } from './utils.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 
@@ -37,6 +37,28 @@ class ncTLS {
          */
         this.LETS_ENCRYPT_STATUS = this.getCertStatus();
         this.NONO_PORTS = [22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5432];
+    }
+
+    /**
+     * Retrieves the domain for TLS configuration.
+     * Attempts to fetch it from Nextcloud config or system hostname.
+     * @returns {string} - The domain name.
+     */
+    getTLSConfigDomain() {
+        try {
+            // Try fetching from Nextcloud config
+            let overwriteURL = this.getConfigValue('overwrite.cli.url');
+            if (overwriteURL) {
+                // Strip the 'https://' from the URL
+                return overwriteURL.replace('https://', '').replace('/', '');
+            }
+
+            // Fallback to system hostname
+            return this.runCommand('hostname -f').trim();
+        } catch (error) {
+            console.error('Error fetching domain:', error);
+            return 'localhost';  // Default if both methods fail
+        }
     }
 
     /**

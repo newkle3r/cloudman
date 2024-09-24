@@ -35,12 +35,17 @@ export function checkComponent(command) {
  * @param {string} key - The key to look for (e.g., 'dbname')
  * @returns {string} - The value corresponding to the key
  */
-export function getConfigValue(configFile, key) {
-    const regex = new RegExp(`'${key}'\\s*=>\\s*'([^']+)'`, 'm');
-    const match = configFile.match(regex);
-    return match ? match[1] : null;
+export function getConfigValue(key) {
+    try {
+        const configPath = `${this.NCPATH}/config/config.php`;
+        // Use sudo to ensure access to config.php
+        const command = `sudo grep -Po "(?<=['\\"]${key}['\\"] => ['\\"]).*?(?=['\\"])" ${configPath}`;
+        return this.runCommand(command).trim();
+    } catch (error) {
+        console.error(`Error fetching config value for ${key}:`, error);
+        return null;
+    }
 }
-
 
 export function loadVariables() {
     try {
