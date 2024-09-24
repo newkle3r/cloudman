@@ -90,18 +90,20 @@ class ncUPDATE {
   }
 
     /**
-     * Executes a shell command and returns the output as a string.
-     * @param {string} command - The command to execute.
-     * @returns {string} - The command's output as a string.
-     */
-    runCommand(command) {
-        try {
-            return execSync(command, { shell: '/bin/bash' }).toString().trim();
-        } catch (error) {
-            console.error(`Error executing command: ${command}`, error);
-            return '';
-        }
+ * Executes a shell command and returns the output as a string.
+ * @param {string} command - The command to execute.
+ * @returns {string} - The command's output as a string.
+ */
+  runCommand(command) {
+    try {
+        // Execute the command and return the trimmed output
+        return execSync(command, { shell: '/bin/bash' }).toString().trim();
+    } catch (error) {
+        // Log the error, but return an empty string for non-critical commands
+        console.error(`Error executing command: ${command}`, error);
+        return '';  // Return an empty string in case of an error
     }
+  }
 
     /**
      * Checks whether maintenance mode is enabled or disabled.
@@ -120,17 +122,23 @@ class ncUPDATE {
     
 
     /**
-     * Checks if apt or dpkg processes are running.
-     * Exits if found.
-     */
-    async checkProcesses() {
-        const aptRunning = this.runCommand('pgrep apt');
-        const dpkgRunning = this.runCommand('pgrep dpkg');
-        if (aptRunning || dpkgRunning) {
-            console.error(RED('Apt or Dpkg processes are currently running. Please wait for them to finish.'));
-            process.exit(1);
-        }
+ * Checks for any conflicting processes like apt or dpkg that could interfere with the update.
+ * @returns {boolean} - True if conflicting processes are found, false otherwise.
+ */
+  checkProcesses() {
+    // Check if any apt or dpkg processes are currently running
+    const aptProcesses = this.runCommand('pgrep apt');
+    const dpkgProcesses = this.runCommand('pgrep dpkg');
+
+    if (aptProcesses || dpkgProcesses) {
+        // If any apt or dpkg processes are running, log and return true (indicating conflict)
+        console.log(RED('Apt or other conflicting processes are running. Please wait for them to finish.'));
+        return true;
     }
+
+    // No conflicting processes found
+    return false;
+  }
 
     /**
      * Displays the Maintenance Mode Management menu and allows the user to enable or disable maintenance mode.
