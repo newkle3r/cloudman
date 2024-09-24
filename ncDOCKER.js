@@ -1,5 +1,5 @@
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { clearConsole,welcome,clearConsole,awaitContinue } from './utils.js';
+import { clearConsole,welcome,awaitContinue } from './utils.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
@@ -13,7 +13,7 @@ import chalk from 'chalk';
 class ncDOCKER {
     constructor() {
         this.mainMenu = this.mainMenu;
-        this.clearConsole = clearConsole;
+        this.this.clearConsole = clearConsole;
         this.awaitContinue = awaitContinue;
 
     }
@@ -44,6 +44,9 @@ class ncDOCKER {
             spinner.error({ text: `${RED('Failed to install Docker.')}` });
             console.error(error);
         }
+        await this.awaitContinue();
+        await this.manageDocker();
+
     }
 
 
@@ -53,7 +56,7 @@ class ncDOCKER {
     async manageDocker(mainMenu) {
 
         let continueMenu = true;
-        clearConsole();
+        this.clearConsole();
        
 
         while (continueMenu === true) {
@@ -109,7 +112,7 @@ class ncDOCKER {
      * Lists all running and stopped Docker containers.
      */
     async listContainers() {
-        clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Fetching Docker containers...').start();
 
         try {
@@ -120,8 +123,7 @@ class ncDOCKER {
             spinner.error({ text: `${RED('Failed to list Docker containers.')}` });
             console.error(error);
         }
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-
+        await this.awaitContinue();
         await this.manageDocker();
     }
 
@@ -129,7 +131,7 @@ class ncDOCKER {
      * Lists all Docker images.
      */
     async listImages() {
-        clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Fetching Docker images...').start();
 
         try {
@@ -141,8 +143,7 @@ class ncDOCKER {
             console.error(error);
         }
 
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...'}])
-
+        await this.awaitContinue();
         await this.manageDocker();
     }
 
@@ -150,7 +151,7 @@ class ncDOCKER {
      * Starts a specified Docker container.
      */
     async startContainer() {
-        clearConsole();
+        this.clearConsole();
 
         const { containerName } = await inquirer.prompt([
             {
@@ -170,10 +171,7 @@ class ncDOCKER {
             console.error(error);
         }
 
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-
-        
-
+        await this.awaitContinue();
         await this.manageDocker();
     }
 
@@ -181,7 +179,7 @@ class ncDOCKER {
      * Stops a specified Docker container.
      */
     async stopContainer() {
-        clearConsole();
+        this.clearConsole();
         const { containerName } = await inquirer.prompt([
             {
                 type: 'input',
@@ -200,8 +198,7 @@ class ncDOCKER {
             console.error(error);
         }
 
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-
+        await this.awaitContinue();
         await this.manageDocker();
     }
 
@@ -209,7 +206,7 @@ class ncDOCKER {
      * Removes a specified Docker container.
      */
     async removeContainer() {
-        clearConsole();
+        this.clearConsole();
         const { containerName } = await inquirer.prompt([
             {
                 type: 'input',
@@ -236,7 +233,7 @@ class ncDOCKER {
      * Removes a specified Docker image.
      */
     async removeImage() {
-        clearConsole();
+        this.clearConsole();
         const { imageName } = await inquirer.prompt([
             {
                 type: 'input',
@@ -263,7 +260,7 @@ class ncDOCKER {
      * View Docker networks.
      */
     async viewNetworks() {
-        clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Fetching Docker networks...').start();
 
         try {
