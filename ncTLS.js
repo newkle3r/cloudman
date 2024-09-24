@@ -12,6 +12,7 @@ import inquirer from 'inquirer';
  */
 class ncTLS {
     constructor() {
+        this.mainMenu = this.mainMenu;
         this.clearConsole = clearConsole;
         this.runCommand =  runCommand;
         this.awaitContinue = awaitContinue;
@@ -170,20 +171,47 @@ class ncTLS {
      * @example
      * ncTLS.installAndGenerateCert('cloud.example.com');
      */
-    installAndGenerateCert(domain) {
+    async installAndGenerateCert(domain) {
         this.setTLSConfig(domain);
-        console.log('Installing Certbot...');
-        execSync('apt-get install -y certbot');
 
-        console.log('Generating TLS certificate using Certbot...');
-        const certCommand = `certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns -d ${domain}`;
+        // Install Certbot
+        console.log('Installing Certbot...');
+        execSync('sudo apt-get install -y certbot', { stdio: 'inherit' });
+
+        // Dry-run the Certbot command first
+        console.log('Performing a dry-run for Certbot...');
+        const certCommandDryRun = `certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns --dry-run -d ${domain}`;
+        
         try {
-            execSync(certCommand, { stdio: 'inherit' });
-            this.generateDHParams();
+            // Execute the dry-run
+            execSync(certCommandDryRun, { stdio: 'inherit' });
+            console.log(GREEN('Dry-run successful!'));
+
+            // Prompt the user if they want to proceed with the real certificate generation
+            const answer = await inquirer.prompt([{
+                type: 'confirm',
+                name: 'proceed',
+                message: `Dry-run was successful. Do you want to proceed with generating a real certificate for ${domain}?`,
+                default: false
+            }]);
+
+            if (answer.proceed) {
+                console.log('Generating real TLS certificate using Certbot...');
+                const certCommand = `certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns -d ${domain}`;
+                execSync(certCommand, { stdio: 'inherit' });
+                console.log(GREEN('TLS certificate generated successfully!'));
+
+                // Generate DH parameters if Certbot succeeded
+                this.generateDHParams();
+            } else {
+                console.log(YELLOW('Operation aborted by user.'));
+            }
         } catch (error) {
-            console.error('Failed to generate TLS certificate.');
+            console.error(RED('Dry-run or certificate generation failed.'));
+            console.error(error.message);
         }
     }
+
 
     /**
      * Check if the domain is reachable and if ports 80 and 443 are open.
@@ -208,7 +236,7 @@ class ncTLS {
     }
 
     /**
-     * Check if the necessary ports (80 and 443) are open for the domain using `nmap`.
+     * Check if the necessary ports (80 and 443) are open for the domain using `nc`.
      * 
      * @param {string} domain - The domain name to be checked.
      * @example
@@ -216,14 +244,19 @@ class ncTLS {
      */
     checkPorts(domain) {
         console.log(`Checking if ports 80 and 443 are open for ${domain}...`);
+
         try {
-            execSync(`nmap -p 80,443 ${domain}`);
-            console.log('Ports 80 and 443 are open.');
+            // Check port 80
+            execSync(`nc -zv ${domain} 80`, { stdio: 'inherit' });
+            console.log(GREEN('Port 80 is open.'));
+
+            // Check port 443
+            execSync(`nc -zv ${domain} 443`, { stdio: 'inherit' });
+            console.log(GREEN('Port 443 is open.'));
         } catch (error) {
-            console.error(`Error checking ports for ${domain}:`, error);
+            console.error(RED(`Error checking ports for ${domain}:`), error.message);
         }
     }
-
     /**
      * Restart the Apache server to apply the new TLS configuration.
      * This ensures that the changes take effect.
@@ -234,7 +267,7 @@ class ncTLS {
     restartWebServer() {
         try {
             console.log('Restarting Apache server...');
-            execSync('systemctl restart apache2');
+            execSync('sudo systemctl restart apache2');
             console.log('Apache server restarted successfully.');
         } catch (error) {
             console.error('Failed to restart Apache server.', error);
@@ -259,93 +292,93 @@ class ncTLS {
         }
     }
 
-/**
+    /**
      * Function to display the menu and handle user interactions.
      */
-async certMenu() {
-    let continueMenu = true;
+    async certMenu(mainMenu) {
+        let continueMenu = true;
 
-    while (continueMenu) {
-        const { action } = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'action',
-                message: 'TLS Management Menu:',
-                choices: [
-                    'Set TLS Config',
-                    'Install and Generate TLS Certificate',
-                    'Check Domain Reachability',
-                    'Check Open Ports',
-                    'Activate TLS Configuration',
-                    'Restart Web Server',
-                    'Exit'
-                ]
+        while (continueMenu) {
+            const { action } = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'action',
+                    message: 'TLS Management Menu:',
+                    choices: [
+                        'Set TLS Config',
+                        'Install and Generate TLS Certificate',
+                        'Check Domain Reachability',
+                        'Check Open Ports',
+                        'Activate TLS Configuration',
+                        'Restart Web Server',
+                        'Exit'
+                    ]
+                }
+            ]);
+
+            switch (action) {
+                case 'Set TLS Config':
+                    const { domain } = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'domain',
+                            message: 'Enter the domain for TLS configuration:'
+                        }
+                    ]);
+                    this.setTLSConfig(domain);
+                    break;
+                case 'Install and Generate TLS Certificate':
+                    const { certDomain } = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'certDomain',
+                            message: 'Enter the domain for which to generate the certificate:'
+                        }
+                    ]);
+                    this.installAndGenerateCert(certDomain);
+                    break;
+                case 'Check Domain Reachability':
+                    const { checkDomain } = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'checkDomain',
+                            message: 'Enter the domain to check reachability:'
+                        }
+                    ]);
+                    this.checkDomainReachability(checkDomain);
+                    break;
+                case 'Check Open Ports':
+                    const { portDomain } = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'portDomain',
+                            message: 'Enter the domain to check open ports:'
+                        }
+                    ]);
+                    this.checkPorts(portDomain);
+                    break;
+                case 'Activate TLS Configuration':
+                    const { oldConfig } = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'oldConfig',
+                            message: 'Enter the old configuration file to disable (default is 000-default.conf):',
+                            default: '000-default.conf'
+                        }
+                    ]);
+                    this.activateTLSConfig(oldConfig);
+                    break;
+                case 'Restart Web Server':
+                    this.restartWebServer();
+                    break;
+                case 'Exit':
+                    continueMenu = false;
+                    return this.mainMenu();
+                default:
+                    break;
             }
-        ]);
-
-        switch (action) {
-            case 'Set TLS Config':
-                const { domain } = await inquirer.prompt([
-                    {
-                        type: 'input',
-                        name: 'domain',
-                        message: 'Enter the domain for TLS configuration:'
-                    }
-                ]);
-                this.setTLSConfig(domain);
-                break;
-            case 'Install and Generate TLS Certificate':
-                const { certDomain } = await inquirer.prompt([
-                    {
-                        type: 'input',
-                        name: 'certDomain',
-                        message: 'Enter the domain for which to generate the certificate:'
-                    }
-                ]);
-                this.installAndGenerateCert(certDomain);
-                break;
-            case 'Check Domain Reachability':
-                const { checkDomain } = await inquirer.prompt([
-                    {
-                        type: 'input',
-                        name: 'checkDomain',
-                        message: 'Enter the domain to check reachability:'
-                    }
-                ]);
-                this.checkDomainReachability(checkDomain);
-                break;
-            case 'Check Open Ports':
-                const { portDomain } = await inquirer.prompt([
-                    {
-                        type: 'input',
-                        name: 'portDomain',
-                        message: 'Enter the domain to check open ports:'
-                    }
-                ]);
-                this.checkPorts(portDomain);
-                break;
-            case 'Activate TLS Configuration':
-                const { oldConfig } = await inquirer.prompt([
-                    {
-                        type: 'input',
-                        name: 'oldConfig',
-                        message: 'Enter the old configuration file to disable (default is 000-default.conf):',
-                        default: '000-default.conf'
-                    }
-                ]);
-                this.activateTLSConfig(oldConfig);
-                break;
-            case 'Restart Web Server':
-                this.restartWebServer();
-                break;
-            case 'Exit':
-                continueMenu = false;
-                break;
-            default:
-                break;
         }
     }
-}
 }
 
 
