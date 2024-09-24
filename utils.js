@@ -58,6 +58,19 @@ export async function initialize(fetchFunction, lastCheckKey, context) {
     }
 }
 
+/**
+     * Executes a shell command and returns the output as a string.
+     * @param {string} command - The command to execute.
+     * @returns {string} - The command's output as a string.
+     */
+        export function runCommand(command) {
+            try {
+                return execSync(command, { shell: '/bin/bash' }).toString().trim();
+            } catch (error) {
+                console.error(`Error executing command: ${command}`, error);
+                return '';
+            }
+        }
 
 /**
  * Runs a command with progress tracking, specifically for commands like `curl` that output progress on `stderr`.
