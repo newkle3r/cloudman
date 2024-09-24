@@ -243,8 +243,37 @@ async removeImage() {
         ]);
 
         const spinner = createSpinner(`Removing Docker image ${imageName}...`).start();
-        execSync(`docker rmi ${imageName}`);
-        spinner.success({ text: `${GREEN(`Docker image '${imageName}' removed!`)}` });
+        
+        try {
+            // Attempt to remove the Docker image normally
+            execSync(`docker rmi ${imageName}`);
+            spinner.success({ text: `${GREEN(`Docker image '${imageName}' removed!`)}` });
+        } catch (error) {
+            // If an error occurs, check if it is related to the image being used
+            if (error.message.includes('conflict: unable to remove repository reference')) {
+                // Prompt the user to force-remove the image
+                const { forceRemove } = await inquirer.prompt([
+                    {
+                        type: 'confirm',
+                        name: 'forceRemove',
+                        message: `Image ${imageName} is being used by a container. Do you want to force-remove it?`,
+                        default: false
+                    }
+                ]);
+
+                if (forceRemove) {
+                    // Force remove the image
+                    execSync(`docker rmi --force ${imageName}`);
+                    spinner.success({ text: `${GREEN(`Docker image '${imageName}' force-removed!`)}` });
+                } else {
+                    spinner.error({ text: `${RED(`Failed to remove Docker image '${imageName}'. Image is in use.`)}` });
+                }
+            } else {
+                spinner.error({ text: `${RED(`Failed to remove Docker image '${imageName}'.`)}` });
+                console.error(error.message);
+            }
+        }
+
     } catch (error) {
         console.error(RED(`Failed to remove Docker image: ${error.message}`));
     }
