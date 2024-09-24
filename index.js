@@ -89,58 +89,58 @@ async function mainMenu() {
             return repairNC.manageRepair();
 
         case 'Manage PostgreSQL':
-            const sqlManager = new ncSQL();
-            return sqlManager.managePostgreSQL(mainMenu);
+            const sqlManager = new ncSQL(mainMenu);
+            return sqlManager.managePostgreSQL();
 
         case 'Manage PHP':
-            const phpManager = new ncPHP();
-            return phpManager.managePHP(mainMenu);
+            const phpManager = new ncPHP(mainMenu);
+            return phpManager.managePHP();
             
         case 'Manage DNS/FQDN':
-            const dnsManager = new ncFQDN();
-            return dnsManager.manageFQDN(mainMenu);
+            const dnsManager = new ncFQDN(mainMenu);
+            return dnsManager.manageFQDN();
 
         case 'Manage LDAP':
-            const ldapManager = new ncLDAP();
+            const ldapManager = new ncLDAP(mainMenu);
             if (activeMenu === 'ldap') {
                 console.log('Already managing LDAP. Returning to main menu...');
                 mainMenu();
                 break;
             }
             activeMenu = 'ldap';
-            return ldapManager.manageLDAP(mainMenu);
+            return ldapManager.manageLDAP();
 
         case 'Manage Nextcloud Apps':
-            const appsManager = new ncAPPS();
-            appsManager.manageApps(mainMenu);
+            const appsManager = new ncAPPS(mainMenu);
+            appsManager.manageApps();
             break;
 
         case 'Manage SMTP':
-            const mailManager = new ncSMTP();
-            return mailManager.manageSMTP(mainMenu);
+            const mailManager = new ncSMTP(mainMenu);
+            return mailManager.manageSMTP();
 
         case 'Manage Docker':
-            const dockerManager = new ncDOCKER();
-            return dockerManager.manageDocker(mainMenu, welcome);
+            const dockerManager = new ncDOCKER(mainMenu);
+            return dockerManager.manageDocker(welcome);
 
         case 'Manage Redis':
-            const redisManager = new ncREDIS();
+            const redisManager = new ncREDIS(mainMenu);
             if (activeMenu === 'redis') {
                 console.log('Already managing Redis. Returning to main menu...');
                 mainMenu();
                 break;
             }
             activeMenu = 'redis';
-            await redisManager.manageRedis(mainMenu);
+            await redisManager.manageRedis();
             break;
 
         case 'Manage TLS':
-            const certManager = new ncTLS();
-            return certManager.certMenu(mainMenu);
+            const certManager = new ncTLS(mainMenu);
+            return certManager.certMenu();
 
         case 'Backup':
-            const backupManager = new ncBAK();
-            return backupManager.runBackups(mainMenu);
+            const backupManager = new ncBAK(mainMenu);
+            return backupManager.runBackups();
 
         case 'Exit':
             exitProgram();

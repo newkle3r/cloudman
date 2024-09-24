@@ -71,8 +71,7 @@ class ncSQL {
                     break;
                 case 'Go Back':
                     continueMenu = false;
-                    if (this.mainMenu) this.mainMenu();
-                    break;
+                    return this.mainMenu();
                     
             }
         }
