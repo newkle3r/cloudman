@@ -37,6 +37,53 @@ class ncTLS {
          */
         this.LETS_ENCRYPT_STATUS = this.getCertStatus();
         this.NONO_PORTS = [22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5432];
+        this.verifyVariables();
+    }
+
+    /**
+     * Retrieves the domain for TLS configuration.
+     * Attempts to fetch it from Nextcloud config or system hostname.
+     * @returns {string} - The domain name.
+     */
+    getTLSConfigDomain() {
+        try {
+            // Try fetching from Nextcloud config with sudo
+            console.log("Attempting to fetch domain from Nextcloud config...");
+            let overwriteURL = getConfigValue.call(this, 'overwrite.cli.url'); // Use this to call the function
+
+            // Debugging information
+            console.log(`Fetched overwrite.cli.url from config.php: ${overwriteURL}`);
+            
+            if (overwriteURL) {
+                // Strip the 'https://' from the URL and return the domain part
+                let domain = overwriteURL.replace('https://', '').replace('/', '').trim();
+                console.log(`Extracted domain from overwrite.cli.url: ${domain}`);
+                return domain;
+            }
+
+            // If overwrite.cli.url isn't found, fallback to system hostname
+            console.log("Fetching domain using 'hostname -f'...");
+            let hostname = this.runCommand('hostname -f').trim();
+            console.log(`Fetched domain from 'hostname -f': ${hostname}`);
+            return hostname;
+        } catch (error) {
+            console.error('Error fetching domain:', error);
+            return 'localhost';  // Default if both methods fail
+        }
+    }
+
+    /**
+     * Retrieves the TLS configuration file path.
+     * @returns {string} - The file path of the TLS configuration.
+     */
+    getTLSConfPath() {
+        try {
+            const confPath = this.runCommand("ls /etc/apache2/sites-available/ | grep '.conf'").trim();
+            return `/etc/apache2/sites-available/${confPath}`;
+        } catch (error) {
+            console.error('Error fetching TLS configuration path:', error);
+            return '/etc/apache2/sites-available/000-default.conf';
+        }
     }
 
     /**
@@ -79,68 +126,6 @@ class ncTLS {
             console.error("DH Parameters path (DHPARAMS_TLS) is empty or undefined!");
         } else {
             console.log(`DH Parameters Path: ${this.DHPARAMS_TLS}`);
-        }
-    }
-
-    /**
-     * Retrieves the domain for TLS configuration.
-     * Attempts to fetch it from Nextcloud config or system hostname.
-     * @returns {string} - The domain name.
-     */
-    getTLSConfigDomain() {
-        try {
-            // Try fetching from Nextcloud config with sudo
-            console.log("Attempting to fetch domain from Nextcloud config...");
-            let overwriteURL = this.getConfigValue('overwrite.cli.url');
-            
-            // Debugging information
-            console.log(`Fetched overwrite.cli.url from config.php: ${overwriteURL}`);
-            
-            if (overwriteURL) {
-                // Strip the 'https://' from the URL and return the domain part
-                let domain = overwriteURL.replace('https://', '').replace('/', '').trim();
-                console.log(`Extracted domain from overwrite.cli.url: ${domain}`);
-                return domain;
-            }
-    
-            // If overwrite.cli.url isn't found, fallback to system hostname
-            console.log("Fetching domain using 'hostname -f'...");
-            let hostname = this.runCommand('hostname -f', true).trim();
-            console.log(`Fetched domain from 'hostname -f': ${hostname}`);
-            return hostname;
-        } catch (error) {
-            console.error('Error fetching domain:', error);
-            return 'localhost';  // Default if both methods fail
-        }
-    }
-
-
-
-    /**
-     * Retrieves the domain from the TLS configuration.
-     * @returns {string} - The domain used for the TLS configuration.
-     */
-    getTLSConfigDomain() {
-        try {
-            const tlsDomain = this.runCommand("grep 'ServerName' /etc/apache2/sites-available/*.conf | awk '{print $2}'");
-            return tlsDomain || 'domain.com';  // Fallback to default domain
-        } catch (error) {
-            console.error('Error fetching TLS domain:', error);
-            return 'domain.com';
-        }
-    }
-
-    /**
-     * Retrieves the TLS configuration file path.
-     * @returns {string} - The file path of the TLS configuration.
-     */
-    getTLSConfPath() {
-        try {
-            const confPath = this.runCommand("ls /etc/apache2/sites-available/ | grep '.conf'");
-            return `/etc/apache2/sites-available/${confPath}`;
-        } catch (error) {
-            console.error('Error fetching TLS configuration path:', error);
-            return '/etc/apache2/sites-available/000-default.conf';
         }
     }
 
