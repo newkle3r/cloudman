@@ -40,11 +40,55 @@ class ncTLS {
     }
 
     /**
+     * Helper function to verify that critical variables are not empty.
+     * Also prints the content of each variable for debugging purposes.
+     */
+    verifyVariables() {
+        console.log("Verifying and printing critical variables...");
+
+        // Verify PHP Version
+        if (!this.PHPVER || this.PHPVER.trim() === '') {
+            console.error("PHP version (PHPVER) is empty or undefined!");
+        } else {
+            console.log(`PHP Version: ${this.PHPVER}`);
+        }
+
+        // Verify Nextcloud Path
+        if (!this.NCPATH || this.NCPATH.trim() === '') {
+            console.error("Nextcloud path (NCPATH) is empty or undefined!");
+        } else {
+            console.log(`Nextcloud Path: ${this.NCPATH}`);
+        }
+
+        // Verify TLS Domain
+        if (!this.TLSDOMAIN || this.TLSDOMAIN.trim() === '') {
+            console.error("TLS domain (TLSDOMAIN) is empty or undefined!");
+        } else {
+            console.log(`TLS Domain: ${this.TLSDOMAIN}`);
+        }
+
+        // Verify TLS Configuration Path
+        if (!this.TLS_CONF || this.TLS_CONF.trim() === '') {
+            console.error("TLS configuration path (TLS_CONF) is empty or undefined!");
+        } else {
+            console.log(`TLS Configuration Path: ${this.TLS_CONF}`);
+        }
+
+        // Verify DH Params Path
+        if (!this.DHPARAMS_TLS || this.DHPARAMS_TLS.trim() === '') {
+            console.error("DH Parameters path (DHPARAMS_TLS) is empty or undefined!");
+        } else {
+            console.log(`DH Parameters Path: ${this.DHPARAMS_TLS}`);
+        }
+    }
+
+    /**
      * Retrieves the domain for TLS configuration.
      * Attempts to fetch it from Nextcloud config or system hostname.
      * @returns {string} - The domain name.
      */
     getTLSConfigDomain() {
+        verifyVariables();
         try {
             // Try fetching from Nextcloud config
             let overwriteURL = this.getConfigValue('overwrite.cli.url');
@@ -61,20 +105,7 @@ class ncTLS {
         }
     }
 
-    /**
-     * Helper function to execute a shell command and return the output.
-     * @param {string} command - The shell command to run.
-     * @returns {string} - Output from the command.
-     * Basically checkComponent, but with stringify
-     */
-    runCommand(command) {
-        try {
-            return execSync(command).toString().trim();
-        } catch (error) {
-            console.error(`Error executing command: ${command}`);
-            return '';
-        }
-    }
+
 
     /**
      * Retrieves the domain from the TLS configuration.
