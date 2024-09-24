@@ -1,6 +1,6 @@
 import { execSync, exec } from 'child_process';
 import { RED,GREEN,BLUE,YELLOW} from './color.js'
-import { clearConsole, runCommand } from './utils.js';
+import { clearConsole,runCommand } from './utils.js';
 import fs from 'fs';
 import readlineSync from 'readline-sync';
 import inquirer from 'inquirer';
@@ -19,6 +19,7 @@ class ncREPAIR {
         this.INDEX_JSON_PATH = '/mnt/data/index_json/nc_data.json';
         this.NC_OCC = 'sudo -u www-data php /var/www/nextcloud/occ';  // Fixed path for Nextcloud OCC
         this.mainMenu = this.mainMenu;
+        this.runCommand = runCommand;
     }
 
     /**
@@ -96,7 +97,7 @@ class ncREPAIR {
         const spinner = createSpinner('Repairing Nextcloud...').start();
         
         try {
-            await runCommand(`${this.NC_OCC} maintenance:repair`);
+            awaitthis.runCommand(`${this.NC_OCC} maintenance:repair`);
             spinner.success({ text: `${GREEN('Nextcloud has been repaired!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to repair Nextcloud')}` });
@@ -112,7 +113,7 @@ class ncREPAIR {
     async autoRepair() {
       clearConsole()
         console.log('Starting auto-repair process...');
-        await runCommand(`bash ${this.SCRIPTS_PATH}/repair.sh`);
+        awaitthis.runCommand(`bash ${this.SCRIPTS_PATH}/repair.sh`);
         console.log('Auto-repair completed.');
         await this.awaitContinue();
     }
@@ -194,7 +195,7 @@ class ncREPAIR {
 
     try {
         const spinner = createSpinner(`Downloading Nextcloud ${versionNumber} binaries...`).start();
-        await runCommand(`curl -o ${homeDir}/nextcloud-${versionNumber}.zip ${downloadUrl}`);
+        awaitthis.runCommand(`curl -o ${homeDir}/nextcloud-${versionNumber}.zip ${downloadUrl}`);
         spinner.success({ text: `Nextcloud version ${versionNumber} binaries downloaded!` });
     } catch (error) {
         console.error(`Failed to download Nextcloud version ${versionNumber} binaries:`, error);
@@ -260,7 +261,7 @@ class ncREPAIR {
         console.log(`Unzipping ${zipFilePath}...`);
         try {
             const spinner = createSpinner('Unzipping binaries...').start();
-            await runCommand(`unzip -q ${zipFilePath} -d ${unzipDirPath}`);
+            awaitthis.runCommand(`unzip -q ${zipFilePath} -d ${unzipDirPath}`);
             spinner.success({ text: 'Unzipping completed.' });
         } catch (error) {
             console.error('Failed to unzip the Nextcloud binaries:', error);
@@ -307,15 +308,15 @@ class ncREPAIR {
 
       if (!fs.existsSync(this.BACKUP_PATH)) {
           console.log(`${this.BACKUP_PATH} does not exist. Creating backup directory...`);
-          await runCommand(`sudo mkdir -p ${this.BACKUP_PATH}`);
+          awaitthis.runCommand(`sudo mkdir -p ${this.BACKUP_PATH}`);
       }
 
       console.log('Backing up current Nextcloud data...');
 
       try {
           const spinner = createSpinner('Backing up...').start();
-          await runCommand(`sudo rsync -Aax ${this.NC_PATH}/config ${this.BACKUP_PATH}/`);
-          await runCommand(`sudo rsync -Aax ${this.NC_PATH}/apps ${this.BACKUP_PATH}/`);
+          awaitthis.runCommand(`sudo rsync -Aax ${this.NC_PATH}/config ${this.BACKUP_PATH}/`);
+          awaitthis.runCommand(`sudo rsync -Aax ${this.NC_PATH}/apps ${this.BACKUP_PATH}/`);
           spinner.success({ text: 'Backup completed successfully!' });
       } catch (error) {
           console.error('Failed to backup Nextcloud data:', error);
@@ -349,7 +350,6 @@ class ncREPAIR {
                  const homeDir = this.runCommand('echo $HOME');
                  const tempFilePath = `${homeDir}/nextcloud-diff-files.txt`;  
                  const unzipDirPath = `${homeDir}/nextcloud-${versionNumber}`;  
-
                  // Warn user about the potential risk of data overwrite
                  console.log(RED('WARNING: This will overwrite existing files in your Nextcloud installation.'));
                  console.log(YELLOW('Ensure you have taken a backup before proceeding.'));
@@ -428,9 +428,8 @@ class ncREPAIR {
                  await this.awaitContinue();
              }
             }])
-          }
              
-
+          }
 
 
 
@@ -467,10 +466,10 @@ class ncREPAIR {
     async installDependencies() {
         const dependencies = ['curl', 'whiptail', 'lshw', 'net-tools', 'bash-completion', 'cron'];
         for (const dep of dependencies) {
-            const isInstalled = await runCommand(`dpkg-query -W -f='${dep}' 2>/dev/null | grep -c "ok installed"`);
+            const isInstalled = awaitthis.runCommand(`dpkg-query -W -f='${dep}' 2>/dev/null | grep -c "ok installed"`);
             if (isInstalled !== '1') {
                 console.log(`Installing ${dep}...`);
-                await runCommand(`apt-get install ${dep} -y`);  // Install dependency
+                awaitthis.runCommand(`apt-get install ${dep} -y`);  // Install dependency
             } else {
                 console.log(`${dep} is already installed.`);
             }
@@ -503,5 +502,6 @@ class ncREPAIR {
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
     }
 }
+
 
 export default ncREPAIR;
