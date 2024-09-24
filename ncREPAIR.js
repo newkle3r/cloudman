@@ -63,9 +63,9 @@ class ncREPAIR {
                     break;
 
                 case 'View Nextcloud Logs':
-                    const nextcloudLogs = await this.fetchLogs();
-                    nextcloudLogs.sort();
-                    await this.viewLogs(nextcloudLogs);
+                    const logs = await this.fetchLogs();
+
+                    await this.viewLogs(logs);
                     break;
 
                 case 'Hansson IT Service-API':
@@ -173,6 +173,7 @@ class ncREPAIR {
                   break;
 
               case 'Abort':
+                clearConsole();
                   console.log('Returning to previous menu...');
                   continueMenu = false;
                   break;
@@ -192,6 +193,37 @@ class ncREPAIR {
             console.error('Failed to extract Nextcloud version:', error);
             return 'latest';  // Fallback to "latest" if extraction fails
         }
+    }
+
+    /**
+     * Fetches the Nextcloud logs from /var/log/nextcloud/nextcloud.log.
+     * Caps the result at 1000 lines and stores it in a temporary variable.
+     * 
+     * @returns {Promise<string[]>} - Returns an array of the last 1000 log lines.
+     */
+    async fetchLogs() {
+      clearConsole();
+      const logFilePath = '/var/log/nextcloud/nextcloud.log'; 
+
+      try {
+          // Check if the log file exists
+          if (!fs.existsSync(logFilePath)) {
+              console.error(`Log file not found at ${logFilePath}`);
+              return [];
+          }
+
+          // Read the log file
+          const logContent = fs.readFileSync(logFilePath, 'utf8');
+          const logLines = logContent.split('\n').filter(Boolean); 
+
+          // Cap the logs at 1000 lines (from the end of the log file)
+          const recentLogs = logLines.slice(-1000);
+
+          return recentLogs;
+      } catch (error) {
+          console.error('Failed to fetch logs:', error);
+          return [];
+      }
     }
 
   /**
@@ -486,7 +518,104 @@ class ncREPAIR {
         await this.awaitContinue();
       }
 
-      
+      /**
+ * Fetches the Nextcloud logs from /var/log/nextcloud/nextcloud.log.
+ * Extracts only relevant fields (time, app, File, message, exception) and caps at 1000 lines.
+ * 
+ * @returns {Promise<object[]>} - Returns an array of parsed log objects with relevant fields.
+ */
+async function fetchLogs() {
+  const logFilePath = '/var/log/nextcloud/nextcloud.log';  // Path to the Nextcloud log file
+
+  try {
+      // Check if the log file exists
+      if (!fs.existsSync(logFilePath)) {
+          console.error(`Log file not found at ${logFilePath}`);
+          return [];
+      }
+
+      // Read the log file
+      const logContent = fs.readFileSync(logFilePath, 'utf8');
+      const logEntries = logContent.split(/\n}\n{/).map(entry => JSON.parse(`{${entry}}`)); // Split into individual log entries
+
+      // Process each log entry to extract relevant fields
+      const parsedLogs = logEntries.map((log) => {
+          return {
+              time: log.time || "N/A",
+              app: log.app || "N/A",
+              file: log.File || "N/A",
+              message: log.message || "N/A",
+              exception: log.exception ? log.exception.Message : "N/A",
+          };
+      });
+
+      // Cap the logs at 1000 entries
+      const limitedLogs = parsedLogs.slice(-1000);
+
+      return limitedLogs;
+  } catch (error) {
+      console.error('Failed to fetch logs:', error);
+      return [];
+  }
+}
+
+/**
+ * Displays the fetched logs in a paginated view for the user.
+ * Shows 20 log entries at a time.
+ * 
+ * @param {object[]} logs - The array of parsed log objects to display.
+ * @returns {Promise<void>}
+ */
+async function viewLogs(logs) {
+  if (!logs || logs.length === 0) {
+      console.log('No logs to display.');
+      return;
+  }
+
+  let currentIndex = 0;
+  const pageSize = 20;  // Number of log entries per page
+
+  while (currentIndex < logs.length) {
+      console.clear();
+      const currentLogs = logs.slice(currentIndex, currentIndex + pageSize);  // Display a subset of logs
+
+      // Display the current page of logs
+      currentLogs.forEach((log, index) => {
+          console.log(`Log ${currentIndex + index + 1}:`);
+          console.log(`  Time: ${log.time}`);
+          console.log(`  App: ${log.app}`);
+          console.log(`  File: ${log.file}`);
+          console.log(`  Message: ${log.message}`);
+          console.log(`  Exception: ${log.exception}`);
+          console.log('---------------------------------------------------------');
+      });
+
+      // Determine if there are more pages to display
+      const hasMore = currentIndex + pageSize < logs.length;
+
+      // Ask user whether to view the next page or exit
+      const { action } = await inquirer.prompt([
+          {
+              type: 'list',
+              name: 'action',
+              message: 'Log Viewer:',
+              choices: hasMore
+                  ? ['Next Page', 'Exit']
+                  : ['Exit'],
+          },
+      ]);
+
+      if (action === 'Next Page') {
+          currentIndex += pageSize;
+      } else {
+          break;
+      }
+  }
+
+  await this.awaitContinue();
+}
+
+
 
 
 
