@@ -115,25 +115,20 @@ class ncDOCKER {
     async listContainers() {
         this.clearConsole();
         const spinner = createSpinner('Fetching Docker containers...').start();
-
+    
         try {
-            const output = await new Promise((resolve, reject) => {
-                exec('docker ps -a', (error, stdout, stderr) => {
-                    if (error) {
-                        return reject(error);
-                    }
-                    resolve(stdout);
-                });
-            });
+            const output = execSync('docker ps -a', { encoding: 'utf8' });
             spinner.success({ text: `${GREEN('Docker containers:')}` });
             console.log(output);
         } catch (error) {
             spinner.error({ text: `${RED('Failed to list Docker containers.')}` });
             console.error(error);
         }
+    
         await this.awaitContinue();
         await this.manageDocker();
     }
+    
 
     /**
      * Lists all Docker images.
