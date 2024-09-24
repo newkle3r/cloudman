@@ -136,6 +136,10 @@ async function mainMenu() {
 
         case 'Manage TLS':
             const certManager = new ncTLS(mainMenu);
+            const outputtls = certManager.getTLSConfigDomain();
+            const outputpath =certManager.getTLSConfPath();
+            console.log(`output from getTLSConfigDomain(): ${outputtls}`)
+            console.log(`output from getTLSConfPath(): ${outputpath}`)
             certManager.verifyVariables();
             await awaitContinue();
             return certManager.certMenu();

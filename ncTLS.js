@@ -88,17 +88,26 @@ class ncTLS {
      * @returns {string} - The domain name.
      */
     getTLSConfigDomain() {
-        verifyVariables();
         try {
-            // Try fetching from Nextcloud config
+            // Try fetching from Nextcloud config with sudo
+            console.log("Attempting to fetch domain from Nextcloud config...");
             let overwriteURL = this.getConfigValue('overwrite.cli.url');
+            
+            // Debugging information
+            console.log(`Fetched overwrite.cli.url from config.php: ${overwriteURL}`);
+            
             if (overwriteURL) {
-                // Strip the 'https://' from the URL
-                return overwriteURL.replace('https://', '').replace('/', '');
+                // Strip the 'https://' from the URL and return the domain part
+                let domain = overwriteURL.replace('https://', '').replace('/', '').trim();
+                console.log(`Extracted domain from overwrite.cli.url: ${domain}`);
+                return domain;
             }
-
-            // Fallback to system hostname
-            return this.runCommand('hostname -f').trim();
+    
+            // If overwrite.cli.url isn't found, fallback to system hostname
+            console.log("Fetching domain using 'hostname -f'...");
+            let hostname = this.runCommand('hostname -f', true).trim();
+            console.log(`Fetched domain from 'hostname -f': ${hostname}`);
+            return hostname;
         } catch (error) {
             console.error('Error fetching domain:', error);
             return 'localhost';  // Default if both methods fail
