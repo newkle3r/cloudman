@@ -157,9 +157,25 @@ class ncTLS {
      * DHParams are used to strengthen the security of the TLS handshake.
      */
     generateDHParams() {
+        const tempDHParams = '/tmp/dhparam.pem';
+    
+        // Check if the DHParams file already exists
         if (!fs.existsSync(this.DHPARAMS_TLS)) {
             console.log('Generating DHParams file...');
-            execSync(`openssl dhparam -out ${this.DHPARAMS_TLS} 2048`);
+    
+            try {
+                // Generate the file in a temporary directory
+                execSync(`openssl dhparam -out ${tempDHParams} 2048`);
+                console.log('DHParams file generated successfully in /tmp.');
+    
+                // Move the file to the correct location with sudo privileges
+                execSync(`sudo mv ${tempDHParams} ${this.DHPARAMS_TLS}`);
+                console.log(`DHParams file moved to ${this.DHPARAMS_TLS}.`);
+            } catch (error) {
+                console.error('Failed to generate or move the DHParams file:', error.message);
+            }
+        } else {
+            console.log('DHParams file already exists.');
         }
     }
 
