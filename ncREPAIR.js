@@ -13,12 +13,12 @@ import { createSpinner } from 'nanospinner';
  * @class ncREPAIR
  */
 class ncREPAIR {
-    constructor() {
+    constructor(mainMenu) {
         this.SCRIPTS_PATH = '/var/scripts';
         this.VARIABLES_JSON_PATH = '/mnt/data/variables.json';
         this.INDEX_JSON_PATH = '/mnt/data/index_json/nc_data.json';
         this.NC_OCC = 'sudo -u www-data php /var/www/nextcloud/occ';  // Fixed path for Nextcloud OCC
-        this.mainMenu = this.mainMenu;
+        this.mainMenu = mainMenu;
         this.runCommand = runCommand;
     }
 
@@ -133,6 +133,7 @@ class ncREPAIR {
                       'Compare Installation/Binaries',
                       'Backup Data',
                       'Overwrite Corrupt Data',
+                      'Clean Up',
                       'Abort'
                   ],
               }
@@ -153,6 +154,10 @@ class ncREPAIR {
 
               case 'Overwrite Corrupt Data':
                   await this.overwriteCorruptData();
+                  break;
+
+              case 'Clean Up':
+                  await this.cleanupDownloadedFiles();
                   break;
 
               case 'Abort':
@@ -430,6 +435,62 @@ class ncREPAIR {
             }])
              
           }
+
+    /**
+     * Cleans up the downloaded zip file and unzipped folder for the Nextcloud binaries.
+     * @returns {Promise<void>}
+     */
+      async cleanupDownloadedFiles() {
+        clearConsole();
+        const homeDir = this.runCommand('echo $HOME');
+        const unzipDirPath = `${homeDir}/nextcloud-${versionNumber}`;
+        const zipFilePath = `${homeDir}/nextcloud-${versionNumber}.zip`;
+
+        console.log(YELLOW('Cleaning up downloaded files and directories...'));
+
+        // Prompt user for confirmation before proceeding with cleanup
+        const { confirmCleanup } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'confirmCleanup',
+                message: 'Are you sure you want to delete the downloaded files and directories?',
+                default: true,
+            },
+        ]);
+
+        if (!confirmCleanup) {
+            console.log(YELLOW('Cleanup aborted. Files and directories remain intact.'));
+            return await this.awaitContinue();
+        }
+
+        const spinner = createSpinner('Cleaning up files...').start();
+
+        try {
+            // Check if the zip file exists and remove it
+            if (fs.existsSync(zipFilePath)) {
+                fs.unlinkSync(zipFilePath); 
+                console.log(GREEN(`Deleted: ${zipFilePath}`));
+            } else {
+                console.log(RED(`File not found: ${zipFilePath}`));
+            }
+
+            // Check if the unzipped directory exists and remove it
+            if (fs.existsSync(unzipDirPath)) {
+                fs.rmdirSync(unzipDirPath, { recursive: true }); 
+                console.log(GREEN(`Deleted: ${unzipDirPath}`));
+            } else {
+                console.log(RED(`Directory not found: ${unzipDirPath}`));
+            }
+
+            spinner.success({ text: 'Cleanup completed successfully!' });
+        } catch (error) {
+            spinner.error({ text: 'Failed to clean up files and directories.' });
+            console.error(error);
+        }
+
+        await this.awaitContinue();
+      }
+
 
 
 
