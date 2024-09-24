@@ -69,158 +69,149 @@ class ncDOCKER {
         }
     }
 
-    /**
-     * Lists all running and stopped Docker containers.
+   /**
+     * Starts a specified Docker container after listing available containers.
      */
-    async listContainers() {
-        this.clearConsole();
-        const spinner = createSpinner('Fetching Docker containers...').start();
+   async startContainer() {
+    this.clearConsole();
 
-        try {
-            const output = execSync('docker ps -a', { encoding: 'utf8' });
-            spinner.success({ text: `${GREEN('Docker containers:')}` });
-            console.log(output);
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to list Docker containers.')}` });
-            console.error(error.message);
+    try {
+        const output = execSync('docker ps -a --format "{{.Names}}"', { encoding: 'utf8' });
+        const containers = output.trim().split('\n').filter(Boolean);
+        
+        if (containers.length === 0) {
+            console.log(RED('No containers found.'));
+            await this.awaitContinue();
+            return this.manageDocker();
         }
-
-        await this.awaitContinue();
-        await this.manageDocker();
-    }
-
-    /**
-     * Lists all Docker images.
-     */
-    async listImages() {
-        this.clearConsole();
-        const spinner = createSpinner('Fetching Docker images...').start();
-
-        try {
-            const output = execSync('docker images', { encoding: 'utf8' });
-            spinner.success({ text: `${GREEN('Docker images:')}` });
-            console.log(output);
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to list Docker images.')}` });
-            console.error(error.message);
-        }
-
-        await this.awaitContinue();
-        await this.manageDocker();
-    }
-
-    /**
-     * Starts a specified Docker container.
-     */
-    async startContainer() {
-        this.clearConsole();
 
         const { containerName } = await inquirer.prompt([
             {
-                type: 'input',
+                type: 'list',
                 name: 'containerName',
-                message: 'Enter the container name or ID you want to start:',
-                validate: input => input ? true : 'You must provide a valid container name or ID.'
+                message: 'Select the container you want to start:',
+                choices: containers
             }
         ]);
 
         const spinner = createSpinner(`Starting Docker container ${containerName}...`).start();
-
-        try {
-            execSync(`docker start ${containerName}`);
-            spinner.success({ text: `${GREEN(`Docker container '${containerName}' started!`)}` });
-        } catch (error) {
-            spinner.error({ text: `${RED(`Failed to start Docker container '${containerName}'.`)}` });
-            console.error(error.message);
-        }
-
-        await this.awaitContinue();
-        await this.manageDocker();
+        execSync(`docker start ${containerName}`);
+        spinner.success({ text: `${GREEN(`Docker container '${containerName}' started!`)}` });
+    } catch (error) {
+        console.error(RED(`Failed to start Docker container: ${error.message}`));
     }
 
-    /**
-     * Stops a specified Docker container.
-     */
-    async stopContainer() {
-        this.clearConsole();
+    await this.awaitContinue();
+    await this.manageDocker();
+}
+
+/**
+ * Stops a specified Docker container after listing available containers.
+ */
+async stopContainer() {
+    this.clearConsole();
+
+    try {
+        const output = execSync('docker ps --format "{{.Names}}"', { encoding: 'utf8' });
+        const containers = output.trim().split('\n').filter(Boolean);
+
+        if (containers.length === 0) {
+            console.log(RED('No running containers found.'));
+            await this.awaitContinue();
+            return this.manageDocker();
+        }
+
         const { containerName } = await inquirer.prompt([
             {
-                type: 'input',
+                type: 'list',
                 name: 'containerName',
-                message: 'Enter the container name or ID you want to stop:',
-                validate: input => input ? true : 'You must provide a valid container name or ID.'
+                message: 'Select the container you want to stop:',
+                choices: containers
             }
         ]);
 
         const spinner = createSpinner(`Stopping Docker container ${containerName}...`).start();
-
-        try {
-            execSync(`docker stop ${containerName}`);
-            spinner.success({ text: `${GREEN(`Docker container '${containerName}' stopped!`)}` });
-        } catch (error) {
-            spinner.error({ text: `${RED(`Failed to stop Docker container '${containerName}'.`)}` });
-            console.error(error.message);
-        }
-
-        await this.awaitContinue();
-        await this.manageDocker();
+        execSync(`docker stop ${containerName}`);
+        spinner.success({ text: `${GREEN(`Docker container '${containerName}' stopped!`)}` });
+    } catch (error) {
+        console.error(RED(`Failed to stop Docker container: ${error.message}`));
     }
 
-    /**
-     * Removes a specified Docker container.
-     */
-    async removeContainer() {
-        this.clearConsole();
+    await this.awaitContinue();
+    await this.manageDocker();
+}
+
+/**
+ * Removes a specified Docker container after listing available containers.
+ */
+async removeContainer() {
+    this.clearConsole();
+
+    try {
+        const output = execSync('docker ps -a --format "{{.Names}}"', { encoding: 'utf8' });
+        const containers = output.trim().split('\n').filter(Boolean);
+
+        if (containers.length === 0) {
+            console.log(RED('No containers found.'));
+            await this.awaitContinue();
+            return this.manageDocker();
+        }
+
         const { containerName } = await inquirer.prompt([
             {
-                type: 'input',
+                type: 'list',
                 name: 'containerName',
-                message: 'Enter the container name or ID you want to remove:',
-                validate: input => input ? true : 'You must provide a valid container name or ID.'
+                message: 'Select the container you want to remove:',
+                choices: containers
             }
         ]);
 
         const spinner = createSpinner(`Removing Docker container ${containerName}...`).start();
-
-        try {
-            execSync(`docker rm ${containerName}`);
-            spinner.success({ text: `${GREEN(`Docker container '${containerName}' removed!`)}` });
-        } catch (error) {
-            spinner.error({ text: `${RED(`Failed to remove Docker container '${containerName}'.`)}` });
-            console.error(error.message);
-        }
-
-        await this.awaitContinue();
-        await this.manageDocker();
+        execSync(`docker rm ${containerName}`);
+        spinner.success({ text: `${GREEN(`Docker container '${containerName}' removed!`)}` });
+    } catch (error) {
+        console.error(RED(`Failed to remove Docker container: ${error.message}`));
     }
 
-    /**
-     * Removes a specified Docker image.
-     */
-    async removeImage() {
-        this.clearConsole();
+    await this.awaitContinue();
+    await this.manageDocker();
+}
+
+/**
+ * Removes a specified Docker image after listing available images.
+ */
+async removeImage() {
+    this.clearConsole();
+
+    try {
+        const output = execSync('docker images --format "{{.Repository}}:{{.Tag}}"', { encoding: 'utf8' });
+        const images = output.trim().split('\n').filter(Boolean);
+
+        if (images.length === 0) {
+            console.log(RED('No images found.'));
+            await this.awaitContinue();
+            return this.manageDocker();
+        }
+
         const { imageName } = await inquirer.prompt([
             {
-                type: 'input',
+                type: 'list',
                 name: 'imageName',
-                message: 'Enter the image name or ID you want to remove:',
-                validate: input => input ? true : 'You must provide a valid image name or ID.'
+                message: 'Select the image you want to remove:',
+                choices: images
             }
         ]);
 
         const spinner = createSpinner(`Removing Docker image ${imageName}...`).start();
-
-        try {
-            execSync(`docker rmi ${imageName}`);
-            spinner.success({ text: `${GREEN(`Docker image '${imageName}' removed!`)}` });
-        } catch (error) {
-            spinner.error({ text: `${RED(`Failed to remove Docker image '${imageName}'.`)}` });
-            console.error(error.message);
-        }
-
-        await this.awaitContinue();
-        await this.manageDocker();
+        execSync(`docker rmi ${imageName}`);
+        spinner.success({ text: `${GREEN(`Docker image '${imageName}' removed!`)}` });
+    } catch (error) {
+        console.error(RED(`Failed to remove Docker image: ${error.message}`));
     }
+
+    await this.awaitContinue();
+    await this.manageDocker();
+}
 
     /**
      * View Docker networks.
