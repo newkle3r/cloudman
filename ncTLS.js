@@ -143,13 +143,22 @@ class ncTLS {
         `;
     
         try {
-            // Use sudo to write the file
+            // Use sudo to write the file with correct permissions
             execSync(`echo "${content}" | sudo tee ${this.TLS_CONF}`, { stdio: 'inherit' });
             console.log(`TLS configuration saved to ${this.TLS_CONF}`);
+            
+            // Enable the new site configuration
+            execSync(`sudo a2ensite ${this.TLSDOMAIN}.conf`, { stdio: 'inherit' });
+            console.log(`Site ${this.TLSDOMAIN} enabled successfully`);
+    
+            // Restart Apache to apply the changes
+            execSync('sudo systemctl restart apache2', { stdio: 'inherit' });
+            console.log('Apache restarted successfully');
         } catch (error) {
-            console.error(`Failed to write TLS configuration: ${error.message}`);
+            console.error(`Failed to write or enable TLS configuration: ${error.message}`);
         }
     }
+    
     
 
     /**
