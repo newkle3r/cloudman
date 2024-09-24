@@ -105,8 +105,11 @@ export function runCommandWithProgress(command, total = 100) {
  * Displays the welcome splash screen with system information.
  */
 export async function welcome() {
+    const linkText = 'Want a professional to just fix it for you? Click here!';
+    const url = 'https://shop.hanssonit.se/product-category/support/';
     clearConsole();
-
+    console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
+    
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n'
     );
@@ -119,28 +122,4 @@ export async function welcome() {
             figlet.textSync('Cloudman', { horizontalLayout: 'full' })
         )
     );
-
-    // Simulate fetching status from variables.json and displaying status
-    const dockerStatus = '[Docker: Running]';
-    const address = '192.168.1.100';
-    const ipv4 = '203.0.113.45';
-    const version = 'Ubuntu 20.04';
-    const name = 'Server 1';
-    const psql = 'PostgreSQL 13';
-    const psqlStatus = 'Running';
-    const redisStatus = '[Redis: Running]';
-    const apache2Status = '[Apache: Running]';
-    const appUpdates = '[No updates available]';
-
-    // Display status information under the splash screen
-    console.log(dockerStatus);
-    console.log(BLUE('LAN:'), GREEN(address));
-    console.log(BLUE('WAN:'), GREEN(ipv4));
-    console.log(BLUE('Ubuntu:'), YELLOW(version), name);
-    console.log(BLUE('PostgreSQL'), YELLOW(psql), ':', psqlStatus);
-    console.log(BLUE('redis-server:'), redisStatus);
-    console.log(BLUE('apache2:'), apache2Status);
-    console.log(BLUE('app updates:'), appUpdates);
-    console.log('');
 }
-
