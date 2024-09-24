@@ -75,24 +75,25 @@ class ncVARS {
      * Asynchronously fetch the available app updates.
      */
     async getAvailableUpdates() {
-        let appUpdateStatus;
         try {
+            // Fetch list of apps from the Nextcloud OCC command
             const appListOutput = execSync("sudo -u www-data php /var/www/nextcloud/occ app:list").toString().trim();
-            const updatesAvailable = appListOutput.match(/(\w+):\s*update available/gi) || [];
-            const updateCount = updatesAvailable.length;
             
+            // Use regex to find apps that need updates
+            const updatesAvailable = appListOutput.match(/(\w+):\s*update available/gi) || [];
+        
+            // Count how many apps have updates available
+            const updateCount = updatesAvailable.length;
+
             if (updateCount > 0) {
                 const appNames = updatesAvailable.map(line => line.split(':')[0]).join(', ');
-                appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);
+                this.appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);
             } else {
-                appUpdateStatus = YELLOW('No apps have available updates');
+                this.appUpdateStatus = YELLOW('No apps have available updates');
             }
         } catch (error) {
-            appUpdateStatus = RED('Error fetching app updates or no apps available');
+            this.appUpdateStatus = RED('Error fetching app updates or no apps available');
         }
-
-        this.appUpdateStatus = appUpdateStatus;
-        return appUpdateStatus;
     }
 
 

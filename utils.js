@@ -2,9 +2,10 @@ import chalkAnimation from 'chalk-animation';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
 import {execSync} from 'child_process';
-import { GREEN, BLUE, YELLOW } from './color.js';  
+import { GREEN, BLUE, YELLOW, PURPLE } from './color.js';  
 import { exec } from 'child_process';
 import cliProgress from 'cli-progress';
+
 
 
 /**
@@ -48,12 +49,12 @@ export function loadVariables() {
  */
 export const UPDATE_THRESHOLD = 60000;
 
-export async function initialize(fetchFunction, lastCheckKey, context, UPDATE_THRESHOLD) {
+export async function initialize(fetchFunction, lastCheckKey, context) {
     const now = new Date().getTime();
     
     if (!context[lastCheckKey] || now - context[lastCheckKey] > threshold) {
         await fetchFunction();
-        context[lastCheckKey] = now; // Save the timestamp of the last update check
+        context[lastCheckKey] = now; 
     }
 }
 
@@ -109,7 +110,7 @@ export async function welcome() {
     const url = 'https://shop.hanssonit.se/product-category/support/';
     clearConsole();
     console.log(`\x1B]8;;${url}\x07${PURPLE(linkText)}\x1B]8;;\x07`);
-    
+
     const rainbowTitle = chalkAnimation.rainbow(
         'Nextcloud instance manager by T&M Hansson IT \n'
     );

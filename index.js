@@ -30,7 +30,7 @@ async function initializeVariables() {
     varsclass.loadVariables();
 
     // Fetch app updates and other system statuses using the initialize function
-    await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass, UPDATE_THRESHOLD);
+    await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass);
 }
 
 /**
@@ -53,6 +53,7 @@ async function mainMenu() {
     console.log(BLUE('redis-server:'), redisStatus);
     console.log(BLUE('apache2:'), apache2Status);
     console.log(BLUE('App updates:'), appUpdateStatus);
+    console.log(``)
 
     const answers = await inquirer.prompt([
         {

@@ -3,7 +3,7 @@ import { clearConsole, welcome } from './utils.js';
 import { execSync,spawn } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
-import { runCommandWithProgress, initialize } from './utils.js';
+import { runCommandWithProgress, initialize, UPDATE_THRESHOLD } from './utils.js';
 import cliProgress from 'cli-progress';
 
 /**
