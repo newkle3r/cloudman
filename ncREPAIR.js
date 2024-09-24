@@ -20,6 +20,7 @@ class ncREPAIR {
         this.NC_OCC = 'sudo -u www-data php /var/www/nextcloud/occ';  // Fixed path for Nextcloud OCC
         this.mainMenu = mainMenu;
         this.versionNumber = this.extractVersionNumber();
+        this.homeDir = runCommand('echo $HOME')
         this.runCommand = runCommand;
     }
 
@@ -229,13 +230,10 @@ class ncREPAIR {
    */
   async compareBinaries() {
     clearConsole();
-    const homeDir = this.runCommand('echo $HOME');
-    
-    
-
-    const zipFilePath = `${homeDir}/nextcloud-${this.versionNumber}.zip`;
-    const unzipDirPath = `${homeDir}/nextcloud-${this.versionNumber}`;
-    const tempFilePath = `${homeDir}/nextcloud-diff-files.txt`;
+  
+    const zipFilePath = `${this.homeDir}/nextcloud-${this.versionNumber}.zip`;
+    const unzipDirPath = `${this.homeDir}/nextcloud-${this.versionNumber}`;
+    const tempFilePath = `${this.homeDir}/nextcloud-diff-files.txt`;
 
     // Check if the zip file exists
     if (!fs.existsSync(zipFilePath)) {
@@ -336,8 +334,7 @@ class ncREPAIR {
    */
   async overwriteCorruptData() {
       clearConsole();
-      const homeDir = this.runCommand('echo $HOME');
-
+      
       // Warn user about the potential risk of data overwrite
       console.log('WARNING: This will overwrite existing files in your Nextcloud installation.');
       console.log('Ensure you have taken a backup before proceeding.');
@@ -351,9 +348,8 @@ class ncREPAIR {
               */
              async overwriteCorruptData() {
                  clearConsole();
-                 const homeDir = this.runCommand('echo $HOME');
-                 const tempFilePath = `${homeDir}/nextcloud-diff-files.txt`;  
-                 const unzipDirPath = `${homeDir}/nextcloud-${this.versionNumber}`;  
+                 const tempFilePath = `${this.homeDir}/nextcloud-diff-files.txt`;  
+                 const unzipDirPath = `${this.homeDir}/nextcloud-${this.versionNumber}`;  
                  // Warn user about the potential risk of data overwrite
                  console.log(RED('WARNING: This will overwrite existing files in your Nextcloud installation.'));
                  console.log(YELLOW('Ensure you have taken a backup before proceeding.'));
@@ -441,9 +437,9 @@ class ncREPAIR {
      */
       async cleanupDownloadedFiles() {
         clearConsole();
-        const homeDir = this.runCommand('echo $HOME');
-        const unzipDirPath = `${homeDir}/nextcloud-${this.versionNumber}`;
-        const zipFilePath = `${homeDir}/nextcloud-${this.versionNumber}.zip`;
+
+        const unzipDirPath = `${this.homeDir}/nextcloud-${this.versionNumber}`;
+        const zipFilePath = `${this.homeDir}/nextcloud-${this.versionNumber}.zip`;
 
         console.log(YELLOW('Cleaning up downloaded files and directories...'));
 
@@ -489,6 +485,8 @@ class ncREPAIR {
 
         await this.awaitContinue();
       }
+
+      
 
 
 
