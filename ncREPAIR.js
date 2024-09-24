@@ -46,7 +46,6 @@ class ncREPAIR {
                         'View System Logs',
                         'Hansson IT Service-API',
                         'Contact Hansson IT',
-                        'Cleanup',
                         'Exit'
                     ],
                 }
@@ -73,10 +72,6 @@ class ncREPAIR {
 
                 case 'Contact Hansson IT':
                     await this.contactSupport();  
-                    break;
-
-                case 'Cleanup':
-                    await this.cleanup();  
                     break;
 
                 case 'Exit':
