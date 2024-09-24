@@ -109,7 +109,7 @@ class ncSQL {
             // Drop the existing database
             execSync(`sudo -u postgres psql -c "DROP DATABASE IF EXISTS nextcloud_db;"`);
             // Recreate the database
-            execSync(`sudo -u postgres psql -c "CREATE DATABASE nextcloud_db OWNER nextcloud_user;"`);
+            execSync(`sudo -u postgres psql -c "CREATE DATABASE nextcloud_db OWNER nextcloud_db_user;"`);
     
             // Execute restore command
             execSync(`sudo -u postgres psql nextcloud_db < ${this.backupPath}/nextcloud_db_backup.sql`);
