@@ -16,9 +16,9 @@ class ncUPDATE {
     constructor(mainMenu) {
         this.SCRIPTS = '/var/scripts';
         this.BACKUP = '/mnt/NCBACKUP/';
-        this.NCPATH = '/var/www/nextcloud';
+        this.NC_PATH = '/var/www/nextcloud';
         this.VMLOGS = '/var/log/nextcloud-vm';
-        this.CURRENTVERSION = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
+        this.CURRENTVERSION = this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ status | grep "versionstring" | awk '{print $3}'`);
         this.DISTRO = this.runCommand('lsb_release -sr');
         this.mainMenu = mainMenu; 
         this.lastCheck = null;
@@ -111,7 +111,7 @@ class ncUPDATE {
      */
     isMaintenanceModeEnabled() {
       try {
-          const result = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode`);
+          const result = this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode`);
           return result.includes('enabled: true');
       } catch (error) {
           console.error(RED('Failed to check maintenance mode status.'));
@@ -195,8 +195,8 @@ class ncUPDATE {
   async setMaintenanceMode(enable) {
     clearConsole();
     const command = enable
-        ? `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`
-        : `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`;
+        ? `sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --on`
+        : `sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --off`;
     
     try {
         this.runCommand(command);
@@ -246,8 +246,8 @@ class ncUPDATE {
           progressBar.start(100, 0); 
 
           // Use sudo to handle permissions and capture rsync progress
-          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
-          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
+          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NC_PATH}/config ${this.BACKUP}`, progressBar);
+          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NC_PATH}/apps ${this.BACKUP}`, progressBar);
 
           progressBar.update(100);
           progressBar.stop();
@@ -263,20 +263,21 @@ class ncUPDATE {
     }
 
     async downloadNextcloud() {
-      clearConsole();
-      const homeDir = this.runCommand('echo $HOME');
-      console.log('Downloading the latest Nextcloud release to your home directory...');
-  
-      try {
-          await runCommandWithProgress(`curl --progress-bar -o ${homeDir}/nextcloud-latest.zip https://download.nextcloud.com/server/releases/latest.zip`, 100);
-          console.log(GREEN('Nextcloud package downloaded to your home directory.'));
-      } catch (error) {
-          console.error(RED('Failed to download Nextcloud package.'));
-          console.error(error.message);
-      }
-  
-      await this.awaitContinue();
-  }
+        clearConsole();
+        const homeDir = this.runCommand('echo $HOME');
+        console.log('Downloading the latest Nextcloud release to your home directory...');
+    
+        try {
+            // Use `spawn` to execute `curl` and show its progress
+            await runCommandWithProgress('curl', ['-o', `${homeDir}/nextcloud-latest.zip`, 'https://download.nextcloud.com/server/releases/latest.zip']);
+            console.log(GREEN('Nextcloud package downloaded to your home directory.'));
+        } catch (error) {
+            console.error(RED('Failed to download Nextcloud package.'));
+            console.error(error.message);
+        }
+    
+        await this.awaitContinue();
+    }
   
 
     /**
@@ -327,7 +328,7 @@ class ncUPDATE {
     async upgradeNextcloud() {
       clearConsole();
       console.log('Running Nextcloud upgrade...');
-      this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ upgrade`);
+      this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ upgrade`);
       console.log(GREEN('Nextcloud upgrade completed.'));
       await this.awaitContinue();
   }
@@ -364,7 +365,7 @@ async runFullUpdate() {
 
       // Enable maintenance mode
       console.log(BLUE('Enabling Maintenance Mode...'));
-      await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`);
+      await this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --on`);
       console.log(GREEN('Maintenance mode enabled successfully.'));
 
       // Create a backup of Nextcloud
@@ -399,7 +400,7 @@ async runFullUpdate() {
       // Attempt to disable maintenance mode if an error occurs
       console.log(YELLOW('Attempting to disable maintenance mode due to an error...'));
       try {
-          await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
+          await this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --off`);
           console.log(GREEN('Maintenance mode disabled successfully.'));
       } catch (err) {
           console.error(RED('Failed to disable maintenance mode.'));
@@ -409,7 +410,7 @@ async runFullUpdate() {
       // Ensure that maintenance mode is disabled in any case
       try {
           console.log(BLUE('Ensuring Maintenance Mode is disabled...'));
-          await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
+          await this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --off`);
           console.log(GREEN('Maintenance mode disabled.'));
       } catch (err) {
           console.error(RED('Failed to disable maintenance mode in finally block.'));

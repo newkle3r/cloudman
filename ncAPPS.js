@@ -6,8 +6,8 @@ import { execSync } from 'child_process';
 import { throws } from 'assert';
 
 class ncAPPS {
-    constructor(nextcloudPath = '/var/www/nextcloud',mainMenu) {
-        this.occCommand = `${nextcloudPath}/occ`;
+    constructor(mainMenu) {
+        this.NC_PATH = '/var/www/nextcloud'
         this.appUpdateStatus = YELLOW('Checking for app updates...');
         this.awaitContinue = awaitContinue;
         this.mainMenu = typeof mainMenu === 'function' ? mainMenu : () => console.log('Main menu is not available.');

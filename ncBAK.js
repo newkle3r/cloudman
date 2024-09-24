@@ -9,22 +9,22 @@ import inquirer from 'inquirer';
 
 // Menu needs clear function and suitable splash
 
-// Helper function to create a timestamp for backup files
 function getTimestamp() {
     return new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15);
 }
 
 // Backup class
 class ncBAK {
-    constructor() {
-        this.backupDir = '/mnt/backups'; // Backup directory path
+    constructor(mainMenu) {
+        this.mainMenu = mainMenu;
+        this.backupDir = '/mnt/backup'; 
         this.timestamp = getTimestamp();
-        this.postgresBackupFile = path.join(this.backupDir, `psql_backup_${this.timestamp}.sql`);
-        this.nextcloudDataDir = '/var/www/nextcloud'; // Nextcloud installation directory
-        this.nextcloudConfigDir = '/var/www/nextcloud/config'; // Nextcloud config files
-        this.apacheConfigDir = '/etc/apache2'; // Apache config directory
-        this.redisConfigDir = '/etc/redis'; // Redis config directory
-        this.phpConfigDir = '/etc/php'; // PHP config directory
+        this.postgresBackupFile = path.join(this.backupDir, `postgresql_backup.sql`);
+        this.nextcloudDataDir = '/var/www/nextcloud';
+        this.nextcloudConfigDir = '/var/www/nextcloud/config';
+        this.apacheConfigDir = '/etc/apache2'; 
+        this.redisConfigDir = '/etc/redis'; 
+        this.phpConfigDir = '/etc/php'; 
     }
 
     // Ensure backup directory exists  
@@ -32,14 +32,16 @@ class ncBAK {
         if (!fs.existsSync(this.backupDir)) {
             console.log(chalk.yellow('Creating backup directory...'));
             const result = spawnSync('sudo', ['mkdir', '-p', this.backupDir]);
-
+    
             if (result.error) {
                 console.error(chalk.red('Failed to create backup directory.'));
-                process.exit(1);  // Exit the process on failure
+             
+                return false;
             } else {
                 console.log(chalk.green(`Created backup directory at ${this.backupDir}`));
             }
         }
+        return true; // Indicate success
     }
 
     // PostgreSQL backup  
@@ -107,7 +109,7 @@ class ncBAK {
     }
 
     // Run backups
-    async runBackups(mainMenu) {
+    async runBackups() {
         let continueMenu = true;
         clearConsole();
         
@@ -172,7 +174,7 @@ class ncBAK {
                     break;
                 case 'goBack':
                     continueMenu = false; 
-                    mainMenu();
+                    this.mainMenu();
                     break;
             }
     
@@ -183,17 +185,17 @@ class ncBAK {
 
 // Restore PostgreSQL database
 restorePostgreSQL() {
-    const backupFile = `/mnt/backups/postgresql_backup.sql`;  // Path to the backup file
+    const backupFile = `/mnt/backups/postgresql_backup.sql`;
     const spinner = createSpinner('Restoring PostgreSQL database...').start();
 
+    if (!fs.existsSync(backupFile)) {
+        spinner.error({ text: chalk.red(`Backup file ${backupFile} not found!`) });
+        return;
+    }
+
     try {
-        // Drop the existing database
         execSync('sudo -u postgres psql -c "DROP DATABASE IF EXISTS nextcloud_db;"');
-        
-        // Create a new empty database
         execSync('sudo -u postgres psql -c "CREATE DATABASE nextcloud_db OWNER ncadmin;"');
-        
-        // Restore the database from the backup file
         execSync(`sudo -u postgres psql nextcloud_db < ${backupFile}`);
         spinner.success({ text: chalk.green('PostgreSQL database restored successfully!') });
     } catch (error) {

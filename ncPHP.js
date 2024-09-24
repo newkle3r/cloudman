@@ -112,22 +112,33 @@ class ncPHP {
         try {
             const phpFpmConf = `/etc/php/${phpVersion}/fpm/pool.d/nextcloud.conf`;
             const phpPoolConfig = `
-[Nextcloud]
-user = www-data
-group = www-data
-listen = /run/php/php${phpVersion}-fpm.nextcloud.sock
-listen.owner = www-data
-listen.group = www-data
-pm = dynamic
-pm.max_children = 8
-pm.start_servers = 3
-pm.min_spare_servers = 2
-pm.max_spare_servers = 3
-security.limit_extensions = .php
-php_admin_value[cgi.fix_pathinfo] = 1
+                [Nextcloud]
+                user = www-data
+                group = www-data
+                listen = /run/php/php${phpVersion}-fpm.nextcloud.sock
+                listen.owner = www-data
+                listen.group = www-data
+                pm = dynamic
+                pm.max_children = 8
+                pm.start_servers = 3
+                pm.min_spare_servers = 2
+                pm.max_spare_servers = 3
+                security.limit_extensions = .php
+                php_admin_value[cgi.fix_pathinfo] = 1
             `;
-            fs.writeFileSync(phpFpmConf, phpPoolConfig);
-            execSync(`sudo systemctl restart php${phpVersion}-fpm`, { stdio: 'inherit' });
+    
+            // Ensure that www-data has appropriate permissions
+            execSync(`sudo chown -R root:www-data /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
+            execSync(`sudo chmod -R 750 /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
+    
+            // Use `sudo` to write the configuration file
+            const writeCommand = `echo "${phpPoolConfig.replace(/"/g, '\\"')}" | sudo tee ${phpFpmConf}`;
+            execSync(writeCommand, { stdio: 'inherit' });
+            execSync(`sudo chown -R root:www-data /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
+            execSync(`sudo chmod -R 750 /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
+    
+            // Restart PHP-FPM to apply the changes
+            execSync(`sudo systemctl restart php${phpVersion}-fpm.service`, { stdio: 'inherit' });
             spinner.success({ text: chalk.green(`PHP-FPM configured for PHP ${phpVersion}`) });
         } catch (error) {
             spinner.error({ text: chalk.red(`Failed to configure PHP-FPM for PHP ${phpVersion}`) });

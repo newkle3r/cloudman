@@ -3,7 +3,7 @@ import figlet from 'figlet';
 import gradient from 'gradient-string';
 import {execSync} from 'child_process';
 import { GREEN, BLUE, YELLOW, PURPLE } from './color.js';  
-import { exec } from 'child_process';
+import { exec,spawn } from 'child_process';
 import cliProgress from 'cli-progress';
 
 
@@ -110,28 +110,11 @@ export async function initialize(fetchFunction, lastCheckKey, context, threshold
  * @param {number} [total=100] - The total amount for progress bar.
  * @returns {Promise<void>} - Resolves when the command is done.
  */
-export function runCommandWithProgress(command, total = 100) {
+export function runCommandWithProgress(command, args = []) {
     return new Promise((resolve, reject) => {
-        const progressBar = new cliProgress.SingleBar({
-            format: 'Progress [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}'
-        }, cliProgress.Presets.shades_classic);
-
-        progressBar.start(total, 0);
-
-        let progress = 0;
-        const process = exec(command);
-
-        process.stderr.on('data', (data) => {
-            // Parse `curl`'s progress output
-            const match = data.toString().match(/([0-9]+)%/);
-            if (match && match[1]) {
-                progress = parseInt(match[1], 10);
-                progressBar.update(progress > total ? total : progress);
-            }
-        });
+        const process = spawn(command, args, { stdio: 'inherit' });
 
         process.on('close', (code) => {
-            progressBar.stop();
             if (code === 0) {
                 resolve();
             } else {
@@ -140,7 +123,6 @@ export function runCommandWithProgress(command, total = 100) {
         });
 
         process.on('error', (error) => {
-            progressBar.stop();
             reject(error);
         });
     });

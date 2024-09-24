@@ -1,7 +1,7 @@
 {
   "filePath": "./variables.json",
-  "lastAppUpdateCheck": 1727202997275,
-  "appUpdateStatus": "\u001b[33mNo apps have available updates\u001b[39m",
+  "lastAppUpdateCheck": 1727209552932,
+  "appUpdateStatus": "\u001b[32mNextcloud core update available: Version 28.0.10\u001b[39m\n\u001b[32m1 app update(s) available.\u001b[39m",
   "SCRIPTS": "/var/scripts",
   "HTML": "/var/www",
   "NCPATH": "/var/www/nextcloud",
@@ -76,7 +76,7 @@
   "WT_WIDTH": "Width for whiptail windows",
   "REDIS_SOCK": "Redis Unix socket file location",
   "REDIS_CONF": "Redis configuration file location",
-  "REDIS_PASS": "Password for Redis configuration",
+  "REDIS_PASS": "Zz#-z9aZ9@AZZ9Z0",
   "TEST_MAIL": "Message template for sending test emails",
   "LOG_FILE": "/var/log/msmtp",
   "SCRIPTS_PATH": "/var/scripts",
