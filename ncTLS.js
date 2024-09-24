@@ -180,7 +180,7 @@ class ncTLS {
 
         // Dry-run the Certbot command first
         console.log('Performing a dry-run for Certbot...');
-        const certCommandDryRun = `certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns --dry-run -d ${domain}`;
+        const certCommandDryRun = `sudo certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns --dry-run -d ${domain}`;
         
         try {
             // Execute the dry-run
@@ -197,7 +197,7 @@ class ncTLS {
 
             if (answer.proceed) {
                 console.log('Generating real TLS certificate using Certbot...');
-                const certCommand = `certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns -d ${domain}`;
+                const certCommand = `sudo certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns -d ${domain}`;
                 execSync(certCommand, { stdio: 'inherit' });
                 console.log(GREEN('TLS certificate generated successfully!'));
 
