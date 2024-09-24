@@ -79,7 +79,7 @@ class ncREPAIR {
                 case 'Exit':
                     console.log(GREEN('Returning to main menu...'));
                     continueMenu = false;  
-                    mainMenu();  
+                    this.mainMenu();  
                     break;
             }
         }

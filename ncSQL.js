@@ -20,7 +20,7 @@ const variablesPath = 'variables.json';
 class ncSQL {
     constructor() {
 
-        this.backupPath = '/var/backups/postgresql_backup.sql';
+        this.backupPath = '/var/backups';
         this.psqlVER = variables.PSQLVER;
     }
 
