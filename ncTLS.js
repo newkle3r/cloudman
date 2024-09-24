@@ -11,7 +11,7 @@ import inquirer from 'inquirer';
  * Provides functionality to set up, test, and manage TLS certificates.
  */
 class ncTLS {
-    constructor() {
+    constructor(mainMenu) {
         this.mainMenu = this.mainMenu;
         this.clearConsole = clearConsole;
         this.runCommand =  runCommand;
@@ -123,10 +123,10 @@ class ncTLS {
             SetHandler "proxy:unix:/run/php/php${this.PHPVER}-fpm.nextcloud.sock|fcgi://localhost"
         </FilesMatch>
     
-        Header add Strict-Transport-Security: "max-age=15552000;includeSubdomains"
+        Header always set Strict-Transport-Security "max-age=15552000; includeSubDomains"
         SSLEngine on
         SSLCompression off
-        SSLProtocol -all +TLSv1.2
+        SSLProtocol -all +TLSv1.2 +TLSv1.3
         SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
     
         DocumentRoot ${this.NCPATH}
@@ -144,7 +144,7 @@ class ncTLS {
     
         try {
             // Use sudo to write the file
-            execSync(`echo "${content}" | sudo tee ${this.TLS_CONF}`);
+            execSync(`echo "${content}" | sudo tee ${this.TLS_CONF}`, { stdio: 'inherit' });
             console.log(`TLS configuration saved to ${this.TLS_CONF}`);
         } catch (error) {
             console.error(`Failed to write TLS configuration: ${error.message}`);
@@ -282,11 +282,10 @@ class ncTLS {
      */
     restartWebServer() {
         try {
-            console.log('Restarting Apache server...');
-            execSync('sudo systemctl restart apache2');
-            console.log('Apache server restarted successfully.');
+            execSync('sudo systemctl restart apache2', { stdio: 'inherit' });
+            console.log('Web server restarted successfully.');
         } catch (error) {
-            console.error('Failed to restart Apache server.', error);
+            console.error('Failed to restart web server:', error);
         }
     }
 
@@ -299,8 +298,13 @@ class ncTLS {
      */
     activateTLSConfig(oldConf = '000-default.conf') {
         try {
-            execSync(`a2ensite ${this.TLS_CONF}`);
-            execSync(`a2dissite ${oldConf}`);
+            // Enable the new TLS configuration
+            execSync(`sudo a2ensite ${this.TLSDOMAIN}.conf`, { stdio: 'inherit' });
+    
+            // Disable the old configuration
+            execSync(`sudo a2dissite ${oldConf}`, { stdio: 'inherit' });
+    
+            // Restart the web server to apply changes
             this.restartWebServer();
             console.log(`TLS configuration ${this.TLS_CONF} activated, and ${oldConf} disabled.`);
         } catch (error) {
