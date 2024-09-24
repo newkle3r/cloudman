@@ -153,31 +153,35 @@ class ncDOCKER {
     /**
      * Starts a specified Docker container.
      */
+    /**
+ * Starts a specified Docker container.
+ */
     async startContainer() {
         this.clearConsole();
-
+    
         const { containerName } = await inquirer.prompt([
             {
                 type: 'input',
                 name: 'containerName',
-                message: 'Enter the container name or ID you want to start:'
+                message: 'Enter the container name or ID you want to start:',
+                validate: input => input ? true : 'You must provide a valid container name or ID.'
             }
         ]);
-
+    
         const spinner = createSpinner(`Starting Docker container ${containerName}...`).start();
-
+    
         try {
             execSync(`docker start ${containerName}`);
             spinner.success({ text: `${GREEN(`Docker container '${containerName}' started!`)}` });
         } catch (error) {
             spinner.error({ text: `${RED(`Failed to start Docker container '${containerName}'.`)}` });
-            console.error(error);
+            console.error(error.message);
         }
-
-        await this.awaitContinue();
+    
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to Docker management...' }]);
         await this.manageDocker();
     }
-
+    
     /**
      * Stops a specified Docker container.
      */
@@ -187,24 +191,25 @@ class ncDOCKER {
             {
                 type: 'input',
                 name: 'containerName',
-                message: 'Enter the container name or ID you want to stop:'
+                message: 'Enter the container name or ID you want to stop:',
+                validate: input => input ? true : 'You must provide a valid container name or ID.'
             }
         ]);
-
+    
         const spinner = createSpinner(`Stopping Docker container ${containerName}...`).start();
-
+    
         try {
             execSync(`docker stop ${containerName}`);
             spinner.success({ text: `${GREEN(`Docker container '${containerName}' stopped!`)}` });
         } catch (error) {
             spinner.error({ text: `${RED(`Failed to stop Docker container '${containerName}'.`)}` });
-            console.error(error);
+            console.error(error.message);
         }
-
-        await this.awaitContinue();
+    
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to Docker management...' }]);
         await this.manageDocker();
     }
-
+    
     /**
      * Removes a specified Docker container.
      */
@@ -214,24 +219,25 @@ class ncDOCKER {
             {
                 type: 'input',
                 name: 'containerName',
-                message: 'Enter the container name or ID you want to remove:'
+                message: 'Enter the container name or ID you want to remove:',
+                validate: input => input ? true : 'You must provide a valid container name or ID.'
             }
         ]);
-
+    
         const spinner = createSpinner(`Removing Docker container ${containerName}...`).start();
-
+    
         try {
             execSync(`docker rm ${containerName}`);
             spinner.success({ text: `${GREEN(`Docker container '${containerName}' removed!`)}` });
         } catch (error) {
             spinner.error({ text: `${RED(`Failed to remove Docker container '${containerName}'.`)}` });
-            console.error(error);
+            console.error(error.message);
         }
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-
+    
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to Docker management...' }]);
         await this.manageDocker();
     }
-
+    
     /**
      * Removes a specified Docker image.
      */
@@ -241,23 +247,25 @@ class ncDOCKER {
             {
                 type: 'input',
                 name: 'imageName',
-                message: 'Enter the image name or ID you want to remove:'
+                message: 'Enter the image name or ID you want to remove:',
+                validate: input => input ? true : 'You must provide a valid image name or ID.'
             }
         ]);
-
+    
         const spinner = createSpinner(`Removing Docker image ${imageName}...`).start();
-
+    
         try {
             execSync(`docker rmi ${imageName}`);
             spinner.success({ text: `${GREEN(`Docker image '${imageName}' removed!`)}` });
         } catch (error) {
             spinner.error({ text: `${RED(`Failed to remove Docker image '${imageName}'.`)}` });
-            console.error(error);
+            console.error(error.message);
         }
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-
+    
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to Docker management...' }]);
         await this.manageDocker();
     }
+    
 
     /**
      * View Docker networks.
