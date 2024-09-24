@@ -19,6 +19,7 @@ class ncREPAIR {
         this.INDEX_JSON_PATH = '/mnt/data/index_json/nc_data.json';
         this.NC_OCC = 'sudo -u www-data php /var/www/nextcloud/occ';  // Fixed path for Nextcloud OCC
         this.mainMenu = mainMenu;
+        this.versionNumber = this.extractVersionNumber();
         this.runCommand = runCommand;
     }
 
@@ -113,6 +114,21 @@ class ncREPAIR {
         await this.awaitContinue();
     }
 
+    /**
+     * Extracts the current Nextcloud version number.
+     * @returns {string} - The version number of the current Nextcloud installation.
+     */
+      extractVersionNumber() {
+        try {
+            const versionOutput = execSync('sudo -u www-data php /var/www/nextcloud/occ -V').toString().trim();
+            const versionMatch = versionOutput.match(/(\d+\.\d+\.\d+)/);  
+            return versionMatch ? versionMatch[0] : 'latest';  
+        } catch (error) {
+            console.error('Failed to extract Nextcloud version:', error);
+            return 'latest'; 
+        }
+    }
+
     async manualRepair() {
       let continueMenu = true;
       clearConsole();
@@ -162,47 +178,48 @@ class ncREPAIR {
           }
       }
   }
+  /**
+     * Extracts the current Nextcloud version number.
+     * @returns {string} - The version number of the current Nextcloud installation.
+     */
+    extractVersionNumber() {
+        try {
+            const versionOutput = execSync('sudo -u www-data php /var/www/nextcloud/occ -V').toString().trim();
+            const versionMatch = versionOutput.match(/(\d+\.\d+\.\d+)/);  // Extract version in the format "X.X.X"
+            return versionMatch ? versionMatch[0] : 'latest';  // If no version is found, fallback to "latest"
+        } catch (error) {
+            console.error('Failed to extract Nextcloud version:', error);
+            return 'latest';  // Fallback to "latest" if extraction fails
+        }
+    }
 
   /**
-   * Downloads fresh Nextcloud binaries to the system.
-   * @returns {Promise<void>}
-   */
+     * Downloads fresh Nextcloud binaries for the extracted version number.
+     * @returns {Promise<void>}
+     */
   async downloadFreshBinaries() {
     clearConsole();
-    const homeDir = this.runCommand('echo $HOME');
-    
-    // Extract version number using Nextcloud OCC command
-    let versionNumber;
-    try {
-        const versionOutput = this.runCommand('sudo -u www-data php /var/www/nextcloud/occ -V');
-        const versionMatch = versionOutput.match(/\d+\.\d+\.\d+/);
-        versionNumber = versionMatch ? versionMatch[0] : null;
-    } catch (error) {
-        console.error('Failed to retrieve Nextcloud version:', error);
+    const zipFilePath = `${this.homeDir}/nextcloud-${this.versionNumber}.zip`;
+
+    // Check if the file already exists
+    if (fs.existsSync(zipFilePath)) {
+        console.log(GREEN(`The binaries for version ${this.versionNumber} are already downloaded.`));
+        return await this.awaitContinue();
     }
 
-    if (!versionNumber) {
-        console.error('Failed to extract the Nextcloud version. Defaulting to the latest version.');
-        versionNumber = 'latest';
-    }
-
-    // Use version number to form the download URL
-    const downloadUrl = versionNumber === 'latest'
-        ? 'https://download.nextcloud.com/server/releases/latest.zip'
-        : `https://download.nextcloud.com/server/releases/nextcloud-${versionNumber}.zip`;
-
-    console.log(`Downloading Nextcloud version ${versionNumber}...`);
+    console.log(`Downloading fresh Nextcloud binaries (version ${this.versionNumber})...`);
 
     try {
-        const spinner = createSpinner(`Downloading Nextcloud ${versionNumber} binaries...`).start();
-        this.runCommand(`curl -o ${homeDir}/nextcloud-${versionNumber}.zip ${downloadUrl}`);
-        spinner.success({ text: `Nextcloud version ${versionNumber} binaries downloaded!` });
+        const spinner = createSpinner('Downloading binaries...').start();
+        await runCommand(`curl -o ${zipFilePath} https://download.nextcloud.com/server/releases/nextcloud-${this.versionNumber}.zip`);
+        spinner.success({ text: `Fresh binaries for version ${this.versionNumber} downloaded!` });
     } catch (error) {
-        console.error(`Failed to download Nextcloud version ${versionNumber} binaries:`, error);
+        console.error('Failed to download Nextcloud binaries:', error);
     }
 
     await this.awaitContinue();
 }
+
 
   /**
    * Compares the current Nextcloud installation with the freshly downloaded binaries.
@@ -214,23 +231,10 @@ class ncREPAIR {
     clearConsole();
     const homeDir = this.runCommand('echo $HOME');
     
-    // Extract version number using Nextcloud OCC command
-    let versionNumber;
-    try {
-        const versionOutput = this.runCommand('sudo -u www-data php /var/www/nextcloud/occ -V');
-        const versionMatch = versionOutput.match(/\d+\.\d+\.\d+/);  // Extract version number using regex
-        versionNumber = versionMatch ? versionMatch[0] : null;
-    } catch (error) {
-        console.error('Failed to retrieve Nextcloud version:', error);
-    }
+    
 
-    if (!versionNumber) {
-        console.error('Failed to extract the Nextcloud version. Cannot proceed with comparison.');
-        return;
-    }
-
-    const zipFilePath = `${homeDir}/nextcloud-${versionNumber}.zip`;
-    const unzipDirPath = `${homeDir}/nextcloud-${versionNumber}`;
+    const zipFilePath = `${homeDir}/nextcloud-${this.versionNumber}.zip`;
+    const unzipDirPath = `${homeDir}/nextcloud-${this.versionNumber}`;
     const tempFilePath = `${homeDir}/nextcloud-diff-files.txt`;
 
     // Check if the zip file exists
@@ -242,7 +246,7 @@ class ncREPAIR {
             {
                 type: 'confirm',
                 name: 'download',
-                message: `Would you like to download Nextcloud version ${versionNumber} now?`,
+                message: `Would you like to download Nextcloud version ${this.versionNumber} now?`,
                 default: true
             }
         ]);
@@ -349,7 +353,7 @@ class ncREPAIR {
                  clearConsole();
                  const homeDir = this.runCommand('echo $HOME');
                  const tempFilePath = `${homeDir}/nextcloud-diff-files.txt`;  
-                 const unzipDirPath = `${homeDir}/nextcloud-${versionNumber}`;  
+                 const unzipDirPath = `${homeDir}/nextcloud-${this.versionNumber}`;  
                  // Warn user about the potential risk of data overwrite
                  console.log(RED('WARNING: This will overwrite existing files in your Nextcloud installation.'));
                  console.log(YELLOW('Ensure you have taken a backup before proceeding.'));
@@ -438,8 +442,8 @@ class ncREPAIR {
       async cleanupDownloadedFiles() {
         clearConsole();
         const homeDir = this.runCommand('echo $HOME');
-        const unzipDirPath = `${homeDir}/nextcloud-${versionNumber}`;
-        const zipFilePath = `${homeDir}/nextcloud-${versionNumber}.zip`;
+        const unzipDirPath = `${homeDir}/nextcloud-${this.versionNumber}`;
+        const zipFilePath = `${homeDir}/nextcloud-${this.versionNumber}.zip`;
 
         console.log(YELLOW('Cleaning up downloaded files and directories...'));
 
