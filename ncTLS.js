@@ -12,7 +12,7 @@ import inquirer from 'inquirer';
  */
 class ncTLS {
     constructor(mainMenu) {
-        this.mainMenu = this.mainMenu;
+        this.mainMenu = mainMenu;
         this.clearConsole = clearConsole;
         this.runCommand =  runCommand;
         this.awaitContinue = awaitContinue;
@@ -189,11 +189,11 @@ class ncTLS {
      */
     async installAndGenerateCert(domain) {
         this.setTLSConfig(domain);
-
+    
         // Install Certbot
         console.log('Installing Certbot...');
         execSync('sudo apt-get install -y certbot', { stdio: 'inherit' });
-
+    
         // Dry-run the Certbot command first
         console.log('Performing a dry-run for Certbot...');
         const certCommandDryRun = `sudo certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns --dry-run -d ${domain}`;
@@ -202,7 +202,7 @@ class ncTLS {
             // Execute the dry-run
             execSync(certCommandDryRun, { stdio: 'inherit' });
             console.log(GREEN('Dry-run successful!'));
-
+    
             // Prompt the user if they want to proceed with the real certificate generation
             const answer = await inquirer.prompt([{
                 type: 'confirm',
@@ -210,13 +210,13 @@ class ncTLS {
                 message: `Dry-run was successful. Do you want to proceed with generating a real certificate for ${domain}?`,
                 default: false
             }]);
-
+    
             if (answer.proceed) {
                 console.log('Generating real TLS certificate using Certbot...');
                 const certCommand = `sudo certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns -d ${domain}`;
                 execSync(certCommand, { stdio: 'inherit' });
                 console.log(GREEN('TLS certificate generated successfully!'));
-
+    
                 // Generate DH parameters if Certbot succeeded
                 this.generateDHParams();
             } else {
@@ -226,6 +226,9 @@ class ncTLS {
             console.error(RED('Dry-run or certificate generation failed.'));
             console.error(error.message);
         }
+    
+        // Wait for user input before proceeding back to the main menu
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to the TLS Management Menu...' }]);
     }
 
 
@@ -317,6 +320,7 @@ class ncTLS {
      */
     async certMenu(mainMenu) {
         let continueMenu = true;
+        clearConsole();
 
         while (continueMenu) {
             const { action } = await inquirer.prompt([
