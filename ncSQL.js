@@ -130,17 +130,22 @@ class ncSQL {
         const spinner = createSpinner('Checking PostgreSQL status...').start();
         
         try {
-            // Check the status of PostgreSQL
-            const status = execSync('sudo systemctl status postgresql', { stdio: 'pipe' });
+            // Check the status of PostgreSQL and capture the output
+            const status = execSync('sudo systemctl status postgresql', { stdio: 'pipe' }).toString();
+            
+            // Mark the spinner as successful and display the status
             spinner.success({ text: `${GREEN('PostgreSQL status displayed.')}` });
-            console.log(GREEN(status.toString()));
+            console.log(GREEN(status));
+    
+            // Wait for user input before continuing
+            await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         } catch (error) {
             spinner.error({ text: `${RED('Failed to retrieve PostgreSQL status')}` });
-            console.error(error);
-        }
+            console.error(RED(error.message));
     
-        // Wait for user input before continuing
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+            // Wait for user input before continuing in case of error
+            await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+        }
     }
 }
 
