@@ -29,6 +29,18 @@ export function checkComponent(command) {
     }
 }
 
+/**
+ * Helper function to extract configuration values from the config.php file
+ * @param {string} configFile - The content of config.php file
+ * @param {string} key - The key to look for (e.g., 'dbname')
+ * @returns {string} - The value corresponding to the key
+ */
+export function getConfigValue(configFile, key) {
+    const regex = new RegExp(`'${key}'\\s*=>\\s*'([^']+)'`, 'm');
+    const match = configFile.match(regex);
+    return match ? match[1] : null;
+}
+
 
 export function loadVariables() {
     try {

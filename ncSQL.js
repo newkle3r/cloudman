@@ -1,5 +1,5 @@
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { clearConsole,runCommand,welcome } from './utils.js';
+import { clearConsole,runCommand,welcome,getConfigValue } from './utils.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
@@ -24,6 +24,12 @@ class ncSQL {
 
         this.backupPath = `/home/${user}/backups`;
         this.psqlVER = variables.PSQLVER;
+
+        const configFilePath = '/var/www/nextcloud/config/config.php';
+        const configFile = fs.readFileSync(configFilePath, 'utf8');
+        this.dbname = getConfigValue(configFile, 'dbname');
+        this.dbuser = getConfigValue(configFile, 'dbuser');
+        this.dbpassword = getConfigValue(configFile, 'dbpassword');
     }
 
     /**
@@ -106,22 +112,29 @@ class ncSQL {
         const spinner = createSpinner('Restoring PostgreSQL database...').start();
         
         try {
-            // Drop the existing database
-            execSync(`sudo -u postgres psql -c "DROP DATABASE IF EXISTS nextcloud_db;"`);
-            // Recreate the database
-            execSync(`sudo -u postgres psql -c "CREATE DATABASE nextcloud_db OWNER nextcloud_db_user;"`);
+            // Ensure the PostgreSQL role exists
+            execSync(`sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='${this.dbuser}'" | grep -q 1 || sudo -u postgres psql -c "CREATE ROLE ${this.dbuser} WITH LOGIN PASSWORD '${this.dbpassword}';"`);
     
-            // Execute restore command
-            execSync(`sudo -u postgres psql nextcloud_db < ${this.backupPath}/nextcloud_db_backup.sql`);
+            // Drop the existing database if it exists
+            execSync(`sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${this.dbname};"`);
+            
+            // Recreate the database with the correct owner
+            execSync(`sudo -u postgres psql -c "CREATE DATABASE ${this.dbname} OWNER ${this.dbuser};"`);
+    
+            // Restore the database from the backup file
+            execSync(`sudo -u postgres psql ${this.dbname} < ${this.backupPath}/nextcloud_db_backup.sql`);
+    
             spinner.success({ text: `${GREEN('Database restore completed!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to restore PostgreSQL database')}` });
             console.error(error);
         }
+    
+        // Wait for user input before continuing
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.managePostgreSQL();
     }
-
+    
     /**
      * Displays the status of the PostgreSQL service.
      */
