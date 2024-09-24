@@ -102,7 +102,7 @@ class ncDOCKER {
     }
 
     await this.awaitContinue();
-    await this.manageDocker();
+    return this.manageDocker();
 }
 
 /**
@@ -138,7 +138,7 @@ async stopContainer() {
     }
 
     await this.awaitContinue();
-    await this.manageDocker();
+    return this.manageDocker();
 }
 
 /**
@@ -174,7 +174,7 @@ async removeContainer() {
     }
 
     await this.awaitContinue();
-    await this.manageDocker();
+    return this.manageDocker();
 }
 
 /**
@@ -210,7 +210,7 @@ async removeImage() {
     }
 
     await this.awaitContinue();
-    await this.manageDocker();
+    return this.manageDocker();
 }
 
     /**
@@ -230,7 +230,7 @@ async removeImage() {
         }
 
         await this.awaitContinue();
-        await this.manageDocker();
+        return this.manageDocker();
     }
 }
 
