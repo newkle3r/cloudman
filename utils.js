@@ -82,6 +82,10 @@ export async function initialize(fetchFunction, lastCheckKey, context, threshold
      */
         export function runCommand(command) {
             try {
+                // Logging the command to debug what's being passed
+                console.log(`Executing command: ${command}`);
+                
+                // Ensure only shell commands are executed, not JavaScript
                 return execSync(command, { shell: '/bin/bash' }).toString().trim();
             } catch (error) {
                 console.error(`Error executing command: ${command}`, error);

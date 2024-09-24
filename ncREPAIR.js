@@ -22,6 +22,8 @@ class ncREPAIR {
         this.versionNumber = this.extractVersionNumber();
         this.homeDir = runCommand('echo $HOME')
         this.runCommand = runCommand;
+        this.NC_PATH = '/var/www/nextcloud';
+        this.BACKUP_PATH = `${this.homeDir}/backup`;
     }
 
     /**
@@ -374,9 +376,11 @@ class ncREPAIR {
 
     // Perform comparison using rsync with dry-run and save the differing files
     try {
+        
         const spinner = createSpinner('Comparing files...').start();
         // Use rsync dry-run to compare current installation with fresh binaries and save differences
-        const rsyncOutput = this.runCommand(`rsync -ncr ${unzipDirPath}/nextcloud/ ${this.NCPATH}/`);
+        const rsyncOutput = this.runCommand(`sudo -u www-data rsync -ncr ${unzipDirPath}/nextcloud/ ${this.NC_PATH}/`);
+       
 
         // Filter out only the file paths from the rsync output and save to a temporary file
         const differingFiles = rsyncOutput
@@ -409,6 +413,8 @@ class ncREPAIR {
   async backupData() {
       clearConsole();
 
+    
+
       if (!fs.existsSync(this.BACKUP_PATH)) {
           console.log(`${this.BACKUP_PATH} does not exist. Creating backup directory...`);
           this.runCommand(`sudo mkdir -p ${this.BACKUP_PATH}`);
@@ -433,104 +439,104 @@ class ncREPAIR {
    * Overwrites corrupt data in the Nextcloud installation with fresh binaries.
    * @returns {Promise<void>}
    */
-  async overwriteCorruptData() {
-      clearConsole();
-      
-      // Warn user about the potential risk of data overwrite
-      console.log('WARNING: This will overwrite existing files in your Nextcloud installation.');
-      console.log('Ensure you have taken a backup before proceeding.');
+    async overwriteCorruptData() {
+        clearConsole();
 
-      const { confirmOverwrite } = await inquirer.prompt([
-          {
-              type: 'confirm',/**
-              * Overwrites corrupt data in the Nextcloud installation with fresh binaries.
-              * Gives the user the option to either overwrite all files or selectively choose which files to overwrite.
-              * @returns {Promise<void>}
-              */
-             async overwriteCorruptData() {
-                 clearConsole();
-                 const tempFilePath = `${this.homeDir}/nextcloud-diff-files.txt`;  
-                 const unzipDirPath = `${this.homeDir}/nextcloud-${this.versionNumber}`;  
-                 // Warn user about the potential risk of data overwrite
-                 console.log(RED('WARNING: This will overwrite existing files in your Nextcloud installation.'));
-                 console.log(YELLOW('Ensure you have taken a backup before proceeding.'));
-             
-                 const { overwriteChoice } = await inquirer.prompt([
-                     {
-                         type: 'list',
-                         name: 'overwriteChoice',
-                         message: 'Would you like to:',
-                         choices: [
-                             'Overwrite all files with fresh binaries',
-                             'Choose which files to overwrite from the list',
-                             'Abort'
-                         ]
-                     }
-                 ]);
-             
-                 if (overwriteChoice === 'Abort') {
-                     console.log(YELLOW('Operation aborted. No files were overwritten.'));
-                     return await this.awaitContinue();
-                 }
-             
-                 if (!fs.existsSync(tempFilePath)) {
-                     console.error(RED('No differing files list found. Please run the comparison first.'));
-                     await this.awaitContinue();
-                     return;
-                 }
-             
-                 const differingFiles = fs.readFileSync(tempFilePath, 'utf8').split('\n').filter(Boolean);
-             
-                 if (overwriteChoice === 'Choose which files to overwrite from the list') {
-                     // Display the list of differing files and allow the user to select files to overwrite
-                     const { selectedFiles } = await inquirer.prompt([
-                         {
-                             type: 'checkbox',
-                             name: 'selectedFiles',
-                             message: 'Select the files you want to overwrite:',
-                             choices: differingFiles
-                         }
-                     ]);
-             
-                     if (selectedFiles.length === 0) {
-                         console.log(YELLOW('No files were selected for overwriting.'));
-                         await this.awaitContinue();
-                         return;
-                     }
-             
-                     console.log(GREEN(`Overwriting ${selectedFiles.length} selected files...`));
-                     const spinner = createSpinner('Overwriting files...').start();
-             
-                     try {
-                         // Rsync the selected files from the fresh binaries to the current installation
-                         selectedFiles.forEach(file => {
-                             const relativePath = file.replace(`${this.NCPATH}/`, '');  // Get the relative path
-                             this.runCommand(`rsync -cr ${unzipDirPath}/nextcloud/${relativePath} ${this.NCPATH}/${relativePath}`);
-                         });
-                         spinner.success({ text: 'Selected files overwritten successfully!' });
-                     } catch (error) {
-                         spinner.error({ text: 'Failed to overwrite selected files.' });
-                         console.error(error);
-                     }
-                 } else {
-                     // Overwrite all files with fresh binaries
-                     console.log(GREEN('Overwriting all files with fresh binaries...'));
-                     const spinner = createSpinner('Overwriting all files...').start();
-             
-                     try {
-                         await this.runCommand(`rsync -cr ${unzipDirPath}/nextcloud/ ${this.NCPATH}/`);
-                         spinner.success({ text: 'All files overwritten successfully!' });
-                     } catch (error) {
-                         spinner.error({ text: 'Failed to overwrite all files.' });
-                         console.error(error);
-                     }
-                 }
-             
-                 await this.awaitContinue();
-             }
-            }])
-             
-          }
+        // Warn user about the potential risk of data overwrite
+        console.log(RED('WARNING: This will overwrite existing files in your Nextcloud installation.'));
+        console.log(YELLOW('Ensure you have taken a backup before proceeding.'));
+
+        // Ensure the prompt is correctly defined and used here
+        const { confirmOverwrite } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'confirmOverwrite',
+                message: 'Do you want to proceed with the overwrite?',  // Proper message
+                default: false,  // Set a default to avoid undefined behavior
+            }
+        ]);
+
+        // If the user doesn't confirm, exit the function
+        if (!confirmOverwrite) {
+            console.log(YELLOW('Operation aborted by user.'));
+            return await this.awaitContinue();
+        }
+
+        // Continue with the overwrite process if confirmed
+        const tempFilePath = `${this.homeDir}/nextcloud-diff-files.txt`;
+        const unzipDirPath = `${this.homeDir}/nextcloud-${this.versionNumber}`;
+
+        if (!fs.existsSync(tempFilePath)) {
+            console.error(RED('No differing files list found. Please run the comparison first.'));
+            return await this.awaitContinue();
+        }
+
+        // Proceed with file overwriting logic
+        const differingFiles = fs.readFileSync(tempFilePath, 'utf8').split('\n').filter(Boolean);
+
+        const { overwriteChoice } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'overwriteChoice',
+                message: 'Would you like to:',
+                choices: [
+                    'Overwrite all files with fresh binaries',
+                    'Choose which files to overwrite from the list',
+                    'Abort'
+                ]
+            }
+        ]);
+
+        if (overwriteChoice === 'Abort') {
+            console.log(YELLOW('Operation aborted. No files were overwritten.'));
+            return await this.awaitContinue();
+        }
+
+        if (overwriteChoice === 'Choose which files to overwrite from the list') {
+            // Display the list of differing files and allow the user to select files to overwrite
+            const { selectedFiles } = await inquirer.prompt([
+                {
+                    type: 'checkbox',
+                    name: 'selectedFiles',
+                    message: 'Select the files you want to overwrite:',
+                    choices: differingFiles
+                }
+            ]);
+
+            if (selectedFiles.length === 0) {
+                console.log(YELLOW('No files were selected for overwriting.'));
+                return await this.awaitContinue();
+            }
+
+            console.log(GREEN(`Overwriting ${selectedFiles.length} selected files...`));
+            const spinner = createSpinner('Overwriting files...').start();
+
+            try {
+                selectedFiles.forEach(file => {
+                    const relativePath = file.replace(`${this.NC_PATH}/`, '');  // Get the relative path
+                    this.runCommand(`sudo rsync -cr ${unzipDirPath}/nextcloud/${relativePath} ${this.NC_PATH}/${relativePath}`);
+                });
+                spinner.success({ text: 'Selected files overwritten successfully!' });
+            } catch (error) {
+                spinner.error({ text: 'Failed to overwrite selected files.' });
+                console.error(error);
+            }
+        } else {
+            // Overwrite all files with fresh binaries
+            console.log(GREEN('Overwriting all files with fresh binaries...'));
+            const spinner = createSpinner('Overwriting all files...').start();
+
+            try {
+                await this.runCommand(`sudo rsync -cr ${unzipDirPath}/nextcloud/ ${this.NC_PATH}/`);
+                spinner.success({ text: 'All files overwritten successfully!' });
+            } catch (error) {
+                spinner.error({ text: 'Failed to overwrite all files.' });
+                console.error(error);
+            }
+        }
+
+        await this.awaitContinue();
+    }
 
     /**
      * Cleans up the downloaded zip file and unzipped folder for the Nextcloud binaries.

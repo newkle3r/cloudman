@@ -29,8 +29,12 @@ async function initializeVariables() {
     // Load variables from the ncVARS class and JSON file
     varsclass = new ncVARS();
     varsclass.loadVariables();
+    varsclass.getAvailableUpdates();
+    // varsclass.appUpdateStatus
 
-    // Fetch app updates and other system statuses using the initialize function
+    
+
+    // Fetch other system statuses using the initialize function
     await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass, UPDATE_THRESHOLD);
 }
 
@@ -43,7 +47,7 @@ async function mainMenu() {
 
     // Fetch system status information
     const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
-    const { psqlStatus, redisStatus, apache2Status, dockerStatus, appUpdateStatus } = varsclass;
+    const { psqlStatus, redisStatus, apache2Status, dockerStatus } = varsclass;
 
     // Display system status in the splash screen
     console.log(dockerStatus);
@@ -53,7 +57,7 @@ async function mainMenu() {
     console.log(BLUE('PostgreSQL'), YELLOW(psql), ':', psqlStatus);
     console.log(BLUE('redis-server:'), redisStatus);
     console.log(BLUE('apache2:'), apache2Status);
-    console.log(BLUE('App updates:'), appUpdateStatus);
+    console.log(BLUE('App updates:'), varsclass.appUpdateStatus);
     console.log(``)
 
     const answers = await inquirer.prompt([

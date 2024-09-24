@@ -76,26 +76,35 @@ class ncVARS {
      */
     async getAvailableUpdates() {
         try {
-            // Fetch list of apps from the Nextcloud OCC command
-            const appListOutput = execSync("sudo -u www-data php /var/www/nextcloud/occ app:list").toString().trim();
-            
-            // Use regex to find apps that need updates
-            const updatesAvailable = appListOutput.match(/(\w+):\s*update available/gi) || [];
-        
-            // Count how many apps have updates available
-            const updateCount = updatesAvailable.length;
-
-            if (updateCount > 0) {
-                const appNames = updatesAvailable.map(line => line.split(':')[0]).join(', ');
-                this.appUpdateStatus = GREEN(`There are ${updateCount} apps with updates: ${appNames}`);
-            } else {
-                this.appUpdateStatus = YELLOW('No apps have available updates');
+            // Run the `occ update:check` command to check for both core and app updates
+            const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
+    
+            let updateSummary = '';  // To hold the summary of updates
+    
+            // Check if there is a Nextcloud core update
+            const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
+            let coreUpdateText = '';
+            if (coreUpdate) {
+                coreUpdateText = `Nextcloud core update available: Version ${coreUpdate[1]}`;
+                updateSummary += `${coreUpdateText}\n`;  // Add core update to summary
             }
+    
+            // Parse app update information
+            const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
+            if (appUpdates && appUpdates.length > 0) {
+                updateSummary += `${appUpdates.length} app update(s) available.\n`;  // Add app updates to summary
+            }
+    
+            // If no core or app updates are available
+            if (!coreUpdateText && (!appUpdates || appUpdates.length === 0)) {
+                updateSummary = 'No apps or core updates available';
+            }
+    
+            this.appUpdateStatus = GREEN(updateSummary.trim());  // Use trimmed summary as the status
         } catch (error) {
-            this.appUpdateStatus = RED('Error fetching app updates or no apps available');
+            this.appUpdateStatus = RED('Error checking for app updates.');
         }
     }
-
 
 
     /**
