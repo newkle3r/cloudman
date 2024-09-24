@@ -1,5 +1,5 @@
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { clearConsole,welcome } from './utils.js';
+import { clearConsole,runCommand,welcome } from './utils.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
@@ -19,8 +19,10 @@ const variablesPath = 'variables.json';
  */
 class ncSQL {
     constructor() {
+        this.runCommand = runCommand;
+        const user = this.runCommand(`echo $USER`).trim();
 
-        this.backupPath = `/home/${user.trim()}/backups`;
+        this.backupPath = `/home/${user}/backups`;
         this.psqlVER = variables.PSQLVER;
     }
 
@@ -85,7 +87,7 @@ class ncSQL {
 
             // Step 4: Create PostgreSQL backup
             console.log(BLUE(`Creating PostgreSQL backup in ${this.backupPath}...`));
-            await this.runCommand(`pg_dump nextcloud_db > ${this.backupPath}/nextcloud_db_backup.sql`);
+            await this.runCommand(`sudo -u postgres pg_dump nextcloud_db > ${this.backupPath}/nextcloud_db_backup.sql`);
             spinner.success({ text: `${GREEN('Database backup completed!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to backup PostgreSQL database')}` });
@@ -104,6 +106,11 @@ class ncSQL {
         const spinner = createSpinner('Restoring PostgreSQL database...').start();
         
         try {
+            // Drop the existing database
+            execSync(`sudo -u postgres psql -c "DROP DATABASE IF EXISTS nextcloud_db;"`);
+            // Recreate the database
+            execSync(`sudo -u postgres psql -c "CREATE DATABASE nextcloud_db OWNER nextcloud_user;"`);
+    
             // Execute restore command
             execSync(`sudo -u postgres psql nextcloud_db < ${this.backupPath}/nextcloud_db_backup.sql`);
             spinner.success({ text: `${GREEN('Database restore completed!')}` });
@@ -124,15 +131,16 @@ class ncSQL {
         
         try {
             // Check the status of PostgreSQL
-            const status = execSync('sudo systemctl status postgresql');
-            console.log(GREEN(status.toString()));
+            const status = execSync('sudo systemctl status postgresql', { stdio: 'pipe' });
             spinner.success({ text: `${GREEN('PostgreSQL status displayed.')}` });
+            console.log(GREEN(status.toString()));
         } catch (error) {
             spinner.error({ text: `${RED('Failed to retrieve PostgreSQL status')}` });
             console.error(error);
         }
+    
+        // Wait for user input before continuing
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-        await this.managePostgreSQL();
     }
 }
 

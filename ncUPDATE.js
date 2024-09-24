@@ -121,24 +121,29 @@ class ncUPDATE {
 
     
 
-    /**
- * Checks for any conflicting processes like apt or dpkg that could interfere with the update.
- * @returns {boolean} - True if conflicting processes are found, false otherwise.
- */
+  /**
+   * Checks for any conflicting processes like apt or dpkg that could interfere with the update.
+   * @returns {boolean} - True if conflicting processes are found, false otherwise.
+   */
   checkProcesses() {
-    // Check if any apt or dpkg processes are currently running
-    const aptProcesses = this.runCommand('pgrep apt');
-    const dpkgProcesses = this.runCommand('pgrep dpkg');
+    try {
+        // Check if any apt or dpkg processes are currently running
+        const aptProcesses = this.runCommand('pgrep apt');
+        const dpkgProcesses = this.runCommand('pgrep dpkg');
 
-    if (aptProcesses || dpkgProcesses) {
-        // If any apt or dpkg processes are running, log and return true (indicating conflict)
-        console.log(RED('Apt or other conflicting processes are running. Please wait for them to finish.'));
-        return true;
+        // If apt or dpkg processes are running, log the conflict and return true
+        if (aptProcesses || dpkgProcesses) {
+            console.log(RED('Apt or other conflicting processes are running. Please wait for them to finish.'));
+            return true;
+        }
+    } catch (error) {
+        // If pgrep returns no processes, it throws an error, which means no conflicts are found
+        return false;
     }
 
-    // No conflicting processes found
-    return false;
-  }
+  // No conflicting processes found
+  return false;
+}
 
     /**
      * Displays the Maintenance Mode Management menu and allows the user to enable or disable maintenance mode.
