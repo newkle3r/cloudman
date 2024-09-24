@@ -18,10 +18,11 @@ const variablesPath = 'variables.json';
  * Class for managing PostgreSQL-related tasks such as backup, restore, and status check.
  */
 class ncSQL {
-    constructor() {
+    constructor(mainMenu) {
+        this.mainMenu = mainMenu;
         this.runCommand = runCommand;
         const user = this.runCommand(`echo $USER`).trim();
-
+        
         this.backupPath = `/home/${user}/backups`;
         this.psqlVER = variables.PSQLVER;
 
@@ -66,7 +67,7 @@ class ncSQL {
                     break;
                 case 'Go Back':
                     continueMenu = false;
-                    mainMenu();
+                    this.mainMenu();
                     break;
                     
             }
@@ -160,6 +161,7 @@ class ncSQL {
             await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         }
     }
+    
 }
 
 export default ncSQL;

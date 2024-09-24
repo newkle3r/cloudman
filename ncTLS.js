@@ -1,5 +1,6 @@
 import fs from 'fs';
-import { clearConsole,welcome } from './utils.js';
+import { RED, GREEN, YELLOW, BLUE } from './color.js';
+import { clearConsole,welcome,runCommand,awaitContinue } from './utils.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 
@@ -11,63 +12,29 @@ import inquirer from 'inquirer';
  */
 class ncTLS {
     constructor() {
-        /**
-         * @property {string} SCRIPTS - Path to the scripts directory.
-         */
+        this.clearConsole = clearConsole;
+        this.runCommand =  runCommand;
+        this.awaitContinue = awaitContinue;
         this.SCRIPTS = '/var/scripts';
-
-        /**
-         * @property {string} HTML - Path to the web root directory.
-         */
         this.HTML = '/var/www';
-
-        /**
-         * @property {string} NCPATH - Path to the Nextcloud installation directory.
-         */
         this.NCPATH = `${this.HTML}/nextcloud`;
-
-        /**
-         * @property {string} CERTFILES - Directory where Let's Encrypt certificates are stored.
-         * @description Dynamically retrieves the certificate directory for Let's Encrypt.
-         */
         this.CERTFILES = '/etc/letsencrypt/live';
-
-        /**
-         * @property {string} PHPVER - Current PHP version in use.
-         * @description Dynamically retrieves the PHP version using the 'php -v' command.
-         */
-        this.PHPVER = this.getCommandOutput('php -v | grep "^PHP" | awk \'{print $2}\'');
-
-        /**
-         * @property {string} TLSDOMAIN - Domain name for which TLS is activated.
-         */
+        this.PHPVER = this.runCommand('php -v | grep "^PHP" | awk \'{print $2}\'');
         this.TLSDOMAIN = this.getTLSConfigDomain();
-
-        /**
-         * @property {string} TLS_CONF - Path to the Apache TLS configuration file.
-         */
         this.TLS_CONF = this.getTLSConfPath();
-
-        /**
-         * @property {string} DHPARAMS_TLS - Path to the DHParams file for TLS configuration.
-         */
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
 
         /**
          * @property {string} LETS_ENCRYPT_CERT - Path to the Let's Encrypt certificate.
          * @description Dynamically retrieves the Let's Encrypt certificate path.
          */
-        this.LETS_ENCRYPT_CERT = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
+        this.LETS_ENCRYPT_CERT = this.runCommand("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
 
         /**
          * @property {string} LETS_ENCRYPT_STATUS - Status of the Let's Encrypt certificate (Valid or Expired).
          * @description Checks the validity of the Let's Encrypt certificate using certbot.
          */
         this.LETS_ENCRYPT_STATUS = this.getCertStatus();
-
-        /**
-         * @property {Array<number>} NONO_PORTS - List of ports that shouldn't be used for public access.
-         */
         this.NONO_PORTS = [22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5432];
     }
 
@@ -77,7 +44,7 @@ class ncTLS {
      * @returns {string} - Output from the command.
      * Basically checkComponent, but with stringify
      */
-    getCommandOutput(command) {
+    runCommand(command) {
         try {
             return execSync(command).toString().trim();
         } catch (error) {
@@ -92,7 +59,7 @@ class ncTLS {
      */
     getTLSConfigDomain() {
         try {
-            const tlsDomain = this.getCommandOutput("grep 'ServerName' /etc/apache2/sites-available/*.conf | awk '{print $2}'");
+            const tlsDomain = this.runCommand("grep 'ServerName' /etc/apache2/sites-available/*.conf | awk '{print $2}'");
             return tlsDomain || 'domain.com';  // Fallback to default domain
         } catch (error) {
             console.error('Error fetching TLS domain:', error);
@@ -106,7 +73,7 @@ class ncTLS {
      */
     getTLSConfPath() {
         try {
-            const confPath = this.getCommandOutput("ls /etc/apache2/sites-available/ | grep '.conf'");
+            const confPath = this.runCommand("ls /etc/apache2/sites-available/ | grep '.conf'");
             return `/etc/apache2/sites-available/${confPath}`;
         } catch (error) {
             console.error('Error fetching TLS configuration path:', error);
