@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { clearConsole, loadVariables, initialize, welcome, UPDATE_THRESHOLD } from './utils.js';
+import { clearConsole, loadVariables, initialize, welcome, UPDATE_THRESHOLD,awaitContinue } from './utils.js';
 import { RED, BLUE, GREEN, YELLOW, PURPLE } from './color.js';
 import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
@@ -136,6 +136,8 @@ async function mainMenu() {
 
         case 'Manage TLS':
             const certManager = new ncTLS(mainMenu);
+            certManager.verifyVariables();
+            await awaitContinue();
             return certManager.certMenu();
 
         case 'Backup':
