@@ -1,11 +1,8 @@
-import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { clearConsole,welcome,awaitContinue } from './utils.js';
+import { RED, BLUE, GREEN } from './color.js';
+import { clearConsole, awaitContinue } from './utils.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
-import chalk from 'chalk';
-
-// Needs new splash
 
 /**
  * Class to manage Docker containers and images using Docker CLI.
@@ -15,98 +12,61 @@ class ncDOCKER {
         this.mainMenu = mainMenu;
         this.clearConsole = clearConsole;
         this.awaitContinue = awaitContinue;
-    
     }
-
-    /**
-     * Check if Docker is installed.
-     */
-    checkDockerInstalled() {
-        try {
-            // Run the `docker` command to see if Docker is installed
-            execSync('docker --version', { stdio: 'ignore' });
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
-
-    /**
-     * Install Docker on the system.
-     */
-    async installDocker() {
-        const spinner = createSpinner('Installing Docker...').start();
-
-        try {
-            execSync(`sudo apt-get update && sudo apt-get install -y docker.io`, { stdio: 'inherit' });
-            spinner.success({ text: `${GREEN('Docker installed successfully!')}` });
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to install Docker.')}` });
-            console.error(error);
-        }
-        await this.awaitContinue();
-        await this.manageDocker();
-
-    }
-
 
     /**
      * Displays the menu for Docker management.
      */
-    async manageDocker(mainMenu) {
-
+    async manageDocker() {
         let continueMenu = true;
         this.clearConsole();
-       
 
         while (continueMenu === true) {
+            const answers = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'action',
+                    message: 'Docker Management:',
+                    choices: [
+                        'List Containers',
+                        'List Images',
+                        'Start Container',
+                        'Stop Container',
+                        'Remove Container',
+                        'Remove Image',
+                        'View Networks',
+                        'Go Back'
+                    ],
+                }
+            ]);
 
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'action',
-                message: 'Docker Management:',
-                choices: [
-                    'List Containers',
-                    'List Images',
-                    'Start Container',
-                    'Stop Container',
-                    'Remove Container',
-                    'Remove Image',
-                    'View Networks',
-                    'Go Back'
-                ],
+            switch (answers.action) {
+                case 'List Containers':
+                    await this.listContainers();
+                    break;
+                case 'List Images':
+                    await this.listImages();
+                    break;
+                case 'Start Container':
+                    await this.startContainer();
+                    break;
+                case 'Stop Container':
+                    await this.stopContainer();
+                    break;
+                case 'Remove Container':
+                    await this.removeContainer();
+                    break;
+                case 'Remove Image':
+                    await this.removeImage();
+                    break;
+                case 'View Networks':
+                    await this.viewNetworks();
+                    break;
+                case 'Go Back':
+                    continueMenu = false;
+                    return this.mainMenu();
             }
-        ]);
-
-        switch (answers.action) {
-            case 'List Containers':
-                this.listContainers();
-                break;
-            case 'List Images':
-                this.listImages();
-                break;
-            case 'Start Container':
-                this.startContainer();
-                break;
-            case 'Stop Container':
-                this.stopContainer();
-                break;
-            case 'Remove Container':
-                this.removeContainer();
-                break;
-            case 'Remove Image':
-                this.removeImage();
-                break;
-            case 'View Networks':
-                this.viewNetworks();
-                break;
-            case 'Go Back':
-                continueMenu = false;
-                return this.mainMenu();
-                
         }
-    }
     }
 
     /**
@@ -115,20 +75,19 @@ class ncDOCKER {
     async listContainers() {
         this.clearConsole();
         const spinner = createSpinner('Fetching Docker containers...').start();
-    
+
         try {
             const output = execSync('docker ps -a', { encoding: 'utf8' });
             spinner.success({ text: `${GREEN('Docker containers:')}` });
             console.log(output);
         } catch (error) {
             spinner.error({ text: `${RED('Failed to list Docker containers.')}` });
-            console.error(error);
+            console.error(error.message);
         }
-    
+
         await this.awaitContinue();
         await this.manageDocker();
     }
-    
 
     /**
      * Lists all Docker images.
@@ -143,7 +102,7 @@ class ncDOCKER {
             console.log(output);
         } catch (error) {
             spinner.error({ text: `${RED('Failed to list Docker images.')}` });
-            console.error(error);
+            console.error(error.message);
         }
 
         await this.awaitContinue();
@@ -262,7 +221,6 @@ class ncDOCKER {
         await this.awaitContinue();
         await this.manageDocker();
     }
-    
 
     /**
      * View Docker networks.
@@ -277,10 +235,10 @@ class ncDOCKER {
             console.log(output);
         } catch (error) {
             spinner.error({ text: `${RED('Failed to fetch Docker networks.')}` });
-            console.error(error);
+            console.error(error.message);
         }
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
+        await this.awaitContinue();
         await this.manageDocker();
     }
 }
