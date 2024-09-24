@@ -1,5 +1,5 @@
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { clearConsole,welcome } from './utils.js';
+import { clearConsole,welcome,clearConsole,awaitContinue } from './utils.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
@@ -11,7 +11,12 @@ import chalk from 'chalk';
  * Class to manage Docker containers and images using Docker CLI.
  */
 class ncDOCKER {
-    constructor() {}
+    constructor() {
+        this.mainMenu = this.mainMenu;
+        this.clearConsole = clearConsole;
+        this.awaitContinue = awaitContinue;
+
+    }
 
     /**
      * Check if Docker is installed.
@@ -49,7 +54,7 @@ class ncDOCKER {
 
         let continueMenu = true;
         clearConsole();
-        await welcome(); // temporary use of main splash, passed from index.js
+       
 
         while (continueMenu === true) {
 
@@ -94,8 +99,8 @@ class ncDOCKER {
                 break;
             case 'Go Back':
                 continueMenu = false;
-                mainMenu();
-                break;
+                return this.mainMenu();
+                
         }
     }
     }
