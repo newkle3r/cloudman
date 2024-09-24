@@ -4,7 +4,7 @@ import { execSync,spawn } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
 import { runCommandWithProgress, initialize } from './utils.js';
-import cliProgress from 'cli-progress';
+import cliProgress from 'cli-progress'; 
 
 /**
  * Class to handle the Nextcloud update process.
@@ -193,6 +193,8 @@ class ncUPDATE {
     }
 
     await this.awaitContinue();
+
+    
 }
 
  
@@ -339,13 +341,13 @@ class ncUPDATE {
     async runFullUpdate() {
         this.checkProcesses();
         await this.checkFreeSpace();
-        await this.enableMaintenanceMode();
+        await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`);
         await this.createBackup();
         await this.downloadNextcloud();
         await this.extractNextcloud();
         await this.upgradeNextcloud();
         await this.cleanup();
-        await this.disableMaintenanceMode();
+        await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
         console.log(GREEN('Nextcloud update completed successfully.'));
         await this.awaitContinue();
     }

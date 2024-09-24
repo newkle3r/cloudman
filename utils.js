@@ -72,6 +72,15 @@ export async function initialize(fetchFunction, lastCheckKey, context) {
             }
         }
 
+        export const awaitContinue = async () => {
+            console.log('\nPress any key to continue...');
+            process.stdin.setRawMode(true);
+            return new Promise((resolve) => process.stdin.once('data', () => {
+                process.stdin.setRawMode(false);
+                resolve();
+            }));
+        };
+
 /**
  * Runs a command with progress tracking, specifically for commands like `curl` that output progress on `stderr`.
  * @param {string} command - The command to run.
@@ -136,4 +145,86 @@ export async function welcome() {
             figlet.textSync('Cloudman', { horizontalLayout: 'full' })
         )
     );
+    
 }
+    /**
+     * Displays the Maintenance Mode Management menu and allows the user to enable or disable maintenance mode.
+     */
+ export async function manageMaintenanceMode() {
+    clearConsole();
+    
+    // Check if maintenance mode is enabled or not
+    const maintenanceEnabled = this.isMaintenanceModeEnabled();
+    const menuOptions = [];
+
+    // Add options to the menu based on the current maintenance mode state
+    if (maintenanceEnabled) {
+        menuOptions.push('✔ Enable Maintenance Mode', 'Disable Maintenance Mode', 'Abort and Go Back');
+    } else {
+        menuOptions.push('Enable Maintenance Mode', '✔ Disable Maintenance Mode', 'Abort and Go Back');
+    }
+
+    const { action } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'action',
+            message: 'Maintenance Mode Management:',
+            choices: menuOptions
+        }
+    ]);
+
+    // Handle the selected action
+    switch (action) {
+        case '✔ Enable Maintenance Mode':
+        case 'Enable Maintenance Mode':
+            await this.setMaintenanceMode(true);
+            break;
+
+        case '✔ Disable Maintenance Mode':
+        case 'Disable Maintenance Mode':
+            await this.setMaintenanceMode(false);
+            break;
+
+        case 'Abort and Go Back':
+            return;
+    }
+}
+
+/**
+   * Enables or disables maintenance mode in Nextcloud.
+   * @param {boolean} enable - True to enable, false to disable.
+   */
+export async function setMaintenanceMode(enable) {
+  clearConsole();
+  const command = enable
+      ? `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`
+      : `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`;
+  
+  try {
+      this.runCommand(command);
+      console.log(GREEN(`Maintenance mode ${enable ? 'enabled' : 'disabled'}.`));
+  } catch (error) {
+      console.error(RED(`Failed to ${enable ? 'enable' : 'disable'} maintenance mode.`));
+  }
+
+  await this.awaitContinue();
+
+  
+}
+
+/**
+ * Checks if the maintenance mode is currently enabled.
+ * @param {string} NCPATH - The path to the Nextcloud installation.
+ * @returns {boolean} - True if maintenance mode is enabled, false otherwise.
+ */
+export async function isMaintenanceModeEnabled(NCPATH) {
+    try {
+        const output = runCommand(`sudo -u www-data php ${NCPATH}/occ maintenance:mode`);
+        return output.includes('enabled: true');
+    } catch (error) {
+        console.error(RED('Failed to check maintenance mode status.'));
+        return false;
+    }
+}
+
+
