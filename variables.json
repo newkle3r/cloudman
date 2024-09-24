@@ -1,5 +1,7 @@
 {
   "filePath": "./variables.json",
+  "lastAppUpdateCheck": 1727190530942,
+  "appUpdateStatus": "\u001b[33mNo apps have available updates\u001b[39m",
   "SCRIPTS": "/var/scripts",
   "HTML": "/var/www",
   "NCPATH": "/var/www/nextcloud",
@@ -86,5 +88,9 @@
   "CERTFILES": "Directory where SSL certificates are stored.",
   "DHPARAMS_TLS": "DHParams file for TLS configuration.",
   "SETENVPROXY": "SetEnv proxy-sendcl variable for specific Ubuntu versions.",
-  "DEDYNPORT": "Custom port for public access if the user decides to change it."
+  "DEDYNPORT": "Custom port for public access if the user decides to change it.",
+  "psqlStatus": "\u001b[32mactive\u001b[39m",
+  "redisStatus": "\u001b[32mactive\u001b[39m",
+  "apache2Status": "\u001b[91mfailed\u001b[39m",
+  "dockerStatus": "No active containers"
 }

@@ -1,4 +1,5 @@
 import fs from 'fs';
+
 import { RED, GREEN, YELLOW, BLUE } from './color.js';
 import { clearConsole,welcome,runCommand,awaitContinue,getConfigValue } from './utils.js';
 import { execSync } from 'child_process';
@@ -38,7 +39,9 @@ class ncTLS {
         this.LETS_ENCRYPT_STATUS = this.getCertStatus();
         this.NONO_PORTS = [22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5432];
         this.verifyVariables();
+        
     }
+    
 
     /**
      * Retrieves the domain for TLS configuration.
@@ -152,9 +155,14 @@ class ncTLS {
      * @example
      * ncTLS.setTLSConfig('cloud.example.com');
      */
+    
+
     setTLSConfig(domain) {
         this.TLSDOMAIN = domain;
         this.TLS_CONF = `/etc/apache2/sites-available/${this.TLSDOMAIN}.conf`;
+    
+        // Extract major and minor PHP version (e.g., "8.1" from "8.1.29")
+        const phpMajorMinor = this.PHPVER.split('.').slice(0, 2).join('.');
     
         const content = `
     <VirtualHost *:80>
@@ -167,7 +175,7 @@ class ncTLS {
         ServerName ${this.TLSDOMAIN}
     
         <FilesMatch "\\.php$">
-            SetHandler "proxy:unix:/run/php/php${this.PHPVER}-fpm.nextcloud.sock|fcgi://localhost"
+            SetHandler "proxy:unix:/run/php/php${phpMajorMinor}-fpm.nextcloud.sock|fcgi://localhost/"
         </FilesMatch>
     
         Header always set Strict-Transport-Security "max-age=15552000; includeSubDomains"
@@ -190,21 +198,32 @@ class ncTLS {
         `;
     
         try {
-            // Use sudo to write the file with correct permissions
-            execSync(`echo "${content}" | sudo tee ${this.TLS_CONF}`, { stdio: 'inherit' });
-            console.log(`TLS configuration saved to ${this.TLS_CONF}`);
+            console.log(`Writing the following content to ${this.TLS_CONF}:`);
+            console.log(content);
+    
+            // Escape any quotes in the content and use sudo tee to write it
+            const escapedContent = content.replace(/"/g, '\\"');
+            const writeCommand = `echo "${escapedContent}" | sudo tee ${this.TLS_CONF}`;
             
+            // Run the command using your runCommand method
+            this.runCommand(writeCommand);
+            console.log(`TLS configuration saved to ${this.TLS_CONF}`);
+    
             // Enable the new site configuration
-            execSync(`sudo a2ensite ${this.TLSDOMAIN}.conf`, { stdio: 'inherit' });
+            this.runCommand(`sudo a2ensite ${this.TLSDOMAIN}.conf`);
             console.log(`Site ${this.TLSDOMAIN} enabled successfully`);
     
             // Restart Apache to apply the changes
-            execSync('sudo systemctl restart apache2', { stdio: 'inherit' });
+            this.runCommand('sudo systemctl restart apache2');
             console.log('Apache restarted successfully');
         } catch (error) {
             console.error(`Failed to write or enable TLS configuration: ${error.message}`);
         }
     }
+    
+
+    
+    
     
     
 
