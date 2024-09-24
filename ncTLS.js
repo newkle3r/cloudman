@@ -1,7 +1,8 @@
 import fs from 'fs';
-
+import dns from 'dns';
+import fetch from 'node-fetch'; 
 import { RED, GREEN, YELLOW, BLUE } from './color.js';
-import { clearConsole,welcome,runCommand,awaitContinue,getConfigValue } from './utils.js';
+import { clearConsole, welcome, runCommand, awaitContinue, getConfigValue } from './utils.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 
@@ -38,7 +39,7 @@ class ncTLS {
          */
         this.LETS_ENCRYPT_STATUS = this.getCertStatus();
         this.NONO_PORTS = [22, 25, 53, 80, 443, 1024, 3012, 3306, 5178, 5432];
-        this.verifyVariables();
+
         
     }
     
@@ -181,7 +182,8 @@ class ncTLS {
         Header always set Strict-Transport-Security "max-age=15552000; includeSubDomains"
         SSLEngine on
         SSLCompression off
-        SSLProtocol -all +TLSv1.2 +TLSv1.3
+        SSLProtocol -all +TLSv1.2 +TLSv1.3le (en_US.UTF-8)
+newkleer@nextcloud:~/cloudman$ git push
         SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
     
         DocumentRoot ${this.NCPATH}
@@ -305,6 +307,7 @@ class ncTLS {
         // Wait for user input before proceeding back to the main menu
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to the TLS Management Menu...' }]);
     }
+    
 
 
     /**
@@ -315,20 +318,34 @@ class ncTLS {
      * @example
      * ncTLS.checkDomainReachability('cloud.example.com');
      */
-    checkDomainReachability(domain) {
-        console.log(`Checking if ${domain} is reachable...`);
-        const isReachable = execSync(`curl -s -o /dev/null -w "%{http_code}" http://${domain}`).toString().trim() === '200';
+    async checkDomainReachability(domain) {
+        try {
+            // Use Google public DNS to resolve the domain
+            const resolver = new dns.promises.Resolver();
+            resolver.setServers(['8.8.8.8']);
 
-        if (!isReachable) {
-            console.error(`The domain ${domain} is not reachable.`);
-            return false;
+            console.log(`Checking DNS resolution for ${domain}`);
+            const addresses = await resolver.resolve4(domain);
+
+            console.log(`Resolved addresses for ${domain}: ${addresses}`);
+
+            // Check if the domain is reachable via HTTP
+            for (const address of addresses) {
+                try {
+                    const response = await fetch(`http://${domain}`);
+                    if (response.ok) {
+                        console.log(`${domain} is reachable.`);
+                    } else {
+                        console.log(`${domain} is not reachable. Status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`Error reaching ${domain}:`, error);
+                }
+            }
+        } catch (error) {
+            console.error(`DNS resolution error for ${domain}:`, error);
         }
-
-        console.log(`Domain ${domain} is reachable.`);
-        this.checkPorts(domain);
-        return true;
     }
-
     /**
      * Check if the necessary ports (80 and 443) are open for the domain using `nc`.
      * 
