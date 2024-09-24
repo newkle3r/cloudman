@@ -20,7 +20,7 @@ const variablesPath = 'variables.json';
 class ncSQL {
     constructor() {
 
-        this.backupPath = '/var/backups';
+        this.backupPath = `/home/${user.trim()}/backups`;
         this.psqlVER = variables.PSQLVER;
     }
 
@@ -67,20 +67,31 @@ class ncSQL {
 
     /**
      * Backs up the PostgreSQL database to the specified location.
-     * The backup is saved as a single file using pg_dumpall.
+     * The backup is saved as a single file using pg_dump.
      */
     async backupDatabase() {
         clearConsole();
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
-        
+
         try {
-            // Execute backup command
-            execSync(`sudo -u postgres pg_dump nextcloud_db > ${this.backupPath}/nextcloud_db_backup.sql`);
+            // Step 1: Fetch the current user asynchronously
+            const user = await this.runCommand('echo $USER');
+
+            // Step 2: Set the backup path
+            this.backupPath = `/home/${user.trim()}/backups`;
+
+            // Step 3: Ensure the directory exists
+            await this.runCommand(`mkdir -p ${this.backupPath}`);
+
+            // Step 4: Create PostgreSQL backup
+            console.log(BLUE(`Creating PostgreSQL backup in ${this.backupPath}...`));
+            await this.runCommand(`pg_dump nextcloud_db > ${this.backupPath}/nextcloud_db_backup.sql`);
             spinner.success({ text: `${GREEN('Database backup completed!')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to backup PostgreSQL database')}` });
             console.error(error);
         }
+
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
         await this.managePostgreSQL();
     }

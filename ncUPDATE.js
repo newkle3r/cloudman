@@ -1,4 +1,4 @@
-import { RED, GREEN,YELLOW } from './color.js';
+import { RED, GREEN,YELLOW,BLUE } from './color.js';
 import { clearConsole, welcome } from './utils.js';
 import { execSync,spawn } from 'child_process';
 import fs from 'fs';
@@ -343,13 +343,13 @@ class ncUPDATE {
       await this.awaitContinue();
   }
 
-    /**
+ /**
  * Runs the full Nextcloud update process.
  */
 async runFullUpdate() {
   try {
       // Check if any conflicting processes (like apt) are running
-      if (this.checkProcesses()) {
+      if (await this.checkProcesses()) {
           console.log(RED('Apt or other conflicting processes are running. Please wait for them to finish.'));
           return;
       }
@@ -365,40 +365,51 @@ async runFullUpdate() {
       // Create a backup of Nextcloud
       console.log(BLUE('Creating Backup...'));
       await this.createBackup();
+      console.log(GREEN('Backup created successfully.'));
 
       // Download the latest Nextcloud version
       console.log(BLUE('Downloading Nextcloud...'));
       await this.downloadNextcloud();
+      console.log(GREEN('Nextcloud downloaded successfully.'));
 
       // Extract the downloaded Nextcloud version
       console.log(BLUE('Extracting Nextcloud...'));
       await this.extractNextcloud();
+      console.log(GREEN('Nextcloud extracted successfully.'));
 
       // Upgrade Nextcloud
       console.log(BLUE('Upgrading Nextcloud...'));
       await this.upgradeNextcloud();
+      console.log(GREEN('Nextcloud upgraded successfully.'));
 
       // Clean up old files and processes after the upgrade
       console.log(BLUE('Cleaning up...'));
       await this.cleanup();
+      console.log(GREEN('Cleanup completed successfully.'));
 
-      // Disable maintenance mode after the upgrade is complete
-      console.log(BLUE('Disabling Maintenance Mode...'));
-      await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
-      console.log(GREEN('Maintenance mode disabled successfully.'));
-
-      // Final success message
-      console.log(GREEN('Nextcloud update completed successfully.'));
   } catch (error) {
       // Catch any error that occurs during the update process
       console.error(RED(`Nextcloud update failed: ${error.message}`));
 
       // Attempt to disable maintenance mode if an error occurs
       console.log(YELLOW('Attempting to disable maintenance mode due to an error...'));
-      await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`).catch(err => {
+      try {
+          await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
+          console.log(GREEN('Maintenance mode disabled successfully.'));
+      } catch (err) {
           console.error(RED('Failed to disable maintenance mode.'));
-      });
+      }
+
   } finally {
+      // Ensure that maintenance mode is disabled in any case
+      try {
+          console.log(BLUE('Ensuring Maintenance Mode is disabled...'));
+          await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
+          console.log(GREEN('Maintenance mode disabled.'));
+      } catch (err) {
+          console.error(RED('Failed to disable maintenance mode in finally block.'));
+      }
+
       // Await user input before returning to the menu
       await this.awaitContinue();
   }
