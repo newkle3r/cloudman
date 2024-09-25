@@ -15,6 +15,7 @@ import ncTLS from './ncTLS.js';
 import ncVARS from './ncVARS.js';
 import inquirer from 'inquirer';
 import ncREPAIR from './ncREPAIR.js';
+import ncRedisServer from './ncRedisServer.js';
 
 // Initialize global variables
 let varsclass;
@@ -125,10 +126,10 @@ async function mainMenu() {
 
         case 'Manage Docker':
             const dockerManager = new ncDOCKER(mainMenu);
-            return dockerManager.manageDocker(welcome);
+            return dockerManager.manageDocker();
 
         case 'Manage Redis':
-            const redisManager = new ncREDIS(mainMenu);
+            const redisManager = new ncRedisServer(mainMenu);
             if (activeMenu === 'redis') {
                 console.log('Already managing Redis. Returning to main menu...');
                 mainMenu();

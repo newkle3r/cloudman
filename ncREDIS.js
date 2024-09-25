@@ -277,6 +277,7 @@ class ncREDIS {
             { name: 'Restart Redis', value: 'restart' },
             { name: 'Check Redis Status', value: 'status' },
             { name: 'Brute-force config', value: 'rewrite' },
+            { name: '' },
             { name: 'Return to main menu', value: 'menu' }
         ];
 
