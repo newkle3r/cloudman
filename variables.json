@@ -1,7 +1,7 @@
 {
   "filePath": "./variables.json",
-  "lastAppUpdateCheck": 1727209552932,
-  "appUpdateStatus": "\u001b[32mNextcloud core update available: Version 28.0.10\u001b[39m\n\u001b[32m1 app update(s) available.\u001b[39m",
+  "lastAppUpdateCheck": 1727283816160,
+  "appUpdateStatus": "\u001b[32mNo apps or core updates available\u001b[39m",
   "SCRIPTS": "/var/scripts",
   "HTML": "/var/www",
   "NCPATH": "/var/www/nextcloud",

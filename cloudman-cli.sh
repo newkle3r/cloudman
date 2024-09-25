@@ -2,7 +2,7 @@
 
 # Define the repository and target directory
 REPO_URL="https://github.com/newkle3r/cloudman.git"
-TARGET_DIR="./cli"
+TARGET_DIR="/var/scripts/cli"
 
 # Check if the script is run as root
 if [ "$EUID" -ne 0 ]; then

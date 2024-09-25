@@ -9,3 +9,5 @@ export const GRAYLI = chalk.bgGrey;
 export const GRAY = chalk.gray;
 export const YELLOWLI = chalk.bgYellowBright;
 export const PURPLE = chalk.magenta;
+export const CYAN = chalk.cyan;
+

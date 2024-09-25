@@ -4,10 +4,20 @@ import { execSync } from 'child_process';
 import { createSpinner } from 'nanospinner';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
+import ncRedisServer from './ncRedisServer.js';
+import ncAPPS from './ncAPPS.js';
 
 class ncPHP {
     constructor() {
+        this.redis = new ncRedisServer();
         this.phpVersion = null;
+        this.installRedis = this.redis.installRedis;
+        this.removeRedis = this.redis.removeRedis;
+        this.configureRedis = this.redis.configureRedis;
+        
+     
+
+        
     }
 
     /**
@@ -42,10 +52,11 @@ class ncPHP {
     /**
      * Purge existing PHP versions and clean the system.
      */
-    purgeOldPHPVersions() {
+    purgeOldPHPVersions(phpVersion) {
+        this.redis.removeRedis(phpVersion);
         const spinner = createSpinner('Purging old PHP versions...').start();
         try {
-            execSync('sudo apt-mark unhold php*', { stdio: 'inherit' });
+            execSync('sudo apt-mark unhold php*', { stdio: 'inherit' });            execSync('sudo apt-get purge php-dev -y', { stdio: 'inherit' });
             execSync('sudo apt-get purge -y php* libapache2-mod-php*', { stdio: 'inherit' });
             execSync('sudo apt-get autoremove -y && sudo apt-get clean', { stdio: 'inherit' });
             execSync('sudo rm -rf /etc/php', { stdio: 'inherit' });
@@ -89,8 +100,14 @@ class ncPHP {
                 php${phpVersion}-xml \
                 php${phpVersion}-zip \
                 php${phpVersion}-redis \
+                php${phpVersion}-igbinary \
                 php${phpVersion}-smbclient`, { stdio: 'inherit' });
 
+                // Install redis-server
+                this.redis.installRedis(phpVersion);
+
+            
+        
             // Configure PHP-FPM
             await this.configurePHPFPM(phpVersion);
 
@@ -111,41 +128,51 @@ class ncPHP {
         const spinner = createSpinner(`Configuring PHP-FPM for PHP ${phpVersion}...`).start();
         try {
             const phpFpmConf = `/etc/php/${phpVersion}/fpm/pool.d/nextcloud.conf`;
-            const phpPoolConfig = `
-                [Nextcloud]
-                user = www-data
-                group = www-data
-                listen = /run/php/php${phpVersion}-fpm.nextcloud.sock
-                listen.owner = www-data
-                listen.group = www-data
-                pm = dynamic
-                pm.max_children = 8
-                pm.start_servers = 3
-                pm.min_spare_servers = 2
-                pm.max_spare_servers = 3
-                security.limit_extensions = .php
-                php_admin_value[cgi.fix_pathinfo] = 1
-            `;
+const phpPoolConfig = `
+[Nextcloud]
+user = www-data
+group = www-data
+listen = /run/php/php${phpVersion}-fpm.nextcloud.sock
+listen.owner = www-data
+listen.group = www-data
+pm = dynamic
+pm.max_children = 8
+pm.start_servers = 3
+pm.min_spare_servers = 2
+pm.max_spare_servers = 3
+security.limit_extensions = .php
+php_admin_value[cgi.fix_pathinfo] = 1
+`;
     
-            // Ensure that www-data has appropriate permissions
+            // Ensure permissions
             execSync(`sudo chown -R root:www-data /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
             execSync(`sudo chmod -R 750 /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
     
-            // Use `sudo` to write the configuration file
-            const writeCommand = `echo "${phpPoolConfig.replace(/"/g, '\\"')}" | sudo tee ${phpFpmConf}`;
+            // Write to PHP-FPM
+            const writeCommand = `echo "${phpPoolConfig.trim()}" | sudo tee ${phpFpmConf}`;
             execSync(writeCommand, { stdio: 'inherit' });
-            execSync(`sudo chown -R root:www-data /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
-            execSync(`sudo chmod -R 750 /etc/php/${phpVersion}/fpm/pool.d/`, { stdio: 'inherit' });
     
             // Restart PHP-FPM to apply the changes
             execSync(`sudo systemctl restart php${phpVersion}-fpm.service`, { stdio: 'inherit' });
             spinner.success({ text: chalk.green(`PHP-FPM configured for PHP ${phpVersion}`) });
+
+            // Set system default php version
+            execSync(`sudo update-alternatives --set php /usr/bin/php${phpVersion}`);
+            execSync(`sudo update-alternatives --set phpize /usr/bin/phpize${phpVersion}`);
+            execSync(`sudo update-alternatives --set php-config /usr/bin/php-config${phpVersion}`);
+
+
+    
+            // Now configure Redis
+            console.log('Restarting Apache and configuring Redis...');
+            execSync(`sudo systemctl restart apache2`, { stdio: 'inherit' });
+            this.redis.configureRedis(phpVersion);
+    
         } catch (error) {
             spinner.error({ text: chalk.red(`Failed to configure PHP-FPM for PHP ${phpVersion}`) });
             console.error(error);
         }
     }
-
     /**
      * Manage the PHP setup via menu.
      * @param {function} mainMenu - Callback to return to main menu
