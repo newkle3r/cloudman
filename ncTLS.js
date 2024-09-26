@@ -6,6 +6,7 @@ import { clearConsole, welcome, runCommand, awaitContinue, getConfigValue } from
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 
+// Needs clear screen, splash, and is not async yet.
 
 /**
  * Class to manage TLS activation and configuration for Nextcloud.
@@ -241,43 +242,44 @@ newkleer@nextcloud:~/cloudman$ git push
     }
 
     /**
-     * Install certbot and generate certificates for the domain.
+     * Install certbot and run the certificate generation process for the domain.
      * Certbot is used to obtain SSL certificates from Let's Encrypt.
-     * If certbot is already installed, it checks whether it is a package or snap version and reinstalls as necessary.
      * 
      * @param {string} domain - The domain for which the certificate will be generated.
+     * @example
+     * ncTLS.installAndGenerateCert('cloud.example.com');
      */
     async installAndGenerateCert(domain) {
         this.setTLSConfig(domain);
-
-        // Install Certbot using snap if it's not installed, or migrate from apt package if necessary
-        this.ensureCertbotInstalled();
-
+    
+        // Install Certbot
+        console.log('Installing Certbot...');
+        execSync('sudo apt-get install -y certbot', { stdio: 'inherit' });
+    
         // Dry-run first
-        console.log(CYAN('Performing a dry-run for Certbot...'));
+        console.log('Performing a dry-run for Certbot...');
         const certCommandDryRun = `sudo certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns --dry-run -d ${domain}`;
-
+        
         try {
+            // Execute dry-run
             execSync(certCommandDryRun, { stdio: 'inherit' });
             console.log(GREEN('Dry-run successful!'));
-
+    
             const answer = await inquirer.prompt([{
                 type: 'confirm',
                 name: 'proceed',
                 message: `Dry-run was successful. Do you want to proceed with generating a real certificate for ${domain}?`,
                 default: false
             }]);
-
+    
             if (answer.proceed) {
-                // Attempt to generate the certificate using available methods
-                const success = this.generateCertForDomain(domain);
-                if (success) {
-                    console.log(GREEN('TLS certificate generated successfully!'));
-                    // Generate DH params after successful cert generation
-                    this.generateDHParams();
-                } else {
-                    console.log(RED('Certificate generation failed using all available methods.'));
-                }
+                console.log('Generating real TLS certificate using Certbot...');
+                const certCommand = `sudo certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns -d ${domain}`;
+                execSync(certCommand, { stdio: 'inherit' });
+                console.log(GREEN('TLS certificate generated successfully!'));
+    
+                // Generate DH parameters if Certbot succeeded
+                this.generateDHParams();
             } else {
                 console.log(YELLOW('Operation aborted by user.'));
             }
@@ -285,129 +287,9 @@ newkleer@nextcloud:~/cloudman$ git push
             console.error(RED('Dry-run or certificate generation failed.'));
             console.error(error.message);
         }
-
+    
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to the TLS Management Menu...' }]);
     }
-
-    /**
-     * Ensure Certbot is installed via Snap, or install it.
-     * Removes the old apt package version if necessary and installs Certbot via Snap.
-     */
-    ensureCertbotInstalled() {
-        try {
-            if (this.isCommandAvailable('certbot')) {
-                if (this.isInstalledViaApt('certbot')) {
-                    if (!this.isInstalledViaSnap('certbot')) {
-                        console.log(CYAN('Reinstalling Certbot via Snap...'));
-                        execSync('sudo apt-get remove certbot -y && sudo apt-get autoremove -y', { stdio: 'inherit' });
-                        this.installSnapd();
-                        execSync('sudo snap install certbot --classic', { stdio: 'inherit' });
-                        execSync('hash -r');  // Refresh the shell environment
-                    }
-                }
-            } else {
-                console.log(CYAN('Installing Certbot via Snap...'));
-                this.installSnapd();
-                execSync('sudo snap install certbot --classic', { stdio: 'inherit' });
-                execSync('hash -r');  // Refresh the shell environment
-            }
-        } catch (error) {
-            console.error(RED('Failed to install Certbot.'), error);
-        }
-    }
-
-    /**
-     * Generate the certificate using available methods (standalone, DNS, etc.).
-     * @param {string} domain - The domain for which the certificate will be generated.
-     * @returns {boolean} - Whether the certificate was successfully generated.
-     */
-    generateCertForDomain(domain) {
-        const defaultOptions = `--cert-name ${domain} --key-type ecdsa --renew-by-default --no-eff-email --agree-tos --server https://acme-v02.api.letsencrypt.org/directory -d ${domain}`;
-        const methods = [
-            `sudo certbot certonly --standalone --pre-hook "sudo systemctl stop apache2" --post-hook "sudo systemctl start apache2" ${defaultOptions}`,
-            `sudo certbot certonly --preferred-challenges tls-alpn-01 ${defaultOptions}`,
-            `sudo certbot certonly --manual --manual-public-ip-logging-ok --preferred-challenges dns ${defaultOptions}`
-        ];
-
-        for (let i = 0; i < methods.length; i++) {
-            console.log(CYAN(`Attempting to generate cert with method: ${methods[i]}`));
-            try {
-                execSync(methods[i], { stdio: 'inherit' });
-                return true;  // If it succeeds, return true
-            } catch (error) {
-                if (i === methods.length - 1) {
-                    console.error(RED('All cert generation methods failed.'));
-                    return false;
-                }
-                console.log(YELLOW('Retrying with another method...'));
-            }
-        }
-    }
-
-    /**
-     * Install Snapd if it's not already installed.
-     */
-    installSnapd() {
-        try {
-            execSync('sudo apt-get install -y snapd', { stdio: 'inherit' });
-            execSync('sudo snap install core', { stdio: 'inherit' });
-        } catch (error) {
-            console.error(RED('Failed to install Snapd.'), error);
-        }
-    }
-
-    /**
-     * Check if a command is available on the system (e.g., certbot).
-     * @param {string} command - The command to check.
-     * @returns {boolean} - Whether the command is available.
-     */
-    isCommandAvailable(command) {
-        try {
-            execSync(`command -v ${command}`, { stdio: 'ignore' });
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * Check if a package is installed via apt.
-     * @param {string} packageName - The package name to check.
-     * @returns {boolean} - Whether the package is installed.
-     */
-    isInstalledViaApt(packageName) {
-        try {
-            execSync(`dpkg -l | grep ${packageName}`, { stdio: 'ignore' });
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * Check if a package is installed via Snap.
-     * @param {string} packageName - The snap package name to check.
-     * @returns {boolean} - Whether the snap package is installed.
-     */
-    isInstalledViaSnap(packageName) {
-        try {
-            execSync(`snap list ${packageName}`, { stdio: 'ignore' });
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * Generate DH parameters.
-     * This is run after successfully generating a TLS certificate.
-     */
-    generateDHParams() {
-        console.log(CYAN('Generating DH Parameters for enhanced TLS security...'));
-        execSync('sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048', { stdio: 'inherit' });
-        console.log(GREEN('DH Parameters generated successfully!'));
-    }
-
     
 
 
