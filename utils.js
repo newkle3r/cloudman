@@ -237,7 +237,7 @@ export async function isMaintenanceModeEnabled(NCPATH) {
  * @param {string} charset - The set of characters to use in the password.
  * @returns {string} - The generated password.
  */
-export function gen_passwd(length, charset) {
+export function gen_passwd(length, charset = 'a-zA-Z0-9@#*') {
     let password = '';
     const charsetArray = charset.split('');
     const charsetLength = charsetArray.length;

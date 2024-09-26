@@ -43,7 +43,7 @@ class ncVARS {
         this.GPGDIR = '/tmp/gpg';
         this.SHA256_DIR = '/tmp/sha256';
         this.BACKUP = '/mnt/NCBACKUP';
-        this.NC_APPS_PATH = `${NCPATH}/apps`;
+        this.NC_APPS_PATH = `${this.NCPATH}/apps`;
         this.VMLOGS = '/var/log/nextcloud';
         this.PSQLVER = this.getCommandOutput('psql --version');
 
@@ -75,56 +75,56 @@ class ncVARS {
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
         this.SETENVPROXY = 'proxy-sendcl';
         this.DEDYNPORT = '443';
-        this.PHP_FPM_DIR=`/etc/php/${PHPVER}/fpm`;
-        this.PHP_INI=`${PHP_FPM_DIR}/php.ini`;
-        this.PHP_POOL_DIR=`${PHP_FPM_DIR}/pool.d`;
-        this.PHP_MODS_DIR=`/etc/php/${PHPVER}/mods-available`;
+        this.PHP_FPM_DIR=`/etc/php/${this.PHPVER}/fpm`;
+        this.PHP_INI=`${this.PHP_FPM_DIR}/php.ini`;
+        this.PHP_POOL_DIR=`${this.PHP_FPM_DIR}/pool.d`;
+        this.PHP_MODS_DIR=`/etc/php/${this.PHPVER}/mods-available`;
         this.opcache_interned_strings_buffer_value=`24`;
         // Letsencrypt
         this.SITES_AVAILABLE="/etc/apache2/sites-available";
         this.LETSENCRYPTPATH="/etc/letsencrypt";
-        this.CERTFILES=`${LETSENCRYPTPATH}/live`;
-        this.DHPARAMS_TLS=`${CERTFILES}/${TLSDOMAIN}/dhparam.pem`;
-        this.DHPARAMS_SUB=`${CERTFILES}/${SUBDOMAIN}/dhparam.pem`;
+        this.CERTFILES=`${this.LETSENCRYPTPATH}/live`;
+        this.DHPARAMS_TLS=`${this.CERTFILES}/${this.TLSDOMAIN}/dhparam.pem`;
+        this.DHPARAMS_SUB=`${this.CERTFILES}/${this.SUBDOMAIN}/dhparam.pem`;
         this.TLS_CONF="nextcloud_tls_domain_self_signed.conf";
         this.HTTP_CONF="nextcloud_http_domain_self_signed.conf";
 
         // Github Repo Nextcloud VM
         this.GITHUB_REPO="https://raw.githubusercontent.com/nextcloud/vm/main";
-        this.STATIC=`${GITHUB_REPO}/static`;
-        this.LETS_ENC=`${GITHUB_REPO}/lets-encrypt`;
-        this.APP=`${GITHUB_REPO}/apps`;
-        this.OLD=`${GITHUB_REPO}/old`;
-        this.ADDONS=`${GITHUB_REPO}/addons`;
-        this.DESEC=`${GITHUB_REPO}/addons/deSEC`;
-        this.MENU=`${GITHUB_REPO}/menu`;
-        this.DISK=`${GITHUB_REPO}/disk`;
-        this.NETWORK=`${GITHUB_REPO}/network`;
-        this.VAGRANT_DIR=`${GITHUB_REPO}/vagrant`;
-        this.NOT_SUPPORTED_FOLDER=`${GITHUB_REPO}/not-supported`;
+        this.STATIC=`${this.GITHUB_REPO}/static`;
+        this.LETS_ENC=`${this.GITHUB_REPO}/lets-encrypt`;
+        this.APP=`${this.GITHUB_REPO}/apps`;
+        this.OLD=`${this.GITHUB_REPO}/old`;
+        this.ADDONS=`${this.GITHUB_REPO}/addons`;
+        this.DESEC=`${this.GITHUB_REPO}/addons/deSEC`;
+        this.MENU=`${this.GITHUB_REPO}/menu`;
+        this.DISK=`${this.GITHUB_REPO}/disk`;
+        this.NETWORK=`${this.GITHUB_REPO}/network`;
+        this.VAGRANT_DIR=`${this.GITHUB_REPO}/vagrant`;
+        this.NOT_SUPPORTED_FOLDER=`${this.GITHUB_REPO}/not-supported`;
         this.NCREPO=`https://download.nextcloud.com/server/releases`;
         this.ISSUES=`https://github.com/nextcloud/vm/issues`;
 
         // User information
-        this.GUIUSER=ncadmin;
-        this.GUIPASS=nextcloud;
-        this.UNIXUSER=$SUDO_USER;
-        this.UNIXUSER_PROFILE=`/home/${UNIXUSER}/.bash_profile`;
+        this.GUIUSER=`ncadmin`;
+        this.GUIPASS=`nextcloud`;
+        this.UNIXUSER=runCommand(`echo $SUDO_USER`);
+        this.UNIXUSER_PROFILE=`/home/${this.UNIXUSER}/.bash_profile`;
         this.ROOT_PROFILE="/root/.bash_profile";
 
         // User for Bitwarden
-        this.BITWARDEN_USER=bitwarden;
-        this.BITWARDEN_HOME=`/home/${BITWARDEN_USER}`;
+        this.BITWARDEN_USER=`bitwarden`;
+        this.BITWARDEN_HOME=`/home/${this.BITWARDEN_USER}`;
 
         // Database
         this.SHUF=runCommand(`shuf -i 25-29 -n 1`);
-        this.PGDB_USER=nextcloud_db_user;
-        this.PGDB_PASS=gen_passwd(`${SHUF},"a-zA-Z0-9@#*"`);
-        this.NEWPGPASS=gen_passwd(`${SHUF},"a-zA-Z0-9@#*"`);
+        this.PGDB_USER=`nextcloud_db_user`;
+        this.PGDB_PASS = gen_passwd(this.SHUF, 'a-zA-Z0-9@#*');
+        this.NEWPGPASS = gen_passwd(this.SHUF, 'a-zA-Z0-9@#*');
         
 
         // Path to specific files
-        this.SECURE=`${SCRIPTS}/setup_secure_permissions_nextcloud.sh`;
+        this.SECURE=`${this.SCRIPTS}/setup_secure_permissions_nextcloud.sh`;
 
         
 
@@ -134,7 +134,7 @@ class ncVARS {
         this.OpenPGP_fingerprint='28806A878AE423A28372792ED75899B9A724937A';
         
         // Collabora App
-        this.HTTPS_CONF=`${SITES_AVAILABLE}/${SUBDOMAIN}.conf`;
+        this.HTTPS_CONF=`${this.SITES_AVAILABLE}/${this.SUBDOMAIN}.conf`;
         this.HTTP2_CONF="/etc/apache2/mods-available/http2.conf";
         // GeoBlock
         this.GEOBLOCK_MOD_CONF="/etc/apache2/conf-available/geoblock.conf";
@@ -145,11 +145,11 @@ class ncVARS {
         // Adminer
         this.ADMINERDIR=`/usr/share/adminer`
         this.ADMINER_CONF=`${this.SITES_AVAILABLE}/adminer.conf`;
-        this.ADMINER_CONF_PLUGIN=`${ADMINERDIR}/extra_plugins.php`;
+        this.ADMINER_CONF_PLUGIN=`${this.ADMINERDIR}/extra_plugins.php`;
         // Redis
         this.REDIS_CONF=`/etc/redis/redis.conf`;
         this.REDIS_SOCK=`/var/run/redis/redis-server.sock`;
-        this.REDIS_PASS=$(`gen_passwd "${SHUF}" "a-zA-Z0-9@#*"`);
+        this.REDIS_PASS=gen_passwd(this.SHUF,`a-zA-Z0-9@#*`);
         // Extra security
         this.SPAMHAUS=`/etc/spamhaus.wl`;
         this.ENVASIVE=`/etc/apache2/mods-available/mod-evasive.load`;
@@ -185,9 +185,9 @@ class ncVARS {
 
     // Nextcloud version
     nc_update() {
-        this.CURRENTVERSION=runCommand(`sudo -u www-data php ${NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
-        this.NCVERSION=runCommand(`curl -s -m 900 ${NCREPO}/ | sed --silent 's/.*href="nextcloud-\([^"]\+\).zip.asc".*/\1/p' | sort --version-sort | tail -1`);
-        this.STABLEVERSION=`nextcloud-${NCVERSION}`;
+        this.CURRENTVERSION=runCommand(`sudo -u www-data php ${this.NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
+        this.NCVERSION=runCommand(`curl -s -m 900 ${this.NCREPO}/ | sed --silent 's/.*href="nextcloud-\([^"]\+\).zip.asc".*/\\1/p' | sort --version-sort | tail -1`);
+        this.STABLEVERSION=`nextcloud-${this.NCVERSION}`;
         this.NCMAJOR=this.NCVERSION.split('.')[0];
         this.CURRENTMAJOR=this.CURRENTVERSION.split('.')[0];
         this.NCBAD=parseInt(this.CURRENTMAJOR, 10) - 2;
