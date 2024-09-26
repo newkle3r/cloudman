@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
 import { RED, GREEN, BLUE, YELLOW, PURPLE } from './color.js';
-import { initialize, runCommand,getConfigValue, gen_passwd } from './utils.js';
+import { initialize, runCommand,getConfigValue, gen_passwd } from './ncUTILS.js';
 import ncRedisServer from './ncRedisServer.js';
 
 /**

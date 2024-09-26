@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { RED,GREEN,BLUE,YELLOW} from './color.js'
-import { clearConsole,runCommand } from './utils.js';
+import { clearConsole,runCommand } from './ncUTILS.js';
 import fs from 'fs';
 import readlineSync from 'readline-sync';
 import inquirer from 'inquirer';

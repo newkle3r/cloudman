@@ -1,4 +1,4 @@
-import { clearConsole, runCommand, awaitContinue } from './utils.js';
+import { clearConsole, runCommand, awaitContinue } from './ncUTILS.js';
 import { GREEN, RED, YELLOW, BLUE, PURPLE } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';

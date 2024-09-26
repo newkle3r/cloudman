@@ -2,7 +2,7 @@ import fs from 'fs';
 import dns from 'dns';
 import fetch from 'node-fetch'; 
 import { RED, GREEN, YELLOW, BLUE } from './color.js';
-import { clearConsole, welcome, runCommand, awaitContinue, getConfigValue } from './utils.js';
+import { clearConsole, welcome, runCommand, awaitContinue, getConfigValue } from './ncUTILS.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 

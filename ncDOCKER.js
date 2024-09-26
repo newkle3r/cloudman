@@ -1,5 +1,5 @@
 import { RED, BLUE, GREEN } from './color.js';
-import { clearConsole, awaitContinue } from './utils.js';
+import { clearConsole, awaitContinue } from './ncUTILS.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';

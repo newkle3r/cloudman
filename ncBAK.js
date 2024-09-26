@@ -1,4 +1,4 @@
-import { clearConsole,welcome } from './utils.js';
+import { clearConsole,welcome } from './ncUTILS.js';
 import { RED, BLUE, GRAY, GRAYLI, GREEN, YELLOW, YELLOWLI, PURPLE } from './color.js';
 import { spawnSync, execSync } from 'child_process';
 import fs from 'fs';

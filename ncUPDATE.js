@@ -1,9 +1,10 @@
 import { RED, GREEN,YELLOW,BLUE } from './color.js';
-import { clearConsole, welcome } from './utils.js';
+import { clearConsole, welcome } from './ncUTILS.js';
 import { execSync,spawn } from 'child_process';
 import fs from 'fs';
 import inquirer from 'inquirer';
-import { runCommandWithProgress, initialize } from './utils.js';
+import { runCommandWithProgress, initialize } from './ncUTILS.js';
+import ncVARS from './ncVARS.js';
 
 /**
  * Class to handle the Nextcloud update process.
@@ -13,12 +14,15 @@ import { runCommandWithProgress, initialize } from './utils.js';
  */
 class ncUPDATE {
     constructor(mainMenu) {
-        this.SCRIPTS = '/var/scripts';
-        this.BACKUP = '/mnt/NCBACKUP/';
-        this.NC_PATH = '/var/www/nextcloud';
-        this.VMLOGS = '/var/log/nextcloud-vm';
-        this.CURRENTVERSION = this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ status | grep "versionstring" | awk '{print $3}'`);
-        this.DISTRO = this.runCommand('lsb_release -sr');
+        let lib;
+        lib = new ncVARS();
+        lib.loadVariables();
+        this.SCRIPTS = lib.SCRIPTS;
+        this.BACKUP = lib.BACKUP;
+        this.NCPATH = lib.NCPATH;
+        this.VMLOGS = lib.VMLOGS;
+        this.CURRENTVERSION = lib.CURRENTVERSION; // this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
+        this.DISTRO = lib.DISTRO; // this.runCommand('lsb_release -sr');
         this.mainMenu = mainMenu; 
         this.lastCheck = null;
     }
@@ -110,7 +114,7 @@ class ncUPDATE {
      */
     isMaintenanceModeEnabled() {
       try {
-          const result = this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode`);
+          const result = this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode`);
           return result.includes('enabled: true');
       } catch (error) {
           console.error(RED('Failed to check maintenance mode status.'));
@@ -127,8 +131,8 @@ class ncUPDATE {
   checkProcesses() {
     try {
         // Check if any apt or dpkg processes are currently running
-        const aptProcesses = this.runCommand('pgrep apt');
-        const dpkgProcesses = this.runCommand('pgrep dpkg');
+        const aptProcesses = this.runCommand('sudo pgrep apt');
+        const dpkgProcesses = this.runCommand('sudo pgrep dpkg');
 
         // If apt or dpkg processes are running, log the conflict and return true
         if (aptProcesses || dpkgProcesses) {
@@ -194,8 +198,8 @@ class ncUPDATE {
   async setMaintenanceMode(enable) {
     clearConsole();
     const command = enable
-        ? `sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --on`
-        : `sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --off`;
+        ? `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`
+        : `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`;
     
     try {
         this.runCommand(command);
@@ -245,8 +249,8 @@ class ncUPDATE {
           progressBar.start(100, 0); 
 
           // Use sudo to handle permissions and capture rsync progress
-          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NC_PATH}/config ${this.BACKUP}`, progressBar);
-          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NC_PATH}/apps ${this.BACKUP}`, progressBar);
+          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
+          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
 
           progressBar.update(100);
           progressBar.stop();
@@ -327,7 +331,7 @@ class ncUPDATE {
     async upgradeNextcloud() {
       clearConsole();
       console.log('Running Nextcloud upgrade...');
-      this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ upgrade`);
+      this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ upgrade`);
       console.log(GREEN('Nextcloud upgrade completed.'));
       await this.awaitContinue();
   }
@@ -364,13 +368,15 @@ async runFullUpdate() {
 
       // Enable maintenance mode
       console.log(BLUE('Enabling Maintenance Mode...'));
-      await this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --on`);
+      await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`);
       console.log(GREEN('Maintenance mode enabled successfully.'));
 
       // Create a backup of Nextcloud
       console.log(BLUE('Creating Backup...'));
       await this.createBackup();
       console.log(GREEN('Backup created successfully.'));
+
+      /*
 
       // Download the latest Nextcloud version
       console.log(BLUE('Downloading Nextcloud...'));
@@ -387,6 +393,8 @@ async runFullUpdate() {
       await this.upgradeNextcloud();
       console.log(GREEN('Nextcloud upgraded successfully.'));
 
+      */
+
       // Clean up old files and processes after the upgrade
       console.log(BLUE('Cleaning up...'));
       await this.cleanup();
@@ -399,7 +407,7 @@ async runFullUpdate() {
       // Attempt to disable maintenance mode if an error occurs
       console.log(YELLOW('Attempting to disable maintenance mode due to an error...'));
       try {
-          await this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --off`);
+          await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
           console.log(GREEN('Maintenance mode disabled successfully.'));
       } catch (err) {
           console.error(RED('Failed to disable maintenance mode.'));
@@ -409,7 +417,7 @@ async runFullUpdate() {
       // Ensure that maintenance mode is disabled in any case
       try {
           console.log(BLUE('Ensuring Maintenance Mode is disabled...'));
-          await this.runCommand(`sudo -u www-data php ${this.NC_PATH}/occ maintenance:mode --off`);
+          await this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`);
           console.log(GREEN('Maintenance mode disabled.'));
       } catch (err) {
           console.error(RED('Failed to disable maintenance mode in finally block.'));

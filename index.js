@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import Table from 'cli-table3';
-import { clearConsole, loadVariables, initialize, welcome, UPDATE_THRESHOLD,awaitContinue } from './utils.js';
+import { clearConsole, loadVariables, initialize, welcome, UPDATE_THRESHOLD,awaitContinue } from './ncUTILS.js';
 import { RED, BLUE, GREEN, YELLOW, PURPLE } from './color.js';
 import { execSync } from 'child_process';
 import ncAPPS from './ncAPPS.js';
