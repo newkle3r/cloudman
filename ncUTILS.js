@@ -22,7 +22,7 @@ class ncUTILS {
      */
     checkComponent(command) {
         try {
-            return execSync(command, { encoding: 'utf8' }).toString().trim(); // Return output of command
+            return execSync(command, { encoding: 'utf8' }).toString().trim(); 
         } catch (error) {
             console.error(`Error executing command: ${command}`, error);
             return false; 
@@ -112,8 +112,6 @@ class ncUTILS {
         });
     }
 
-    
-
     /**
      * Generate a random password based on the provided length and charset.
      * @param {number} length - The desired length of the password.
@@ -172,10 +170,77 @@ class ncUTILS {
                 }
 
                 console.log(`Retrying in 30 seconds...`);
-                new Promise(resolve => setTimeout(resolve, 30000)); // 30 second delay
+                new Promise(resolve => setTimeout(resolve, 30000)); // 30 sec
             }
+        }
+    }
+
+    /**
+     * Run Nextcloud occ command
+     * @param {string} command - The occ command to run (e.g., 'config:system:set memcache.local --value="\OC\Memcache\Redis"')
+     */
+    runOccCommand(command) {
+        try {
+            execSync(`sudo -u www-data php ${this.NCPATH}/occ ${command}`, { stdio: 'inherit' });
+            console.log(`Successfully ran: ${command}`);
+        } catch (error) {
+            console.error(`Failed to run: ${command}`, error.message);
+        }
+    }
+
+    /**
+     * Add aliases to /root/.bash_aliases if they do not exist.
+     */
+    addAliases() {
+        const aliasFile = '/root/.bash_aliases';
+        const nextcloudAlias = "alias nextcloud_occ='sudo -u www-data php /var/www/nextcloud/occ'";
+        const updateAlias = "alias run_update_nextcloud='bash /var/scripts/update.sh'";
+
+        try {
+            if (fs.existsSync(aliasFile)) {
+                const aliases = fs.readFileSync(aliasFile, 'utf8');
+
+                if (!aliases.includes('nextcloud')) {
+                    fs.appendFileSync(aliasFile, `\n${nextcloudAlias}\n${updateAlias}\n`);
+                    console.log(GREEN('Aliases added to /root/.bash_aliases'));
+                } else {
+                    console.log(GREEN('Aliases already present in /root/.bash_aliases'));
+                }
+            } else {
+                // If /root/.bash_aliases doesn't exist, create the file and add the aliases
+                fs.writeFileSync(aliasFile, `${nextcloudAlias}\n${updateAlias}\n`);
+                console.log(GREEN('/root/.bash_aliases created and aliases added'));
+            }
+
+            execSync('source /root/.bash_aliases', { stdio: 'inherit' });
+        } catch (error) {
+            console.error(RED('Error managing /root/.bash_aliases:'), error);
+        }
+    }
+
+    /**
+     * Installs a program if it's not already installed.
+     * @param {string} program - The name of the program to install.
+     */
+    installIfNot(program) {
+        try {
+
+            const isInstalled = execSync(`dpkg-query -W -f='${Status}' ${program} | grep -q "ok installed"`, { stdio: 'pipe' });
+
+            if (!isInstalled) {
+                console.log(`${program} is not installed. Installing...`);
+
+                execSync('sudo apt-get update -q4', { stdio: 'inherit' });  
+                execSync(`sudo RUNLEVEL=1 apt-get install ${program} -y`, { stdio: 'inherit' }); 
+                
+                console.log(`${program} installed successfully.`);
+            } else {
+                console.log(`${program} is already installed.`);
+            }
+        } catch (error) {
+            console.error(`Failed to check or install ${program}:`, error);
         }
     }
 }
 
-export default new ncUTILS();
+export default ncUTILS;

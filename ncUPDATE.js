@@ -1,9 +1,8 @@
 import { RED, GREEN,YELLOW,BLUE } from './color.js';
-import { clearConsole, welcome } from './ncUTILS.js';
-import { execSync,spawn } from 'child_process';
-import fs from 'fs';
+import { execSync } from 'child_process';
+import fs, { link } from 'fs';
 import inquirer from 'inquirer';
-import { runCommandWithProgress, initialize } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import ncVARS from './ncVARS.js';
 
 /**
@@ -14,9 +13,12 @@ import ncVARS from './ncVARS.js';
  */
 class ncUPDATE {
     constructor(mainMenu) {
-        let lib;
-        lib = new ncVARS();
+        let lib = new ncVARS();
+        let util;
         lib.loadVariables();
+        lib.ncdb();
+        lib.nc_update();
+        util = new ncUTILS();
         this.SCRIPTS = lib.SCRIPTS;
         this.BACKUP = lib.BACKUP;
         this.NCPATH = lib.NCPATH;
@@ -38,7 +40,7 @@ class ncUPDATE {
       let continueMenu = true;
 
       while (continueMenu) {
-          clearConsole();
+          util.clearConsole();
           const answers = await inquirer.prompt([
               {
                   type: 'list',
@@ -99,10 +101,8 @@ class ncUPDATE {
  */
   runCommand(command) {
     try {
-        // Execute the command and return the trimmed output
         return execSync(command, { shell: '/bin/bash' }).toString().trim();
     } catch (error) {
-        // Log the error, but return an empty string for non-critical commands
         console.error(`Error executing command: ${command}`, error);
         return '';  // Return an empty string in case of an error
     }
@@ -130,21 +130,17 @@ class ncUPDATE {
    */
   checkProcesses() {
     try {
-        // Check if any apt or dpkg processes are currently running
         const aptProcesses = this.runCommand('sudo pgrep apt');
         const dpkgProcesses = this.runCommand('sudo pgrep dpkg');
 
-        // If apt or dpkg processes are running, log the conflict and return true
         if (aptProcesses || dpkgProcesses) {
             console.log(RED('Apt or other conflicting processes are running. Please wait for them to finish.'));
             return true;
         }
     } catch (error) {
-        // If pgrep returns no processes, it throws an error, which means no conflicts are found
         return false;
     }
 
-  // No conflicting processes found
   return false;
 }
 
@@ -152,13 +148,12 @@ class ncUPDATE {
      * Displays the Maintenance Mode Management menu and allows the user to enable or disable maintenance mode.
      */
     async manageMaintenanceMode() {
-      clearConsole();
+      util.clearConsole();
       
-      // Check if maintenance mode is enabled or not
+
       const maintenanceEnabled = this.isMaintenanceModeEnabled();
       const menuOptions = [];
 
-      // Add options to the menu based on the current maintenance mode state
       if (maintenanceEnabled) {
           menuOptions.push('✔ Enable Maintenance Mode', 'Disable Maintenance Mode', 'Abort and Go Back');
       } else {
@@ -174,7 +169,6 @@ class ncUPDATE {
           }
       ]);
 
-      // Handle the selected action
       switch (action) {
           case '✔ Enable Maintenance Mode':
           case 'Enable Maintenance Mode':
@@ -196,7 +190,7 @@ class ncUPDATE {
      * @param {boolean} enable - True to enable, false to disable.
      */
   async setMaintenanceMode(enable) {
-    clearConsole();
+    util.clearConsole();
     const command = enable
         ? `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`
         : `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`;
@@ -219,7 +213,7 @@ class ncUPDATE {
      * Checks if the server has enough free disk space for the update.
      */
     async checkFreeSpace() {
-        clearConsole();
+        util.clearConsole();
         const freeSpace = this.runCommand("df -h | grep -m 1 '/' | awk '{print $4}'");
         if (parseInt(freeSpace) < 50) {
             console.error(RED('Not enough disk space for backup. At least 50GB required.'));
@@ -233,7 +227,7 @@ class ncUPDATE {
  * Creates a backup of Nextcloud's config and apps directories.
  */
   async createBackup() {
-      clearConsole();
+      util.clearConsole();
       const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 
       if (!fs.existsSync(this.BACKUP)) {
@@ -248,9 +242,9 @@ class ncUPDATE {
           // Start the progress bar
           progressBar.start(100, 0); 
 
-          // Use sudo to handle permissions and capture rsync progress
-          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
-          runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
+          // Capture rsync progress
+          util.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
+          util.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
 
           progressBar.update(100);
           progressBar.stop();
@@ -266,13 +260,13 @@ class ncUPDATE {
     }
 
     async downloadNextcloud() {
-        clearConsole();
+        util.clearConsole();
         const homeDir = this.runCommand('echo $HOME');
         console.log('Downloading the latest Nextcloud release to your home directory...');
     
         try {
             // Use `spawn` to execute `curl` and show its progress
-            await runCommandWithProgress('curl', ['-o', `${homeDir}/nextcloud-latest.zip`, 'https://download.nextcloud.com/server/releases/latest.zip']);
+            await util.runCommandWithProgress('curl', ['-o', `${homeDir}/nextcloud-latest.zip`, 'https://download.nextcloud.com/server/releases/latest.zip']);
             console.log(GREEN('Nextcloud package downloaded to your home directory.'));
         } catch (error) {
             console.error(RED('Failed to download Nextcloud package.'));
@@ -288,14 +282,12 @@ class ncUPDATE {
    * Warns the user that this operation will overwrite all files in their Nextcloud installation and prompts for confirmation.
    */
   async extractNextcloud() {
-    clearConsole();
+    util.clearConsole();
     const homeDir = this.runCommand('echo $HOME');
     
-    // Display warning message
     console.log(RED('WARNING: You are about to overwrite ALL files in your Nextcloud installation.'));
     console.log(RED('It is strongly recommended to run a backup before proceeding.'));
     
-    // Prompt user for confirmation
     const { proceed } = await inquirer.prompt([
         {
             type: 'confirm',
@@ -305,14 +297,12 @@ class ncUPDATE {
         }
     ]);
     
-    // If user chooses not to proceed, abort the extraction
     if (!proceed) {
         console.log(YELLOW('Operation aborted. Please run a backup and try again.'));
         await this.awaitContinue();
         return this.manageUpdate();  
     }
 
-    // Proceed with the extraction
     console.log('Extracting Nextcloud package into /var/www/nextcloud...');
     try {
         this.runCommand(`sudo -u www-data unzip ${homeDir}/nextcloud-latest.zip -d /var/www`);
@@ -329,7 +319,7 @@ class ncUPDATE {
      * Runs the Nextcloud upgrade using the OCC command as www-data.
      */
     async upgradeNextcloud() {
-      clearConsole();
+      util.clearConsole();
       console.log('Running Nextcloud upgrade...');
       this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ upgrade`);
       console.log(GREEN('Nextcloud upgrade completed.'));
@@ -340,7 +330,7 @@ class ncUPDATE {
      * Cleans up downloaded files and temporary files from the user's home directory.
      */
     async cleanup() {
-      clearConsole();
+      util.clearConsole();
       const homeDir = this.runCommand('echo $HOME');
       console.log('Cleaning up downloaded files...');
       if (fs.existsSync(`${homeDir}/nextcloud-latest.zip`)) {
@@ -352,18 +342,149 @@ class ncUPDATE {
       await this.awaitContinue();
   }
 
+  autoRestartServices() {
+    try {
+        const distroVersion = lib.DISTRO;
+
+        // Check if the version is between 16.04.10 and 22.04.10 (similar to the bash version comparison)
+        if (parseFloat(distroVersion) < 16.04 || parseFloat(distroVersion) > 22.04) {
+            
+            // Check if /etc/needrestart/needrestart.conf exists, if not install needrestart
+            if (!fs.existsSync('/etc/needrestart/needrestart.conf')) {
+                console.log('needrestart configuration not found. Installing needrestart...');
+                this.util.installIfNot('needrestart');
+            }
+
+            // Check if the needrestart.conf contains the correct setting for automatic restarts
+            const needRestartConfig = execSync(`grep -rq "{restart} = 'a'" /etc/needrestart/needrestart.conf`).toString().trim();
+            
+            if (!needRestartConfig) {
+                // Modify the needrestart configuration to automatically restart services
+                console.log('Configuring needrestart for automatic service restarts...');
+                execSync(`sudo sed -i "s|#\\$nrconf{restart} =.*|\\$nrconf{restart} = 'a';|g" /etc/needrestart/needrestart.conf`);
+                console.log('needrestart configured for automatic restarts.');
+            } else {
+                console.log('needrestart is already configured for automatic restarts.');
+            }
+        } else {
+            console.log('Ubuntu version is within the supported range. No need to modify needrestart configuration.');
+        }
+    } catch (error) {
+        console.error('An error occurred while trying to configure automatic service restarts:', error);
+    }
+}
+
+    /**
+     * Check for pending snapshots and handle the situation by providing a message to the user.
+     * If a snapshot exists, kill any `cloudman-cli` processes to prevent auto-restart.
+     */
+    async checkPendingSnapshot() {
+        try {
+            // Check if the snapshot "NcVM-snapshot-pending" exists
+            const snapshotExists = this.doesSnapshotExist('NcVM-snapshot-pending');
+
+            if (snapshotExists) {
+                await inquirer.prompt([{
+                    type: 'info',
+                    name: 'message',
+                    message: 'Cannot proceed with the update currently because NcVM-snapshot-pending exists.\n' +
+                        'It is possible that a backup is currently running or an update was not successful.\n' +
+                        'Advice: don\'t restart your system now if that is the case!\n\n' +
+                        'If you are sure that no update or backup is currently running, you can fix this by rebooting your server.',
+                }]);
+
+                // Find all processes related to cloudman-cli
+                const processList = execSync(`ps aux | grep 'cloudman-cli' | grep -v grep | awk '{print $2}'`).toString().trim();
+
+                
+                if (processList) {
+                    const processIDs = processList.split('\n');
+                    for (let process of processIDs) {
+                        console.log(CYAN(`Killing the process with PID ${process} to prevent a potential automatic restart...`));
+                        
+                        try {
+                            execSync(`kill ${process}`);
+                            console.log(GREEN(`Successfully killed process with PID ${process}.`));
+                        } catch (error) {
+                            console.error(RED(`Couldn't kill the process with PID ${process}.`), error);
+                        }
+                    }
+                }
+
+                this.mainMenu();
+            }
+        } catch (error) {
+            console.error(RED('An error occurred while checking for pending snapshots or killing processes.'), error);
+        }
+    }
+
+    /**
+     * Checks if a specific snapshot exists.
+     * @param {string} snapshotName - The name of the snapshot to check.
+     * @returns {boolean} - True if the snapshot exists, false otherwise.
+     */
+    doesSnapshotExist(snapshotName) {
+        try {
+            const result = execSync(`zfs list -t snapshot | grep ${snapshotName}`).toString().trim();
+            return result.length > 0;
+        } catch (error) {
+            return false;
+        }
+    }
+    /**
+     * Function to check if a PHP extension is installed
+     * @param {string} extension - The PHP extension to check (e.g., 'apcu', 'redis')
+     * @returns {boolean} - True if the extension is installed, false otherwise
+     */
+    isPHPExtensionInstalled(extension) {
+        try {
+            const result = execSync(`pecl list | grep ${extension}`).toString().trim();
+            return result.includes(extension);
+        } catch (error) {
+            return false;
+        }
+    }
+    /**
+     * Change from APCu to Redis for local cache
+     */
+    updateCacheToRedis() {
+        const configFilePath = `${this.NCPATH}/config/config.php`;
+
+        if (this.isPHPExtensionInstalled('apcu')) {
+            // Remove any existing 'memcache.local' entry from config.php
+            try {
+                const configContent = fs.readFileSync(configFilePath, 'utf8');
+                const updatedConfigContent = configContent.replace(/'memcache\.local'.*\n/, '');
+
+                fs.writeFileSync(configFilePath, updatedConfigContent, 'utf8');
+                console.log('Removed memcache.local from config.php');
+            } catch (error) {
+                console.error('Failed to modify config.php:', error);
+            }
+
+
+            if (this.isPHPExtensionInstalled('redis')) {
+                util.runOccCommand('config:system:set memcache.local --value="\\OC\\Memcache\\Redis"');
+            } else {
+                util.runOccCommand('config:system:delete memcache.local');
+            }
+        }
+    }
+
+
+
  /**
  * Runs the full Nextcloud update process.
  */
 async runFullUpdate() {
   try {
-      // Check if any conflicting processes (like apt) are running
+      // Check if there are any conflicting processes
       if (await this.checkProcesses()) {
           console.log(RED('Apt or other conflicting processes are running. Please wait for them to finish.'));
           return;
       }
 
-      // Check if there is sufficient free space for the update
+      // Check if there is sufficient free space
       await this.checkFreeSpace();
 
       // Enable maintenance mode
@@ -375,6 +496,18 @@ async runFullUpdate() {
       console.log(BLUE('Creating Backup...'));
       await this.createBackup();
       console.log(GREEN('Backup created successfully.'));
+
+      // Restart if not between 16.04.10 and 22.04.10
+      await this.autoRestartServices();
+      await this.checkPendingSnapshot();
+      await this.isPHPExtensionInstalled();
+      await this.updateCacheToRedis();
+
+
+
+      
+
+
 
       /*
 
@@ -401,7 +534,6 @@ async runFullUpdate() {
       console.log(GREEN('Cleanup completed successfully.'));
 
   } catch (error) {
-      // Catch any error that occurs during the update process
       console.error(RED(`Nextcloud update failed: ${error.message}`));
 
       // Attempt to disable maintenance mode if an error occurs
@@ -423,7 +555,6 @@ async runFullUpdate() {
           console.error(RED('Failed to disable maintenance mode in finally block.'));
       }
 
-      // Await user input before returning to the menu
       await this.awaitContinue();
   }
 }
