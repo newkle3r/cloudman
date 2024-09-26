@@ -2,7 +2,7 @@ import chalkAnimation from 'chalk-animation';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
 import {execSync} from 'child_process';
-import { GREEN, BLUE, YELLOW, PURPLE } from './color.js';  
+import { GREEN, BLUE, YELLOW, PURPLE, CYAN, GRAY } from './color.js';  
 import { spawn } from 'child_process';
 
 
@@ -230,5 +230,71 @@ export async function isMaintenanceModeEnabled(NCPATH) {
         return false;
     }
 }
+
+/**
+ * Generate a random password based on the provided length and charset.
+ * @param {number} length - The desired length of the password.
+ * @param {string} charset - The set of characters to use in the password.
+ * @returns {string} - The generated password.
+ */
+export function gen_passwd(length, charset) {
+    let password = '';
+    const charsetArray = charset.split('');
+    const charsetLength = charsetArray.length;
+
+    while (password.length < length) {
+        const randomIndex = Math.floor(Math.random() * charsetLength);
+        password += charsetArray[randomIndex];
+    }
+
+    return password;
+}
+
+/**
+ * Function to download a file using curl to a specific directory.
+ * 
+ * @param {string} url - The base URL of the file to download (e.g., "https://example.com").
+ * @param {string} filename - The name of the file to download (e.g., "myfile.txt").
+ * @param {string} directory - The destination directory to store the file.
+ * @param {number} maxRetries - Maximum number of retry attempts (default is 10).
+ */
+export function curlToDir(url, filename, directory, maxRetries = 10) {
+    // Ensure the directory exists
+    if (!fs.existsSync(directory)) {
+        fs.mkdirSync(directory, { recursive: true });
+    }
+
+    // Full path to the file
+    const filePath = path.join(directory, filename);
+
+    // Remove the existing file if it exists
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+
+    let retries = 0;
+
+    while (retries < maxRetries) {
+        try {
+            console.log(`Attempting to download ${url}/${filename}...`);
+            execSync(`sudo curl -sfL ${url}/${filename} -o ${filePath}`);
+            console.log(`File downloaded successfully to ${filePath}`);
+            break; 
+        } catch (error) {
+            retries += 1;
+            console.error(`Failed to download ${url}/${filename} (Attempt ${retries} of ${maxRetries})`);
+
+            if (retries >= maxRetries) {
+                console.error(`Exceeded maximum retries (${maxRetries}). Exiting...`);
+                throw new Error(`Failed to download ${url}/${filename} after ${maxRetries} attempts.`);
+            }
+
+            console.log(`Retrying in 30 seconds...`);
+            new Promise(resolve => setTimeout(resolve, 30000)); // 30 second delay
+        }
+    }
+}
+
+
 
 

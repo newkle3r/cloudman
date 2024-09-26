@@ -41,7 +41,7 @@ async function initializeVariables() {
     varsclass.redisStatus = varsclass.getServiceStatus('redis-server');
     varsclass.apache2Status = varsclass.getServiceStatus('apache2');
     varsclass.dockerStatus = varsclass.getDockerStatus();
-    versions.phpversion = phpVersion;  // Set PHP version
+    versions.phpversion = phpVersion;  
     varsclass.phpFPMstatus = varsclass.getServiceStatus(`php${versions.phpversion}-fpm.service`);
     
     // Fetch the Nextcloud state and version
@@ -66,7 +66,7 @@ async function mainMenu() {
 
 
     async function displaySystemStatus() {
-        const hostname = execSync('hostname -f').toString().trim(); // Get the hostname
+        const hostname = execSync('hostname -f').toString().trim(); 
             // Fetch system status information
         const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
         const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState  } = varsclass;
@@ -77,7 +77,7 @@ async function mainMenu() {
     
         // Create a new table instance with column widths and without headers
         const table = new Table({
-        colWidths: [40, 40],  // Adjust column widths to your needs
+        colWidths: [40, 40],  
     });
     
         const ncstatColor = nextcloudState === 'active' ? GREEN(nextcloudState) : RED(nextcloudState);
@@ -201,12 +201,6 @@ function exitProgram() {
     process.exit(0);
 }
 
-// Helper function to align text in two columns
-function formatTwoColumns(left, right) {
-    const padding = 40;  // Adjust this value for more or less spacing
-    const leftPadded = left.padEnd(padding, ' ');
-    return `${leftPadded}${right}`;
-}
 
 /**
  * Reset the active menu state.

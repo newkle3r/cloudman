@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
 import { RED, GREEN, BLUE, YELLOW, PURPLE } from './color.js';
-import { initialize } from './utils.js';
+import { initialize, runCommand,getConfigValue, gen_passwd } from './utils.js';
 import ncRedisServer from './ncRedisServer.js';
 
 /**
@@ -12,6 +12,7 @@ class ncVARS {
     
     constructor(filePath = './variables.json') {
         let ncredserv;
+        this.getConfigValue = getConfigValue;
         ncredserv = new ncRedisServer();
         this.phpversion = ncredserv.getPHPVersion();
         this.filePath = filePath;
@@ -37,11 +38,12 @@ class ncVARS {
         this.NCPATH = `${this.HTML}/nextcloud`;
         this.POOLNAME = 'ncdata';
         this.NCDATA = `/mnt/${this.POOLNAME}`;
+        this.VMLOGS = '/var/log/nextcloud';
         this.SNAPDIR = '/var/snap/spreedme';
         this.GPGDIR = '/tmp/gpg';
         this.SHA256_DIR = '/tmp/sha256';
         this.BACKUP = '/mnt/NCBACKUP';
-        this.NC_APPS_PATH = `${this.NCPATH}/apps`;
+        this.NC_APPS_PATH = `${NCPATH}/apps`;
         this.VMLOGS = '/var/log/nextcloud';
         this.PSQLVER = this.getCommandOutput('psql --version');
 
@@ -68,14 +70,132 @@ class ncVARS {
         // Domain and TLS configuration
         this.DEDYNDOMAIN = this.getCommandOutput("hostname -f");
         this.TLSDOMAIN = this.getCommandOutput("hostname -f");
-        this.TLS_CONF = `/etc/apache2/sites-available/${this.TLSDOMAIN}.conf`;
-        this.HTTP_CONF = `/etc/apache2/sites-available/${this.DEDYNDOMAIN}.conf`;
         this.PHPVER = this.getCommandOutput("php -v | grep '^PHP' | awk '{print $2}'");
         this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
         this.SETENVPROXY = 'proxy-sendcl';
         this.DEDYNPORT = '443';
+        this.PHP_FPM_DIR=`/etc/php/${PHPVER}/fpm`;
+        this.PHP_INI=`${PHP_FPM_DIR}/php.ini`;
+        this.PHP_POOL_DIR=`${PHP_FPM_DIR}/pool.d`;
+        this.PHP_MODS_DIR=`/etc/php/${PHPVER}/mods-available`;
+        this.opcache_interned_strings_buffer_value=`24`;
+        // Letsencrypt
+        this.SITES_AVAILABLE="/etc/apache2/sites-available";
+        this.LETSENCRYPTPATH="/etc/letsencrypt";
+        this.CERTFILES=`${LETSENCRYPTPATH}/live`;
+        this.DHPARAMS_TLS=`${CERTFILES}/${TLSDOMAIN}/dhparam.pem`;
+        this.DHPARAMS_SUB=`${CERTFILES}/${SUBDOMAIN}/dhparam.pem`;
+        this.TLS_CONF="nextcloud_tls_domain_self_signed.conf";
+        this.HTTP_CONF="nextcloud_http_domain_self_signed.conf";
+
+        // Github Repo Nextcloud VM
+        this.GITHUB_REPO="https://raw.githubusercontent.com/nextcloud/vm/main";
+        this.STATIC=`${GITHUB_REPO}/static`;
+        this.LETS_ENC=`${GITHUB_REPO}/lets-encrypt`;
+        this.APP=`${GITHUB_REPO}/apps`;
+        this.OLD=`${GITHUB_REPO}/old`;
+        this.ADDONS=`${GITHUB_REPO}/addons`;
+        this.DESEC=`${GITHUB_REPO}/addons/deSEC`;
+        this.MENU=`${GITHUB_REPO}/menu`;
+        this.DISK=`${GITHUB_REPO}/disk`;
+        this.NETWORK=`${GITHUB_REPO}/network`;
+        this.VAGRANT_DIR=`${GITHUB_REPO}/vagrant`;
+        this.NOT_SUPPORTED_FOLDER=`${GITHUB_REPO}/not-supported`;
+        this.NCREPO=`https://download.nextcloud.com/server/releases`;
+        this.ISSUES=`https://github.com/nextcloud/vm/issues`;
+
+        // User information
+        this.GUIUSER=ncadmin;
+        this.GUIPASS=nextcloud;
+        this.UNIXUSER=$SUDO_USER;
+        this.UNIXUSER_PROFILE=`/home/${UNIXUSER}/.bash_profile`;
+        this.ROOT_PROFILE="/root/.bash_profile";
+
+        // User for Bitwarden
+        this.BITWARDEN_USER=bitwarden;
+        this.BITWARDEN_HOME=`/home/${BITWARDEN_USER}`;
+
+        // Database
+        this.SHUF=runCommand(`shuf -i 25-29 -n 1`);
+        this.PGDB_USER=nextcloud_db_user;
+        this.PGDB_PASS=gen_passwd(`${SHUF},"a-zA-Z0-9@#*"`);
+        this.NEWPGPASS=gen_passwd(`${SHUF},"a-zA-Z0-9@#*"`);
+        
+
+        // Path to specific files
+        this.SECURE=`${SCRIPTS}/setup_secure_permissions_nextcloud.sh`;
+
+        
+
+        // Set the hour for automatic updates. This would be 18:00 as only the hour is configurable.
+        this.AUT_UPDATES_TIME=`18`;
+        // Keys
+        this.OpenPGP_fingerprint='28806A878AE423A28372792ED75899B9A724937A';
+        
+        // Collabora App
+        this.HTTPS_CONF=`${SITES_AVAILABLE}/${SUBDOMAIN}.conf`;
+        this.HTTP2_CONF="/etc/apache2/mods-available/http2.conf";
+        // GeoBlock
+        this.GEOBLOCK_MOD_CONF="/etc/apache2/conf-available/geoblock.conf";
+        this.GEOBLOCK_MOD="/etc/apache2/mods-available/maxminddb.load";
+        
+        // Notify push
+        this.NOTIFY_PUSH_SERVICE_PATH="/etc/systemd/system/notify_push.service";
+        // Adminer
+        this.ADMINERDIR=`/usr/share/adminer`
+        this.ADMINER_CONF=`${this.SITES_AVAILABLE}/adminer.conf`;
+        this.ADMINER_CONF_PLUGIN=`${ADMINERDIR}/extra_plugins.php`;
+        // Redis
+        this.REDIS_CONF=`/etc/redis/redis.conf`;
+        this.REDIS_SOCK=`/var/run/redis/redis-server.sock`;
+        this.REDIS_PASS=$(`gen_passwd "${SHUF}" "a-zA-Z0-9@#*"`);
+        // Extra security
+        this.SPAMHAUS=`/etc/spamhaus.wl`;
+        this.ENVASIVE=`/etc/apache2/mods-available/mod-evasive.load`;
+        this.APACHE2=`/etc/apache2/apache2.conf`;
+
+        //Full text search
+        this.FULLTEXTSEARCH_DIR = `${this.SCRIPTS}/fulltextsearch`;
+        this.NEXTCLOUD_INDEX = gen_passwd(this.SHUF, '[:lower:]');
+        this.ELASTIC_USER_PASSWORD = gen_passwd(this.SHUF, '[:lower:]');
+        this.FULLTEXTSEARCH_IMAGE_NAME = 'fulltextsearch_es01';
+        this.FULLTEXTSEARCH_SERVICE = 'nextcloud-fulltext-elasticsearch-worker.service';
+        this.DOCKER_IMAGE_NAME = 'es01';
+        this.RORDIR = '/opt/es/';
+        this.OPNSDIR = '/opt/opensearch';
+        this.nc_fts = 'ark74/nc_fts';
+        this.opens_fts = 'opensearchproject/opensearch';
+        this.fts_node = 'fts_os-node';
+
+        // Talk
+        this.TURN_CONF = "/etc/turnserver.conf";
+        this.TURN_PORT = 3478;
+
     }
+
+    ncdb() {        
+        this.NC_CONF=`${this.NCPATH}/config/config.php`
+        this.NCDB=this.getConfigValue(this.NC_CONF,'dbname')
+        this.NCDBPASS=this.getConfigValue(this.NC_CONF,'dbpassword')
+        this.NCDBUSER=this.getConfigValue(this.NC_CONF,'dbuser')
+        this.NCDBTYPE=this.getConfigValue(this.NC_CONF,'dbtype')
+        this.NCDBHOST=this.getConfigValue(this.NC_CONF,'dbhost')
+    }
+
+    // Nextcloud version
+    nc_update() {
+        this.CURRENTVERSION=runCommand(`sudo -u www-data php ${NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
+        this.NCVERSION=runCommand(`curl -s -m 900 ${NCREPO}/ | sed --silent 's/.*href="nextcloud-\([^"]\+\).zip.asc".*/\1/p' | sort --version-sort | tail -1`);
+        this.STABLEVERSION=`nextcloud-${NCVERSION}`;
+        this.NCMAJOR=this.NCVERSION.split('.')[0];
+        this.CURRENTMAJOR=this.CURRENTVERSION.split('.')[0];
+        this.NCBAD=parseInt(this.CURRENTMAJOR, 10) - 2;
+        this.NCNEXT=this.NCNEXT = parseInt(this.CURRENTMAJOR, 10) + 1;
+    }
+        
+
+
 
     async getNCstate() {
         try {
@@ -103,6 +223,8 @@ class ncVARS {
         await initialize(this.getAvailableUpdates, 'lastAppUpdateCheck', this);
        
     }
+
+    
 
    
 
@@ -187,6 +309,156 @@ class ncVARS {
         return dockerStatus;
     }
 
+    /**
+     * Install and configure TURN server for Nextcloud Talk.
+     */
+    turnInstall() {
+        try {
+            this.TURN_DOMAIN = runCommand(
+                `sudo -u www-data php /var/www/nextcloud/occ config:system:get overwrite.cli.url | sed 's|https://||;s|/||'`
+            ).trim();
+            
+            // Generate random secrets
+            
+            this.TURN_SECRET = gen_passwd(this.SHUF, "a-zA-Z0-9");
+            this.JANUS_API_KEY = gen_passwd(this.SHUF, "a-zA-Z0-9");
+            this.SIGNALING_SECRET = gen_passwd(this.SHUF, "a-zA-Z0-9");
+            this.TURN_INTERNAL_SECRET = gen_passwd(this.SHUF, "a-zA-Z0-9");
+            this.TURN_RECORDING_SECRET = gen_passwd(this.SHUF, "a-zA-Z0-9");
+            
+            this.TURN_RECORDING_HOST = "127.0.0.1";
+            this.TURN_RECORDING_HOST_PORT = 1234;
+            
+            // Log generated secrets for debugging purposes
+            console.log(`TURN_DOMAIN: ${this.TURN_DOMAIN}`);
+            console.log(`TURN_SECRET: ${this.TURN_SECRET}`);
+            console.log(`JANUS_API_KEY: ${this.JANUS_API_KEY}`);
+            console.log(`SIGNALING_SECRET: ${this.SIGNALING_SECRET}`);
+            console.log(`TURN_INTERNAL_SECRET: ${this.TURN_INTERNAL_SECRET}`);
+            console.log(`TURN_RECORDING_SECRET: ${this.TURN_RECORDING_SECRET}`);
+            console.log(`TURN_RECORDING_HOST: ${this.TURN_RECORDING_HOST}`);
+            console.log(`TURN_RECORDING_HOST_PORT: ${this.URN_RECORDING_HOST_PORT}`);
+
+
+        } catch (error) {
+            console.error('Error installing TURN server:', error);
+        }
+    }
+
+    calculatePHPfpm() {
+        // Minimum amount of max children (lower than this won't work with 2 GB RAM)
+        const min_max_children = 8;
+        const min_start_servers = 20;
+        const min_max_spare_servers = 35;
+        const average_php_memory_requirement = 50;
+
+        // Get current start, max, min values from nextcloud.conf
+        const current_start = parseInt(this.getPhpFpmValue('pm.start_servers')) || 0;
+        const current_max = parseInt(this.getPhpFpmValue('pm.max_spare_servers')) || 0;
+        const current_min = parseInt(this.getPhpFpmValue('pm.min_spare_servers')) || 0;
+        const current_sum = current_start + current_max + current_min;
+
+        // Calculate available memory and max children
+        const available_memory = parseInt(execSync("awk '/MemAvailable/ {printf \"%d\", $2/1024}' /proc/meminfo").toString().trim());
+        const PHP_FPM_MAX_CHILDREN = Math.max(min_max_children, Math.floor(available_memory / average_php_memory_requirement));
+
+        console.log(CYAN('Automatically configures pm.max_children for php-fpm...'));
+        
+        if (PHP_FPM_MAX_CHILDREN < min_max_children) {
+            console.error(RED(`The current max_children value (${PHP_FPM_MAX_CHILDREN}) is too low for proper functioning.
+The minimum value is 8, and it is calculated based on available RAM.`));
+            process.exit(1);
+        } else {
+            // Update max_children
+            this.setPhpFpmValue('pm.max_children', PHP_FPM_MAX_CHILDREN);
+            console.log(GREEN(`pm.max_children was set to ${PHP_FPM_MAX_CHILDREN}`));
+
+            if (PHP_FPM_MAX_CHILDREN > current_sum) {
+                // Set pm.max_spare_servers
+                if (PHP_FPM_MAX_CHILDREN >= min_max_spare_servers && current_start < min_start_servers) {
+                    this.setPhpFpmValue('pm.max_spare_servers', PHP_FPM_MAX_CHILDREN - 30);
+                    console.log(chalk.green(`pm.max_spare_servers was set to ${PHP_FPM_MAX_CHILDREN - 30}`));
+                }
+            }
+        }
+
+        // If PHP_FPM_MAX_CHILDREN is lower than current_sum, revert to defaults
+        if (PHP_FPM_MAX_CHILDREN < current_sum) {
+            this.resetPhpFpmToDefault();
+            console.log(chalk.cyan('All PHP-FPM values were set back to default as pm.max_children was lower than the sum of all current values.'));
+        }
+
+        runCommand(`sudo systemctl restart apache2 && sudo systemctl restart php${this.PHPVER}-fpm.service`)
+    }
+
+    getPhpFpmValue(key) {
+        try {
+            const value = execSync(`grep ${key} ${this.PHP_POOL_DIR}/nextcloud.conf | awk '{ print $3}'`).toString().trim();
+            return value;
+        } catch (error) {
+            console.error(RED(`Failed to fetch ${key} from nextcloud.conf`), error);
+            return null;
+        }
+    }
+
+    setPhpFpmValue(key, value) {
+        try {
+            runCommand(`sed -i "s|${key}.*|${key} = ${value}|g" ${this.PHP_POOL_DIR}/nextcloud.conf`);
+        } catch (error) {
+            console.error(RED(`Failed to set ${key} to ${value}`), error);
+        }
+    }
+
+    resetPhpFpmToDefault() {
+        const defaultSettings = {
+            'pm.max_children': 8,
+            'pm.start_servers': 3,
+            'pm.min_spare_servers': 2,
+            'pm.max_spare_servers': 3
+        };
+
+        for (const [key, value] of Object.entries(defaultSettings)) {
+            this.setPhpFpmValue(key, value);
+        }
+    }
+
+
+    /**
+     * Set the systemd-resolved default DNS servers based on the current
+     * internet-facing interface.
+     * This is useful for Docker interfaces that might not use the same DNS servers.
+     * 
+     * @param {string} iface - The name of the network interface (e.g., eth0, enp0s3)
+     */
+    setSystemdResolvedDNS(iface) {
+        try {
+            const pattern = `${iface}(?:.|\\n)*?DNS Servers: ((?:[0-9a-f.: ]|\\n)*?)\\s*(?=\\n\\S|\\n.+: |$)`;
+            const systemdStatus = execSync('systemd-resolve --status').toString();
+            
+            // Use regex to extract DNS servers based on the interface
+            const regex = new RegExp(pattern, 'm');
+            const match = systemdStatus.match(regex);
+            let dnss = match ? match[1].replace(/\s+/g, ' ').trim() : null;
+
+            if (dnss) {
+                // Update DNS setting in /etc/systemd/resolved.conf
+                execSync(`sudo sed -i "s/^#\\?DNS=.*$/DNS=${dnss}/" /etc/systemd/resolved.conf`);
+                
+                // Restart systemd-resolved to apply the changes
+                execSync('sudo systemctl restart systemd-resolved');
+                
+                // Sleep for 1 second (optional)
+                setTimeout(() => {
+                    console.log('systemd-resolved DNS settings updated and service restarted.');
+                }, 1000);
+            } else {
+                console.log(`No DNS servers found for interface: ${iface}`);
+            }
+        } catch (error) {
+            console.error('Error setting systemd-resolved DNS:', error);
+        }
+    }
+    
     /**
      * Helper function to execute a shell command and return the output.
      * @param {string} command - The shell command to run.
@@ -314,5 +586,6 @@ class ncVARS {
         return password;
     }
 }
+
 
 export default ncVARS;
