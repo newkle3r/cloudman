@@ -34,6 +34,9 @@ async function initializeVariables() {
     versions.getPHPVersion();
     varsclass = new ncVARS();
     varsclass.loadVariables();
+    const ncStatus = await getNCstate();
+    varsclass.nextcloudState = ncStatus.state;
+    varsclass.nextcloudVersion = ncStatus.version;
 
     varsclass.psqlStatus = varsclass.getServiceStatus('postgresql');
     varsclass.redisStatus = varsclass.getServiceStatus('redis-server');
@@ -42,9 +45,7 @@ async function initializeVariables() {
     versions.phpversion = versions.getPHPVersion();
     varsclass.phpFPMstatus = varsclass.getServiceStatus(`php${versions.phpversion}-fpm.service`)
 
-     await varsclass.getNCstate();
-     varsclass.nextcloudVersion = varsclass.NEXTCLOUD_VERSION; 
-     varsclass.nextcloudState = varsclass.NEXTCLOUD_STATUS; 
+
 
     // Fetch available app updates
     await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass, UPDATE_THRESHOLD);

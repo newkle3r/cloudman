@@ -83,18 +83,18 @@ class ncVARS {
             const result = execSync('sudo -u www-data php /var/www/nextcloud/occ -V').toString().trim();
 
             // Use regex to extract the version from the result
-            const versionMatch = result.match(/Nextcloud\s+(\d+\.\d+\.\d+)/);
-            if (versionMatch) {
-                this.NEXTCLOUD_VERSION = versionMatch[1]; 
-                this.NEXTCLOUD_STATUS = 'active';  
-            } else {
-                this.NEXTCLOUD_VERSION = 'Unknown';
-                this.NEXTCLOUD_STATUS = 'disabled';
-            }
+            const versionMatch = result.match(/versionstring:\s+(\S+)/);
+            const version = versionMatch ? versionMatch[1] : 'Unknown';
+
+            // Determine if Nextcloud is installed and active
+            const installedMatch = result.match(/installed:\s+(true)/);
+            const isActive = installedMatch ? 'active' : 'disabled';
+
+            // Return the state and version
+            return { state: isActive, version };
         } catch (error) {
-            console.error('Failed to fetch Nextcloud version or status:', error);
-            this.NEXTCLOUD_VERSION = 'Unknown';
-            this.NEXTCLOUD_STATUS = 'disabled';
+            console.error(RED('Failed to fetch Nextcloud status.'), error);
+            return { state: 'unknown', version: 'Unknown' };
         }
     }
 
