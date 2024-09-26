@@ -20,7 +20,7 @@ class ncRedisServer {
     getPHPVersion() {
         try {
             const phpVersion = execSync('php -v').toString().match(/^PHP\s+(\d+\.\d+)/);
-            return phpVersion ? phpVersion[1] : 'unknown';
+            return phpVersion ? phpVersion[1] : 'unknown';  // Return version or 'unknown'
         } catch (error) {
             console.error(RED('Failed to detect PHP version.'));
             return 'unknown';

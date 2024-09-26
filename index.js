@@ -31,7 +31,7 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  */
 async function initializeVariables() {
     versions = new ncRedisServer();
-    versions.getPHPVersion();
+    const phpVersion = versions.getPHPVersion();
     varsclass = new ncVARS();
     varsclass.loadVariables();
     
@@ -40,8 +40,8 @@ async function initializeVariables() {
     varsclass.redisStatus = varsclass.getServiceStatus('redis-server');
     varsclass.apache2Status = varsclass.getServiceStatus('apache2'); 
     varsclass.dockerStatus = varsclass.getDockerStatus();
-    versions.phpversion = versions.getPHPVersion();
-    varsclass.phpFPMstatus = varsclass.getServiceStatus(`php${versions.phpversion}-fpm.service`)
+    versions.phpversion = phpVersion;  // Set PHP version
+    varsclass.phpFPMstatus = varsclass.getServiceStatus(`php${versions.phpversion}-fpm.service`);
 
      await varsclass.getNCstate();
      varsclass.nextcloudVersion = varsclass.NEXTCLOUD_VERSION; 
