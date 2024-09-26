@@ -79,25 +79,24 @@ class ncVARS {
 
     async getNCstate() {
         try {
-            // Run the Nextcloud version command
-            const result = execSync('sudo -u www-data php /var/www/nextcloud/occ -V').toString().trim();
-
-            // Use regex to extract the version from the result
-            const versionMatch = result.match(/Nextcloud\s+(\d+\.\d+\.\d+)/);
-            if (versionMatch) {
-                this.NEXTCLOUD_VERSION = versionMatch[1]; 
-                this.NEXTCLOUD_STATUS = 'active';  
-            } else {
-                this.NEXTCLOUD_VERSION = 'Unknown';
-                this.NEXTCLOUD_STATUS = 'disabled';
-            }
+            // Execute the occ status command to get the Nextcloud status and version information
+            const result = execSync('sudo -u www-data php /var/www/nextcloud/occ status').toString().trim();
+    
+            // Extract the version string using regex or simple string matching
+            const versionMatch = result.match(/versionstring:\s+(\S+)/);
+            const version = versionMatch ? versionMatch[1] : 'Unknown';
+    
+            // Determine if Nextcloud is installed and active
+            const installedMatch = result.match(/installed:\s+(true)/);
+            const isActive = installedMatch ? 'active' : 'disabled';
+    
+            // Return the state and version
+            return { state: isActive, version };
         } catch (error) {
-            console.error('Failed to fetch Nextcloud version or status:', error);
-            this.NEXTCLOUD_VERSION = 'Unknown';
-            this.NEXTCLOUD_STATUS = 'disabled';
+            console.error(RED('Failed to fetch Nextcloud status.'), error);
+            return { state: 'unknown', version: 'Unknown' };
         }
     }
-
 
     async manageVars() {
         // Initialize and fetch updates if necessary

@@ -30,22 +30,24 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  * Initialize variables and statuses, fetch updates where necessary.
  */
 async function initializeVariables() {
+    // Initialize versions and varsclass
     versions = new ncRedisServer();
-    const phpVersion = versions.getPHPVersion();
+    const phpVersion = versions.getPHPVersion();  // Fetch PHP version once
     varsclass = new ncVARS();
     varsclass.loadVariables();
-    
 
+    // Load service statuses
     varsclass.psqlStatus = varsclass.getServiceStatus('postgresql');
     varsclass.redisStatus = varsclass.getServiceStatus('redis-server');
-    varsclass.apache2Status = varsclass.getServiceStatus('apache2'); 
+    varsclass.apache2Status = varsclass.getServiceStatus('apache2');
     varsclass.dockerStatus = varsclass.getDockerStatus();
     versions.phpversion = phpVersion;  // Set PHP version
     varsclass.phpFPMstatus = varsclass.getServiceStatus(`php${versions.phpversion}-fpm.service`);
-
-     await varsclass.getNCstate();
-     varsclass.nextcloudVersion = varsclass.NEXTCLOUD_VERSION; 
-     varsclass.nextcloudState = varsclass.NEXTCLOUD_STATUS; 
+    
+    // Fetch the Nextcloud state and version
+    const ncStateAndVersion = await varsclass.getNCstate();
+    varsclass.nextcloudState = ncStateAndVersion.state;
+    varsclass.nextcloudVersion = ncStateAndVersion.version;
 
     // Fetch available app updates
     await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass, UPDATE_THRESHOLD);
@@ -61,6 +63,8 @@ async function mainMenu() {
     //const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
     const { dockerStatus } = varsclass;
     console.log(dockerStatus);
+
+
     async function displaySystemStatus() {
         const hostname = execSync('hostname -f').toString().trim(); // Get the hostname
             // Fetch system status information
@@ -73,19 +77,19 @@ async function mainMenu() {
     
         // Create a new table instance with column widths and without headers
         const table = new Table({
-            colWidths: [40, 40],  // Adjust column widths to your needs
-        });
+        colWidths: [40, 40],  // Adjust column widths to your needs
+    });
     
         const ncstatColor = nextcloudState === 'active' ? GREEN(nextcloudState) : RED(nextcloudState);
     
         // Add rows to the table
         table.push(
-            [`${BLUE('Hostname:')} ${GREEN(hostname)}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
+            [`${BLUE('Hostname:')} ${hostname}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
             [`${BLUE('Ubuntu:')} ${YELLOW(version)} { ${name} }`, `${BLUE('LAN:')} ${GREEN(address)}`],
-            [`${BLUE('Nextcloud:')} ${YELLOW(nextcloudVersion)} { ${ncstatColor} }`, `${BLUE('apache2:')} ${apache2Status}`],
-            [`${BLUE('PostgreSQL')} ${YELLOW(psql)}: ${psqlStatus}`, `${BLUE('PHP:')} ${YELLOW(versions.phpversion)}`],
-            [`${BLUE('redis-server:')} ${redisStatus}`, `${BLUE('PHP-FPM:')} ${phpFPMstatus}`],
-            [`${BLUE('App updates:')} ${varsclass.appUpdateStatus}`, '']
+            [`${BLUE('Nextcloud:')} ${YELLOW(varsclass.nextcloudVersion)} { ${varsclass.nextcloudState} }`, `${BLUE('apache2:')} ${varsclass.apache2Status}`],
+            [`${BLUE('PostgreSQL')} ${YELLOW(psql)}: ${psqlStatus}`, `${BLUE('PHP:')} ${YELLOW(versions.phpVersion)}`],
+            [`${BLUE('PHP-FPM:')} ${varsclass.phpFPMstatus}`,`${BLUE('redis-server:')} ${varsclass.redisStatus}`],
+            [`${BLUE('App updates:')} ${varsclass.appUpdateStatus}`,`${BLUE('Docker:')} ${varsclass.dockerStatus}`]
         );
     
         // Output the table
