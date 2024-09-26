@@ -3,7 +3,6 @@ import { GREEN, RED, YELLOW, BLUE, PURPLE } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process'; 
-import { throws } from 'assert';
 
 class ncAPPS {
     constructor(mainMenu) {
@@ -239,13 +238,7 @@ class ncAPPS {
             
             // Display the full output for debugging purposes
             console.log(output);
-    
-            // Parse core update information
-            const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
-            if (coreUpdate) {
-                console.log(GREEN(`Nextcloud core update available: Version ${coreUpdate[1]}`));
-            }
-
+            
             // Parse app update information
             const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
             if (appUpdates && appUpdates.length > 0) {
@@ -253,6 +246,14 @@ class ncAPPS {
             } else {
                 this.appUpdateStatus = YELLOW('No app updates available.');
             }
+
+            // Parse core update information
+            const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
+            if (coreUpdate) {
+                console.log(GREEN(`Nextcloud update available: Version ${coreUpdate[1]}`));
+            }
+
+            
     
         } catch (error) {
             this.appUpdateStatus = RED('Failed to check for updates.');

@@ -277,6 +277,10 @@ class ncRedisServer {
 
             execSync(`sudo chown -R www-data:www-data /var/www/nextcloud/`);
             execSync(`sudo chmod 755 /var/www/nextcloud/config/config.php`);
+
+            execSync(`chown redis:root /etc/redis/redis.conf`);
+            execSync(`chmod 600 /etc/redis/redis.conf`);
+
     
             spinner.success({ text: 'Redis configured successfully for Nextcloud!' });
         } catch (error) {

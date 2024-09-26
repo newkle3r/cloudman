@@ -1,11 +1,9 @@
-import { clearConsole,welcome } from './utils.js';
-import fs from 'fs';
 import { execSync } from 'child_process';
 import { createSpinner } from 'nanospinner';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ncRedisServer from './ncRedisServer.js';
-import ncAPPS from './ncAPPS.js';
+
 
 class ncPHP {
     constructor() {
@@ -56,7 +54,8 @@ class ncPHP {
         this.redis.removeRedis(phpVersion);
         const spinner = createSpinner('Purging old PHP versions...').start();
         try {
-            execSync('sudo apt-mark unhold php*', { stdio: 'inherit' });            execSync('sudo apt-get purge php-dev -y', { stdio: 'inherit' });
+            execSync('sudo apt-mark unhold php*', { stdio: 'inherit' });            
+            // execSync('sudo apt-get purge php-dev -y', { stdio: 'inherit' });
             execSync('sudo apt-get purge -y php* libapache2-mod-php*', { stdio: 'inherit' });
             execSync('sudo apt-get autoremove -y && sudo apt-get clean', { stdio: 'inherit' });
             execSync('sudo rm -rf /etc/php', { stdio: 'inherit' });

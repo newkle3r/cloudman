@@ -51,15 +51,12 @@ class ncTLS {
      */
     getTLSConfigDomain() {
         try {
-            // Try fetching from Nextcloud config with sudo
             console.log("Attempting to fetch domain from Nextcloud config...");
             let overwriteURL = getConfigValue.call(this, 'overwrite.cli.url'); // Use this to call the function
-
-            // Debugging information
             console.log(`Fetched overwrite.cli.url from config.php: ${overwriteURL}`);
             
             if (overwriteURL) {
-                // Strip the 'https://' from the URL and return the domain part
+                // Strip the 'https://' and leave the domain
                 let domain = overwriteURL.replace('https://', '').replace('/', '').trim();
                 console.log(`Extracted domain from overwrite.cli.url: ${domain}`);
                 return domain;
@@ -97,35 +94,30 @@ class ncTLS {
     verifyVariables() {
         console.log("Verifying and printing critical variables...");
 
-        // Verify PHP Version
         if (!this.PHPVER || this.PHPVER.trim() === '') {
             console.error("PHP version (PHPVER) is empty or undefined!");
         } else {
             console.log(`PHP Version: ${this.PHPVER}`);
         }
 
-        // Verify Nextcloud Path
         if (!this.NCPATH || this.NCPATH.trim() === '') {
             console.error("Nextcloud path (NCPATH) is empty or undefined!");
         } else {
             console.log(`Nextcloud Path: ${this.NCPATH}`);
         }
 
-        // Verify TLS Domain
         if (!this.TLSDOMAIN || this.TLSDOMAIN.trim() === '') {
             console.error("TLS domain (TLSDOMAIN) is empty or undefined!");
         } else {
             console.log(`TLS Domain: ${this.TLSDOMAIN}`);
         }
 
-        // Verify TLS Configuration Path
         if (!this.TLS_CONF || this.TLS_CONF.trim() === '') {
             console.error("TLS configuration path (TLS_CONF) is empty or undefined!");
         } else {
             console.log(`TLS Configuration Path: ${this.TLS_CONF}`);
         }
 
-        // Verify DH Params Path
         if (!this.DHPARAMS_TLS || this.DHPARAMS_TLS.trim() === '') {
             console.error("DH Parameters path (DHPARAMS_TLS) is empty or undefined!");
         } else {
@@ -203,19 +195,15 @@ newkleer@nextcloud:~/cloudman$ git push
             console.log(`Writing the following content to ${this.TLS_CONF}:`);
             console.log(content);
     
-            // Escape any quotes in the content and use sudo tee to write it
             const escapedContent = content.replace(/"/g, '\\"');
             const writeCommand = `echo "${escapedContent}" | sudo tee ${this.TLS_CONF}`;
             
-            // Run the command using your runCommand method
             this.runCommand(writeCommand);
             console.log(`TLS configuration saved to ${this.TLS_CONF}`);
-    
-            // Enable the new site configuration
+
             this.runCommand(`sudo a2ensite ${this.TLSDOMAIN}.conf`);
             console.log(`Site ${this.TLSDOMAIN} enabled successfully`);
     
-            // Restart Apache to apply the changes
             this.runCommand('sudo systemctl restart apache2');
             console.log('Apache restarted successfully');
         } catch (error) {
@@ -235,17 +223,14 @@ newkleer@nextcloud:~/cloudman$ git push
      */
     generateDHParams() {
         const tempDHParams = '/tmp/dhparam.pem';
-    
-        // Check if the DHParams file already exists
+
         if (!fs.existsSync(this.DHPARAMS_TLS)) {
             console.log('Generating DHParams file...');
     
             try {
-                // Generate the file in a temporary directory
                 execSync(`openssl dhparam -out ${tempDHParams} 2048`);
                 console.log('DHParams file generated successfully in /tmp.');
     
-                // Move the file to the correct location with sudo privileges
                 execSync(`sudo mv ${tempDHParams} ${this.DHPARAMS_TLS}`);
                 console.log(`DHParams file moved to ${this.DHPARAMS_TLS}.`);
             } catch (error) {
@@ -271,16 +256,15 @@ newkleer@nextcloud:~/cloudman$ git push
         console.log('Installing Certbot...');
         execSync('sudo apt-get install -y certbot', { stdio: 'inherit' });
     
-        // Dry-run the Certbot command first
+        // Dry-run first
         console.log('Performing a dry-run for Certbot...');
         const certCommandDryRun = `sudo certbot certonly --manual --key-type ecdsa --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --preferred-challenges dns --dry-run -d ${domain}`;
         
         try {
-            // Execute the dry-run
+            // Execute dry-run
             execSync(certCommandDryRun, { stdio: 'inherit' });
             console.log(GREEN('Dry-run successful!'));
     
-            // Prompt the user if they want to proceed with the real certificate generation
             const answer = await inquirer.prompt([{
                 type: 'confirm',
                 name: 'proceed',
@@ -304,7 +288,6 @@ newkleer@nextcloud:~/cloudman$ git push
             console.error(error.message);
         }
     
-        // Wait for user input before proceeding back to the main menu
         await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to return to the TLS Management Menu...' }]);
     }
     
@@ -357,11 +340,8 @@ newkleer@nextcloud:~/cloudman$ git push
         console.log(`Checking if ports 80 and 443 are open for ${domain}...`);
 
         try {
-            // Check port 80
             execSync(`nc -zv ${domain} 80`, { stdio: 'inherit' });
             console.log(GREEN('Port 80 is open.'));
-
-            // Check port 443
             execSync(`nc -zv ${domain} 443`, { stdio: 'inherit' });
             console.log(GREEN('Port 443 is open.'));
         } catch (error) {
@@ -393,19 +373,14 @@ newkleer@nextcloud:~/cloudman$ git push
      */
     activateTLSConfig(oldConf = '000-default.conf') {
         try {
-            // Enable the new TLS configuration
             execSync(`sudo a2ensite ${this.TLSDOMAIN}.conf`, { stdio: 'inherit' });
-    
-            // Disable the old configuration
             execSync(`sudo a2dissite ${oldConf}`, { stdio: 'inherit' });
-    
-            // Restart the web server to apply changes
             this.restartWebServer();
             console.log(`TLS configuration ${this.TLS_CONF} activated, and ${oldConf} disabled.`);
         } catch (error) {
             console.error(`Failed to activate TLS configuration: ${this.TLS_CONF}`, error);
         }
-    }
+    }s
 
     /**
      * Function to display the menu and handle user interactions.

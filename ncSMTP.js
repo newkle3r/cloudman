@@ -70,7 +70,7 @@ class ncSMTP {
                 break;
             case 'Go Back':
                 continueMenu = false;
-                mainMenu(); // Return to the main menu
+                mainMenu();
                 break;
         }
     }
@@ -118,7 +118,7 @@ async installSMTP() {
         return;
     }
 
-    const { choice, mailServer, smtpPort, protocol, username, password, recipient } = await this.promptSMTPSettings();
+    const { choice, mailServer, smtpPort, protocol, username, password, recipient, domain } = await this.promptSMTPSettings();
 
     this.configureSMTP({
         mailServer,
@@ -126,12 +126,14 @@ async installSMTP() {
         protocol,
         username,
         password,
-        recipient
+        recipient,
+        domain,
     });
     this.updateVariables('smtp_server', mailServer);
     this.updateVariables('smtp_port', smtpPort);
     this.updateVariables('smtp_protocol', protocol);
     this.updateVariables('smtp_username', username);
+    this.updateVariables('mail_domain', domain);
 }
 
 
@@ -320,12 +322,12 @@ Congratulations!
 Your SMTP Relay is working properly. This is a test email.
 
 Best regards,
-The NcVM Team
+T&M Hansson IT
 `;
 
         const spinner = createSpinner('Sending test email...').start();
         try {
-            execSync(`echo "${testMailContent}" | mail -s "Test email from NcVM" ${recipient}`);
+            execSync(`echo "${testMailContent}" | mail -s "Test email from Hansson IT" ${recipient}`);
             spinner.success({ text: `${GREEN('Test email sent successfully! Check your inbox.')}` });
         } catch (error) {
             spinner.error({ text: `${RED('Failed to send test email.')}` });
@@ -367,7 +369,7 @@ smtpd_sasl_path = private/auth
         `;
         fs.writeFileSync('/etc/postfix/main.cf', postfixConfig);
 
-        // Restart Postfix to apply changes
+
         execSync('sudo systemctl restart postfix');
         spinner.success({ text: `${GREEN('Postfix installed and configured successfully.')}` });
     } catch (error) {
@@ -407,7 +409,7 @@ ssl_key = </etc/ssl/private/mail.key
         `;
         fs.writeFileSync('/etc/dovecot/dovecot.conf', dovecotConfig);
 
-        // Restart Dovecot to apply changes
+
         execSync('sudo systemctl restart dovecot');
         spinner.success({ text: `${GREEN('Dovecot installed and configured successfully.')}` });
     } catch (error) {
@@ -423,7 +425,6 @@ setupSSL() {
     const spinner = createSpinner('Setting up SSL certificates...').start();
 
     try {
-        // Generate self-signed certificate
         execSync('sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/mail.key -out /etc/ssl/certs/mailcert.pem -subj "/C=US/ST=State/L=City/O=Organization/OU=IT/CN=mail.mydomain.com"');
         spinner.success({ text: `${GREEN('SSL certificates created successfully.')}` });
     } catch (error) {
@@ -448,7 +449,7 @@ integrateWithNextcloud() {
 'mail_smtphost' => '${variables.smtp_server}',
 'mail_smtpport' => '${variables.smtp_port}',
 'mail_from_address' => 'admin',
-'mail_domain' => 'mydomain.com',
+'mail_domain' => '${variables.mail_domain}',
 'mail_smtpsecure' => '${variables.smtp_protocol === 'SSL' ? 'ssl' : 'tls'}',
         `;
         

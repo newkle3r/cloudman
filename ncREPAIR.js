@@ -1,4 +1,4 @@
-import { execSync, exec } from 'child_process';
+import { execSync } from 'child_process';
 import { RED,GREEN,BLUE,YELLOW} from './color.js'
 import { clearConsole,runCommand } from './utils.js';
 import fs from 'fs';

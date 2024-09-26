@@ -1,5 +1,4 @@
 import { execSync } from 'child_process';
-import { clearConsole,welcome } from './utils.js';
 import { createSpinner } from 'nanospinner';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
@@ -68,7 +67,7 @@ class ncREDIS {
      * Install Redis and PHP Redis module if not installed.
      */
     async installRedis() {
-        await this.deleteNextcloudRedisConfig(); // Ensure config is deleted first
+        await this.deleteNextcloudRedisConfig(); 
         const spinner = createSpinner('Checking Redis installation...').start();
 
         try {
@@ -87,7 +86,7 @@ class ncREDIS {
             }
         }
 
-        await this.installRedisPhpModule();  // Install PHP Redis extension after Redis installation
+        await this.installRedisPhpModule(); 
     }
 
     /**
@@ -277,7 +276,6 @@ class ncREDIS {
             { name: 'Restart Redis', value: 'restart' },
             { name: 'Check Redis Status', value: 'status' },
             { name: 'Brute-force config', value: 'rewrite' },
-            { name: '' },
             { name: 'Return to main menu', value: 'menu' }
         ];
 

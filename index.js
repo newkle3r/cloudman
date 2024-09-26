@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+import Table from 'cli-table3';
 import { clearConsole, loadVariables, initialize, welcome, UPDATE_THRESHOLD,awaitContinue } from './utils.js';
 import { RED, BLUE, GREEN, YELLOW, PURPLE } from './color.js';
+import { execSync } from 'child_process';
 import ncAPPS from './ncAPPS.js';
 import ncFQDN from './ncFQDN.js';
 import ncPHP from './ncPHP.js';
@@ -18,6 +20,7 @@ import ncREPAIR from './ncREPAIR.js';
 import ncRedisServer from './ncRedisServer.js';
 
 // Initialize global variables
+let versions;
 let varsclass;
 let activeMenu = null;
 const linkText = 'Want a professional to just fix it for you? Click here!';
@@ -27,18 +30,25 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  * Initialize variables and statuses, fetch updates where necessary.
  */
 async function initializeVariables() {
-    // Load variables from the ncVARS class and JSON file
+    versions = new ncRedisServer();
+    versions.getPHPVersion();
     varsclass = new ncVARS();
     varsclass.loadVariables();
-    varsclass.getAvailableUpdates();
-    // varsclass.appUpdateStatus
 
-    
+    varsclass.psqlStatus = varsclass.getServiceStatus('postgresql');
+    varsclass.redisStatus = varsclass.getServiceStatus('redis-server');
+    varsclass.apache2Status = varsclass.getServiceStatus('apache2'); 
+    varsclass.dockerStatus = varsclass.getDockerStatus();
+    versions.phpversion = versions.getPHPVersion();
+    varsclass.phpFPMstatus = varsclass.getServiceStatus(`php${versions.phpversion}-fpm.service`)
 
-    // Fetch other system statuses using the initialize function
+     await varsclass.getNCstate();
+     varsclass.nextcloudVersion = varsclass.NEXTCLOUD_VERSION; 
+     varsclass.nextcloudState = varsclass.NEXTCLOUD_STATUS; 
+
+    // Fetch available app updates
     await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass, UPDATE_THRESHOLD);
 }
-
 /**
  * Main menu system from which all others branch.
  */
@@ -47,19 +57,43 @@ async function mainMenu() {
     await welcome();
 
     // Fetch system status information
-    const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
-    const { psqlStatus, redisStatus, apache2Status, dockerStatus } = varsclass;
-
-    // Display system status in the splash screen
+    //const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
+    const { dockerStatus } = varsclass;
     console.log(dockerStatus);
-    console.log(BLUE('LAN:'), GREEN(address));
-    console.log(BLUE('WAN:'), GREEN(ipv4));
-    console.log(BLUE('Ubuntu:'), YELLOW(version), { name });
-    console.log(BLUE('PostgreSQL'), YELLOW(psql), ':', psqlStatus);
-    console.log(BLUE('redis-server:'), redisStatus);
-    console.log(BLUE('apache2:'), apache2Status);
-    console.log(BLUE('App updates:'), varsclass.appUpdateStatus);
-    console.log(``)
+    async function displaySystemStatus() {
+        const hostname = execSync('hostname -f').toString().trim(); // Get the hostname
+            // Fetch system status information
+        const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
+        const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState  } = varsclass;
+
+    
+
+ 
+    
+        // Create a new table instance with column widths and without headers
+        const table = new Table({
+            colWidths: [40, 40],  // Adjust column widths to your needs
+        });
+    
+        const ncstatColor = nextcloudState === 'active' ? GREEN(nextcloudState) : RED(nextcloudState);
+    
+        // Add rows to the table
+        table.push(
+            [`${BLUE('Hostname:')} ${GREEN(hostname)}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
+            [`${BLUE('Ubuntu:')} ${YELLOW(version)} { ${name} }`, `${BLUE('LAN:')} ${GREEN(address)}`],
+            [`${BLUE('Nextcloud:')} ${YELLOW(nextcloudVersion)} { ${ncstatColor} }`, `${BLUE('apache2:')} ${apache2Status}`],
+            [`${BLUE('PostgreSQL')} ${YELLOW(psql)}: ${psqlStatus}`, `${BLUE('PHP:')} ${YELLOW(versions.phpversion)}`],
+            [`${BLUE('redis-server:')} ${redisStatus}`, `${BLUE('PHP-FPM:')} ${phpFPMstatus}`],
+            [`${BLUE('App updates:')} ${varsclass.appUpdateStatus}`, '']
+        );
+    
+        // Output the table
+        console.log(table.toString());
+    }
+    
+    // Call the function to display the status table
+    await displaySystemStatus();
+    
 
     const answers = await inquirer.prompt([
         {
@@ -160,6 +194,13 @@ function exitProgram() {
     resetActiveMenu();  
     console.log('Goodbye!');
     process.exit(0);
+}
+
+// Helper function to align text in two columns
+function formatTwoColumns(left, right) {
+    const padding = 40;  // Adjust this value for more or less spacing
+    const leftPadded = left.padEnd(padding, ' ');
+    return `${leftPadded}${right}`;
 }
 
 /**

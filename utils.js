@@ -3,8 +3,7 @@ import figlet from 'figlet';
 import gradient from 'gradient-string';
 import {execSync} from 'child_process';
 import { GREEN, BLUE, YELLOW, PURPLE } from './color.js';  
-import { exec,spawn } from 'child_process';
-import cliProgress from 'cli-progress';
+import { spawn } from 'child_process';
 
 
 

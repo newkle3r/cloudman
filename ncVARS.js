@@ -2,13 +2,18 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 import { RED, GREEN, BLUE, YELLOW, PURPLE } from './color.js';
 import { initialize } from './utils.js';
+import ncRedisServer from './ncRedisServer.js';
 
 /**
  * Class to manage Nextcloud configuration variables.
  * Provides functionality to load, save, and update system variables in variables.json.
  */
 class ncVARS {
+    
     constructor(filePath = './variables.json') {
+        let ncredserv;
+        ncredserv = new ncRedisServer();
+        this.phpversion = ncredserv.getPHPVersion();
         this.filePath = filePath;
         this.lastAppUpdateCheck = null;
         this.appUpdateStatus = null;
@@ -21,6 +26,10 @@ class ncVARS {
         this.redisStatus = this.getServiceStatus('redis-server');
         this.apache2Status = this.getServiceStatus('apache2');
         this.dockerStatus = this.getDockerStatus();
+        this.phpfpmStatus = this.getServiceStatus(`php${this.phpversion}-fpm.service`);
+        this.nextcloudState = this.getNCstate();
+        this.nextcloudVersion = this.NEXTCLOUD_VERSION;
+        
 
         // Default directories and paths
         this.SCRIPTS = '/var/scripts';
@@ -35,6 +44,11 @@ class ncVARS {
         this.NC_APPS_PATH = `${this.NCPATH}/apps`;
         this.VMLOGS = '/var/log/nextcloud';
         this.PSQLVER = this.getCommandOutput('psql --version');
+
+        this.NEXTCLOUD_VERSION = null;
+        this.NEXTCLOUD_STATUS =  null;
+
+        
 
         // Ubuntu OS information
         this.DISTRO = this.getCommandOutput('lsb_release -sr');
@@ -63,6 +77,28 @@ class ncVARS {
         this.DEDYNPORT = '443';
     }
 
+    async getNCstate() {
+        try {
+            // Run the Nextcloud version command
+            const result = execSync('sudo -u www-data php /var/www/nextcloud/occ -V').toString().trim();
+
+            // Use regex to extract the version from the result
+            const versionMatch = result.match(/Nextcloud\s+(\d+\.\d+\.\d+)/);
+            if (versionMatch) {
+                this.NEXTCLOUD_VERSION = versionMatch[1]; 
+                this.NEXTCLOUD_STATUS = 'active';  
+            } else {
+                this.NEXTCLOUD_VERSION = 'Unknown';
+                this.NEXTCLOUD_STATUS = 'disabled';
+            }
+        } catch (error) {
+            console.error('Failed to fetch Nextcloud version or status:', error);
+            this.NEXTCLOUD_VERSION = 'Unknown';
+            this.NEXTCLOUD_STATUS = 'disabled';
+        }
+    }
+
+
     async manageVars() {
         // Initialize and fetch updates if necessary
         await initialize(this.getAvailableUpdates, 'lastAppUpdateCheck', this);
@@ -85,14 +121,14 @@ class ncVARS {
             const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
             let coreUpdateText = '';
             if (coreUpdate) {
-                coreUpdateText = `Nextcloud core update available: Version ${coreUpdate[1]}`;
-                updateSummary += `${coreUpdateText}\n`;  // Add core update to summary
+                coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
+                updateSummary += `${coreUpdateText}\n`;  
             }
     
             // Parse app update information
             const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
             if (appUpdates && appUpdates.length > 0) {
-                updateSummary += `${appUpdates.length} app update(s) available.\n`;  // Add app updates to summary
+                updateSummary += `${appUpdates.length} app update(s) available.`;  // Add app updates to summary
             }
     
             // If no core or app updates are available
@@ -115,14 +151,15 @@ class ncVARS {
     getServiceStatus(service) {
         let status;
         try {
-            status = execSync(`systemctl status ${service} | grep Active | awk '{print $2}'`).toString().trim();
-            if (!status) {
-                status = 'disabled';
-            }
+            // Try fetching the active status of the service
+            status = execSync(`systemctl is-active ${service}`).toString().trim();
         } catch (error) {
-            status = 'disabled';
+            // If there's an error, treat the service as inactive
+            console.error(`${service} status check failed:`, error);
+            status = 'inactive';
         }
-        return status === 'active' ? GREEN(status) : RED(status);
+    
+        return status === 'active' ? GREEN('active') : RED('inactive');
     }
 
     /**

@@ -5,7 +5,6 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 
 class ncTERMINATOR {
-    // Method to check for running package management processes
     checkRunningProcesses() {
         try {
             const aptStatus = execSync('pgrep apt').toString().trim();
@@ -15,18 +14,17 @@ class ncTERMINATOR {
 
             return aptStatus || dpkgStatus || unattendedUpgradesStatus || upgradeStatus;
         } catch (error) {
-            // If no processes are found, `pgrep` will throw an error, meaning no relevant processes are running
             return false;
         }
     }
 
-    // Method to terminate the Cloudman CLI
+
     killCloudman() {
         console.log(chalk.blue('Shutting down Cloudman...'));
-        process.exit(0); // Exit the Node.js process successfully
+        process.exit(0); 
     }
 
-    // Method to prompt user if processes are running
+
     async promptShutdown() {
         const { shutdown } = await inquirer.prompt([
             {
@@ -38,13 +36,12 @@ class ncTERMINATOR {
         ]);
 
         if (shutdown) {
-            this.killCloudman(); // Shut down Cloudman after confirmation
+            this.killCloudman(); 
         } else {
             console.log(chalk.yellow('Shutdown canceled.'));
         }
     }
 
-    // Method to check processes and decide shutdown behavior
     async terminate() {
         console.log(chalk.green('Checking for running processes...'));
 
@@ -52,10 +49,10 @@ class ncTERMINATOR {
 
         if (processesRunning) {
             console.log(chalk.yellow('Critical processes are currently running.'));
-            await this.promptShutdown(); // Prompt user if critical processes are running
+            await this.promptShutdown(); 
         } else {
             console.log(chalk.green('No critical processes are running.'));
-            this.killCloudman(); // No processes are running, shut down Cloudman
+            this.killCloudman(); 
         }
     }
 }
