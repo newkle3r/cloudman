@@ -1,4 +1,5 @@
-import { clearConsole, runCommand, awaitContinue } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
+import ncVARS from './ncVARS.js';
 import { GREEN, RED, YELLOW, BLUE, PURPLE } from './color.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
@@ -6,7 +7,11 @@ import { execSync } from 'child_process';
 
 class ncAPPS {
     constructor(mainMenu) {
-        this.NC_PATH = '/var/www/nextcloud'
+        let util = new ncUTILS();
+        let lib = new ncVARS();
+        util.clearConsole();
+        lib.loadVariables();
+        this.NCPATH = lib.NCPATH;
         this.appUpdateStatus = YELLOW('Checking for app updates...');
         this.awaitContinue = awaitContinue;
         this.mainMenu = typeof mainMenu === 'function' ? mainMenu : () => console.log('Main menu is not available.');
@@ -14,7 +19,7 @@ class ncAPPS {
 
     async manageApps() {
         let continueMenu = true;
-        clearConsole();
+        util.clearConsole();
 
         while (continueMenu) {
             const answers = await inquirer.prompt([
@@ -65,7 +70,7 @@ class ncAPPS {
 
 
     async listInstalledApps() {
-        clearConsole();
+        util.clearConsole();
         const spinner = createSpinner('Fetching installed Nextcloud apps...').start();
 
         const output = runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:list --shipped=true`);
@@ -81,7 +86,7 @@ class ncAPPS {
     }
 
     async enableApp() {
-        clearConsole();
+        util.clearConsole();
         const availableApps = await this.getAvailableApps();
     
         if (availableApps.length === 0) {
@@ -122,7 +127,7 @@ class ncAPPS {
     }
     
     async disableApp() {
-        clearConsole();
+        util.clearConsole();
         const installedApps = await this.getInstalledApps();
     
         if (installedApps.length === 0) {
@@ -160,7 +165,7 @@ class ncAPPS {
     }
     
     async removeApp() {
-        clearConsole();
+        util.clearConsole();
         const installedApps = await this.getInstalledApps();
     
         if (installedApps.length === 0) {
@@ -227,7 +232,7 @@ class ncAPPS {
     }
 
     async listUpdates() {
-        clearConsole();
+        util.clearConsole();
         const spinner = createSpinner('Checking for available Nextcloud updates...').start();
         
         try {
@@ -267,7 +272,7 @@ class ncAPPS {
     
     
     async updateApps() {
-        clearConsole();
+        util.clearConsole();
     
         // Prompt the user to update all apps or a specific app
         const { updateChoice } = await inquirer.prompt([

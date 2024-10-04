@@ -1,13 +1,10 @@
 import fs from 'fs';
 import { execSync, spawn } from 'child_process';
 import path from 'path';
-import inquirer from 'inquirer';
-import chalkAnimation from 'chalk-animation';
-import gradient from 'gradient-string';
-import figlet from 'figlet';
 import { GREEN, BLUE, YELLOW, PURPLE, CYAN, GRAY } from './color.js';
 
 class ncUTILS {
+    constructor () {}
     /**
      * Clears the console screen.
      */
@@ -113,12 +110,20 @@ class ncUTILS {
     }
 
     /**
+     * Checks free space and returns the available space in GB.
+     */
+    checkFreeSpace() {
+        const freeSpace = this.runCommand("df -h / | grep -m 1 '/' | awk '{print $4}'");
+        return parseInt(freeSpace.replace('G', ''), 10); // Return free space in GB
+    }
+
+    /**
      * Generate a random password based on the provided length and charset.
      * @param {number} length - The desired length of the password.
      * @param {string} charset - The set of characters to use in the password.
      * @returns {string} - The generated password.
      */
-    gen_passwd(length, charset = 'a-zA-Z0-9@#*') {
+    genPasswd(length, charset = 'a-zA-Z0-9@#*') {
         let password = '';
         const charsetArray = charset.split('');
         const charsetLength = charsetArray.length;

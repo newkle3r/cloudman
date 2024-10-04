@@ -1,5 +1,5 @@
 import { RED,BLUE,GRAY,GRAYLI,GREEN,YELLOW,YELLOWLI,PURPLE } from './color.js';
-import { clearConsole,runCommand,welcome,getConfigValue } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
@@ -19,8 +19,11 @@ const variablesPath = 'variables.json';
  */
 class ncSQL {
     constructor(mainMenu) {
+        let util = new ncUTILS();
+        this.getConfigValue = util.getConfigValue();
+        this.clearConsole = util.clearConsole();
         this.mainMenu = mainMenu;
-        this.runCommand = runCommand;
+        this.runCommand = util.runCommand();
         const user = this.runCommand(`echo $USER`).trim();
         
         this.backupPath = `/home/${user}/backups`;
@@ -29,9 +32,9 @@ class ncSQL {
         try {
             const configFilePath = '/var/www/nextcloud/config/config.php';
             const configFile = execSync(`sudo -u www-data cat ${configFilePath}`, { encoding: 'utf8' });
-            this.dbname = getConfigValue(configFile, 'dbname');
-            this.dbuser = getConfigValue(configFile, 'dbuser');
-            this.dbpassword = getConfigValue(configFile, 'dbpassword');
+            this.dbname = this.getConfigValue(configFile, 'dbname');
+            this.dbuser = this.getConfigValue(configFile, 'dbuser');
+            this.dbpassword = this.getConfigValue(configFile, 'dbpassword');
         } catch (error) {
             console.error(`Error reading config.php file: ${error.message}`);
         }
@@ -43,7 +46,7 @@ class ncSQL {
     async managePostgreSQL() {
 
         let continueMenu = true;
-        clearConsole();
+        this.clearConsole();
         while (continueMenu === true) {
             const answers = await inquirer.prompt([
                 {
@@ -82,7 +85,7 @@ class ncSQL {
      * The backup is saved as a single file using pg_dump.
      */
     async backupDatabase() {
-        clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
 
         try {
@@ -112,7 +115,7 @@ class ncSQL {
      * Restores the PostgreSQL database from the backup file.
      */
     async restoreDatabase() {
-        clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Restoring PostgreSQL database...').start();
         
         try {
@@ -143,7 +146,7 @@ class ncSQL {
      * Displays the status of the PostgreSQL service.
      */
     async viewDatabaseStatus() {
-        clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Checking PostgreSQL status...').start();
         
         try {

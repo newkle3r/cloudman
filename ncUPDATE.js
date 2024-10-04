@@ -27,6 +27,9 @@ class ncUPDATE {
         this.DISTRO = lib.DISTRO; // this.runCommand('lsb_release -sr');
         this.mainMenu = mainMenu; 
         this.lastCheck = null;
+        this.awaitContinue = util.awaitContinue;
+        this.clearConsole = util.clearConsole;
+        
     }
 
     /**

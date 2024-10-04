@@ -1,4 +1,4 @@
-import { clearConsole,welcome } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import { RED, BLUE, GRAY, GRAYLI, GREEN, YELLOW, YELLOWLI, PURPLE } from './color.js';
 import { spawnSync, execSync } from 'child_process';
 import fs from 'fs';
@@ -16,6 +16,8 @@ function getTimestamp() {
 // Backup class
 class ncBAK {
     constructor(mainMenu) {
+        let util = new ncUTILS();
+
         this.mainMenu = mainMenu;
         this.backupDir = '/mnt/backup'; 
         this.timestamp = getTimestamp();
@@ -111,7 +113,7 @@ class ncBAK {
     // Run backups
     async runBackups() {
         let continueMenu = true;
-        clearConsole();
+        util.clearConsole();
         
     
         while (continueMenu) {

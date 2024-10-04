@@ -1,5 +1,5 @@
 import { RED, GREEN, YELLOW } from './color.js';
-import { clearConsole,welcome,checkComponent } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
@@ -11,7 +11,11 @@ import chalk from 'chalk';
  * Class for managing DNS, FQDN, and ports using CLI commands.
  */
 class ncFQDN {
-    constructor() {}
+    constructor() {
+        let util = ncUTILS();
+        util.checkComponent();
+        util.clearConsole();
+    }
 
     /**
      * Displays the menu for DNS and FQDN management tasks.
@@ -19,7 +23,7 @@ class ncFQDN {
     async manageFQDN(mainMenu) {
 
         let continueMenu = true;
-        clearConsole();
+        util.clearConsole();
         while (continueMenu === true) {
 
         const answers = await inquirer.prompt([
@@ -67,7 +71,7 @@ class ncFQDN {
      * Identifies the Fully Qualified Domain Name (FQDN) of the current Ubuntu system.
      */
     async identifyFQDN() {
-        clearConsole();
+        util.clearConsole();
         const spinner = createSpinner('Identifying Fully Qualified Domain Name...').start();
 
         try {
@@ -147,13 +151,13 @@ class ncFQDN {
      * Identifies the DNS settings of the current Ubuntu system.
      */
     async identifyDNS() {
-        clearConsole();
+        util.clearConsole();
         const spinner = createSpinner('Identifying DNS settings...').start();
     
         try {
             // First, try using resolvectl (if available on the system)
             try {
-                const dnsSettings = checkComponent('resolvectl status | grep "DNS Servers"').toString().trim();
+                const dnsSettings = util.checkComponent('resolvectl status | grep "DNS Servers"').toString().trim();
                 spinner.success({ text: chalk.green('DNS settings identified via resolvectl:') });
                 console.log(dnsSettings);
             } catch {
@@ -182,7 +186,7 @@ class ncFQDN {
      * Updates DNS settings by modifying the Netplan configuration file.
      */
     async updateDNS() {
-        clearConsole();
+        util.clearConsole();
         const { newDNS } = await inquirer.prompt([
             {
                 type: 'input',
@@ -214,7 +218,7 @@ class ncFQDN {
      * Checks and forwards ports 80 (HTTP) and 443 (HTTPS) using UFW or iptables.
      */
     async forwardPorts() {
-        clearConsole();
+        util.clearConsole();
         const spinner = createSpinner('Checking/forwarding ports...').start();
 
         try {

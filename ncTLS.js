@@ -2,7 +2,7 @@ import fs from 'fs';
 import dns from 'dns';
 import fetch from 'node-fetch'; 
 import { RED, GREEN, YELLOW, BLUE } from './color.js';
-import { clearConsole, welcome, runCommand, awaitContinue, getConfigValue } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 
@@ -14,10 +14,12 @@ import inquirer from 'inquirer';
  */
 class ncTLS {
     constructor(mainMenu) {
+        let util = new ncUTILS();
         this.mainMenu = mainMenu;
-        this.clearConsole = clearConsole;
-        this.runCommand =  runCommand;
-        this.awaitContinue = awaitContinue;
+        this.clearConsole = util.clearConsole();
+        this.runCommand =  util.runCommand();
+        this.awaitContinue = util.awaitContinue();
+        this.getConfigValue = util.getConfigValue();
         this.SCRIPTS = '/var/scripts';
         this.HTML = '/var/www';
         this.NCPATH = `${this.HTML}/nextcloud`;
@@ -52,7 +54,7 @@ class ncTLS {
     getTLSConfigDomain() {
         try {
             console.log("Attempting to fetch domain from Nextcloud config...");
-            let overwriteURL = getConfigValue.call(this, 'overwrite.cli.url');
+            let overwriteURL = this.getConfigValue.call(this, 'overwrite.cli.url');
             console.log(`Fetched overwrite.cli.url from config.php: ${overwriteURL}`);
             
             if (overwriteURL) {

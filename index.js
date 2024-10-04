@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import Table from 'cli-table3';
-import { clearConsole, loadVariables, initialize, welcome, UPDATE_THRESHOLD,awaitContinue } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import { RED, BLUE, GREEN, YELLOW, PURPLE } from './color.js';
 import { execSync } from 'child_process';
 import ncAPPS from './ncAPPS.js';
@@ -12,7 +12,7 @@ import ncUPDATE from './ncUPDATE.js';
 import ncBAK from './ncBAK.js';
 import ncLDAP from './ncLDAP.js';
 import ncREDIS from './ncREDIS.js';
-import noVMNC from './nextcloud.js';
+import ncUX from './ncUX.js';
 import ncTLS from './ncTLS.js';
 import ncVARS from './ncVARS.js';
 import inquirer from 'inquirer';
@@ -21,7 +21,10 @@ import ncRedisServer from './ncRedisServer.js';
 
 // Initialize global variables
 let versions;
-let varsclass;
+let util = new ncUTILS();
+let lib = new ncVARS();
+let ux = new ncUX();
+const UPDATE_THRESHOLD = lib.UPDATE_THRESHOLD;
 let activeMenu = null;
 const linkText = 'Want a professional to just fix it for you? Click here!';
 const url = 'https://shop.hanssonit.se/product-category/support/';
@@ -30,46 +33,46 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  * Initialize variables and statuses, fetch updates where necessary.
  */
 async function initializeVariables() {
-    // Initialize versions and varsclass
+    // Initialize versions and lib
     versions = new ncRedisServer();
     const phpVersion = versions.getPHPVersion();  // Fetch PHP version once
-    varsclass = new ncVARS();
-    varsclass.loadVariables();
+ 
+    util.loadVariables();
 
     // Load service statuses
-    varsclass.psqlStatus = varsclass.getServiceStatus('postgresql');
-    varsclass.redisStatus = varsclass.getServiceStatus('redis-server');
-    varsclass.apache2Status = varsclass.getServiceStatus('apache2');
-    varsclass.dockerStatus = varsclass.getDockerStatus();
-    versions.phpversion = phpVersion;  
-    varsclass.phpFPMstatus = varsclass.getServiceStatus(`php${versions.phpversion}-fpm.service`);
+    lib.psqlStatus = lib.getServiceStatus('postgresql');
+    lib.redisStatus = lib.getServiceStatus('redis-server');
+    lib.apache2Status = lib.getServiceStatus('apache2');
+    lib.dockerStatus = lib.getDockerStatus();
+    versions.phpVersion = phpVersion;  
+    lib.phpfpmStatus = lib.getServiceStatus(`php${versions.phpVersion}-fpm.service`);
     
     // Fetch the Nextcloud state and version
-    const ncStateAndVersion = await varsclass.getNCstate();
-    varsclass.nextcloudState = ncStateAndVersion.state;
-    varsclass.nextcloudVersion = ncStateAndVersion.version;
+    const ncStateAndVersion = await lib.getNCstate();
+    lib.nextcloudState = ncStateAndVersion.state;
+    lib.nextcloudVersion = ncStateAndVersion.version;
 
     // Fetch available app updates
-    await initialize(varsclass.getAvailableUpdates.bind(varsclass), 'lastAppUpdateCheck', varsclass, UPDATE_THRESHOLD);
+    await util.initialize(lib.getAvailableUpdates.bind(lib), 'lastAppUpdateCheck', lib, UPDATE_THRESHOLD);
 }
 /**
  * Main menu system from which all others branch.
  */
 async function mainMenu() {
-    clearConsole();
-    await welcome();
+    util.clearConsole();
+    await ux.welcome();
 
     // Fetch system status information
-    //const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
-    const { dockerStatus } = varsclass;
+    //const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = lib;
+    const { dockerStatus } = lib;
     console.log(dockerStatus);
 
 
     async function displaySystemStatus() {
         const hostname = execSync('hostname -f').toString().trim(); 
             // Fetch system status information
-        const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = varsclass;
-        const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState  } = varsclass;
+        const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = lib;
+        const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState  } = lib;
 
     
 
@@ -86,10 +89,10 @@ async function mainMenu() {
         table.push(
             [`${BLUE('Hostname:')} ${hostname}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
             [`${BLUE('Ubuntu:')} ${YELLOW(version)} { ${name} }`, `${BLUE('LAN:')} ${GREEN(address)}`],
-            [`${BLUE('Nextcloud:')} ${YELLOW(varsclass.nextcloudVersion)} { ${varsclass.nextcloudState} }`, `${BLUE('apache2:')} ${varsclass.apache2Status}`],
+            [`${BLUE('Nextcloud:')} ${YELLOW(lib.nextcloudVersion)} { ${lib.nextcloudState} }`, `${BLUE('apache2:')} ${lib.apache2Status}`],
             [`${BLUE('PostgreSQL')} ${YELLOW(psql)}: ${psqlStatus}`, `${BLUE('PHP:')} ${YELLOW(versions.phpVersion)}`],
-            [`${BLUE('PHP-FPM:')} ${varsclass.phpFPMstatus}`,`${BLUE('redis-server:')} ${varsclass.redisStatus}`],
-            [`${BLUE('App updates:')} ${varsclass.appUpdateStatus}`,`${BLUE('Docker:')} ${varsclass.dockerStatus}`]
+            [`${BLUE('PHP-FPM:')} ${lib.phpFPMstatus}`,`${BLUE('redis-server:')} ${lib.redisStatus}`],
+            [`${BLUE('App updates:')} ${lib.appUpdateStatus}`,`${BLUE('Docker:')} ${lib.dockerStatus}`]
         );
     
         // Output the table
@@ -195,7 +198,7 @@ async function mainMenu() {
  * Clear any active prompts or actions before exiting.
  */
 function exitProgram() {
-    varsclass.saveVariables('./variables.json');
+    lib.saveVariables('./variables.json');
     resetActiveMenu();  
     console.log('Goodbye!');
     process.exit(0);

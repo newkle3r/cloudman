@@ -1,17 +1,19 @@
 import { RED, BLUE, GREEN } from './color.js';
-import { clearConsole, awaitContinue } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
+import ncUPDATE from './ncUPDATE.js';
 
 /**
  * Class to manage Docker containers and images using Docker CLI.
  */
 class ncDOCKER {
     constructor(mainMenu) {
+        let util = new ncUTILS();
         this.mainMenu = mainMenu;
-        this.clearConsole = clearConsole;
-        this.awaitContinue = awaitContinue;
+        this.clearConsole = util.clearConsole();
+        this.awaitContinue = util.awaitContinue();
     }
 
     /**

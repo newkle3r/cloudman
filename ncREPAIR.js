@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { RED,GREEN,BLUE,YELLOW} from './color.js'
-import { clearConsole,runCommand } from './ncUTILS.js';
+import ncUTILS from './ncUTILS.js';
 import fs from 'fs';
 import readlineSync from 'readline-sync';
 import inquirer from 'inquirer';
@@ -14,14 +14,16 @@ import { createSpinner } from 'nanospinner';
  */
 class ncREPAIR {
     constructor(mainMenu) {
+        let util = new ncUTILS();
+        this.clearConsole = util.clearConsole();
+        this.runCommand = util.runCommand();
         this.SCRIPTS_PATH = '/var/scripts';
         this.VARIABLES_JSON_PATH = '/mnt/data/variables.json';
         this.INDEX_JSON_PATH = '/mnt/data/index_json/nc_data.json';
         this.NC_OCC = 'sudo -u www-data php /var/www/nextcloud/occ';  // Fixed path for Nextcloud OCC
         this.mainMenu = mainMenu;
         this.versionNumber = this.extractVersionNumber();
-        this.homeDir = runCommand('echo $HOME')
-        this.runCommand = runCommand;
+        this.homeDir = this.runCommand('echo $HOME')
         this.NC_PATH = '/var/www/nextcloud';
         this.BACKUP_PATH = `${this.homeDir}/backup`;
     }
@@ -35,7 +37,7 @@ class ncREPAIR {
      */
     async manageRepair(mainMenu) {
         let continueMenu = true;  
-        clearConsole();
+        this.clearConsole();
 
         while (continueMenu) {  
             const answers = await inquirer.prompt([
@@ -92,7 +94,7 @@ class ncREPAIR {
      * @returns {Promise<void>} - Resolves when the command completes.
      */
     async repairNextcloud() {
-        clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Repairing Nextcloud...').start();
         
         try {
@@ -110,7 +112,7 @@ class ncREPAIR {
      * @returns {Promise<void>}
      */
     async autoRepair() {
-      clearConsole()
+      this.clearConsole()
         console.log('Starting auto-repair process...');
         this.runCommand(`bash ${this.SCRIPTS_PATH}/repair.sh`);
         console.log('Auto-repair completed.');
@@ -134,7 +136,7 @@ class ncREPAIR {
 
     async manualRepair() {
       let continueMenu = true;
-      clearConsole();
+      this.clearConsole();
 
       while (continueMenu) {
           const answers = await inquirer.prompt([
@@ -175,7 +177,7 @@ class ncREPAIR {
                   break;
 
               case 'Abort':
-                clearConsole();
+                this.clearConsole();
                   console.log('Returning to previous menu...');
                   continueMenu = false;
                   break;
@@ -204,7 +206,7 @@ class ncREPAIR {
    * @returns {Promise<string[]>} - Returns an array of the last 1000 log lines.
    */
     async fetchLogs() {
-      clearConsole();
+      this.clearConsole();
       const logFilePath = '/var/log/nextcloud/nextcloud.log';
   
       try {
@@ -302,7 +304,7 @@ class ncREPAIR {
      * @returns {Promise<void>}
      */
   async downloadFreshBinaries() {
-    clearConsole();
+    this.clearConsole();
     const zipFilePath = `${this.homeDir}/nextcloud-${this.versionNumber}.zip`;
 
     // Check if the file already exists
@@ -315,7 +317,7 @@ class ncREPAIR {
 
     try {
         const spinner = createSpinner('Downloading binaries...').start();
-        await runCommand(`curl -o ${zipFilePath} https://download.nextcloud.com/server/releases/nextcloud-${this.versionNumber}.zip`);
+        await this.runCommand(`curl -o ${zipFilePath} https://download.nextcloud.com/server/releases/nextcloud-${this.versionNumber}.zip`);
         spinner.success({ text: `Fresh binaries for version ${this.versionNumber} downloaded!` });
     } catch (error) {
         console.error('Failed to download Nextcloud binaries:', error);
@@ -332,7 +334,7 @@ class ncREPAIR {
    * @returns {Promise<void>}
    */
   async compareBinaries() {
-    clearConsole();
+    this.clearConsole();
   
     const zipFilePath = `${this.homeDir}/nextcloud-${this.versionNumber}.zip`;
     const unzipDirPath = `${this.homeDir}/nextcloud-${this.versionNumber}`;
@@ -411,7 +413,7 @@ class ncREPAIR {
    * @returns {Promise<void>}
    */
   async backupData() {
-      clearConsole();
+      this.clearConsole();
 
     
 
@@ -440,7 +442,7 @@ class ncREPAIR {
    * @returns {Promise<void>}
    */
     async overwriteCorruptData() {
-        clearConsole();
+        this.clearConsole();
 
         // Warn user about the potential risk of data overwrite
         console.log(RED('WARNING: This will overwrite existing files in your Nextcloud installation.'));
@@ -543,7 +545,7 @@ class ncREPAIR {
      * @returns {Promise<void>}
      */
       async cleanupDownloadedFiles() {
-        clearConsole();
+        this.clearConsole();
 
         const unzipDirPath = `${this.homeDir}/nextcloud-${this.versionNumber}`;
         const zipFilePath = `${this.homeDir}/nextcloud-${this.versionNumber}.zip`;
