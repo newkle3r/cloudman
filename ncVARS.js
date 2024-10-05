@@ -239,39 +239,46 @@ class ncVARS {
    
 
     /**
-     * Asynchronously fetch the available app updates.
-     */
-    async getAvailableUpdates() {
-        try {
-            // Run the `occ update:check` command to check for both core and app updates
-            const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
-    
-            let updateSummary = '';  // To hold the summary of updates
-    
-            // Check if there is a Nextcloud core update
-            const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
-            let coreUpdateText = '';
-            if (coreUpdate) {
-                coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
-                updateSummary += `${coreUpdateText}\n`;  
-            }
-    
-            // Parse app update information
-            const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
-            if (appUpdates && appUpdates.length > 0) {
-                updateSummary += `${appUpdates.length} app update(s) available.`;  // Add app updates to summary
-            }
-    
-            // If no core or app updates are available
-            if (!coreUpdateText && (!appUpdates || appUpdates.length === 0)) {
-                updateSummary = 'No apps or core updates available';
-            }
-    
-            this.appUpdateStatus = GREEN(updateSummary.trim());  // Use trimmed summary as the status
-        } catch (error) {
-            this.appUpdateStatus = RED('Error checking for app updates.');
+ * Asynchronously fetch the available app updates and core updates.
+ */
+async getAvailableUpdates() {
+    try {
+        const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
+        
+        let updateSummary = '';  
+        let coreUpdateText = ''; 
+
+        console.log('OCC update:check output:\n', output);
+
+        const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
+        if (coreUpdate) {
+            coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
+            updateSummary += `${coreUpdateText}\n`;
+        } else {
+            console.log('No core update found in the output.');
         }
+
+        const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
+        if (appUpdates && appUpdates.length > 0) {
+            updateSummary += `${appUpdates.length} app update(s) available.\n`;
+
+            appUpdates.forEach(appUpdate => {
+                console.log('App Update Found:', appUpdate);
+            });
+        } else {
+            console.log('No app updates found in the output.');
+        }
+
+        if (!coreUpdateText && (!appUpdates || appUpdates.length === 0)) {
+            updateSummary = 'No apps or core updates available';
+        }
+
+        this.appUpdateStatus = GREEN(updateSummary.trim()); 
+    } catch (error) {
+        console.error('Error checking for app updates:', error);
+        this.appUpdateStatus = RED('Error checking for app updates.');
     }
+}
 
 
     /**
@@ -282,10 +289,8 @@ class ncVARS {
     getServiceStatus(service) {
         let status;
         try {
-            // Try fetching the active status of the service
             status = execSync(`systemctl is-active ${service}`).toString().trim();
         } catch (error) {
-            // If there's an error, treat the service as inactive
             console.error(`${service} status check failed:`, error);
             status = 'inactive';
         }

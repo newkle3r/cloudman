@@ -35,17 +35,17 @@ class ncUTILS {
  * Helper function to extract configuration values from the config.php file.
  * Handles both single values and arrays (like 'trusted_domains').
  * @param {string} key - The key to look for (e.g., 'trusted_domains', 'dbname')
- * @param {string} NCPATH - Nextcloud installation path
+ * @param {string} NCPATH - Nextcloud installation path (e.g., '/var/www/nextcloud')
  * @returns {string | array} - The value corresponding to the key, or an array if it's an array (e.g., trusted_domains).
  */
 getConfigValue(key, NCPATH) {
     try {
         const configPath = `${NCPATH}/config/config.php`;
-        // Extract the key-value block
+
         const command = `sudo sed -n "/['\\"]${key}['\\"] =>/,/),/p" ${configPath}`;
         const output = execSync(command).toString().trim();
 
-        // Check if it's an array (array block)
+
         if (output.includes('array (')) {
             const arrayValues = [];
             const arrayMatch = output.match(/\d+\s*=>\s*['"]([^'"]+)['"]/g);
@@ -55,9 +55,8 @@ getConfigValue(key, NCPATH) {
                     arrayValues.push(domain);
                 });
             }
-            return arrayValues;  // Return the array of trusted domains
+            return arrayValues; 
         } else {
-            // For single key-value pairs
             const singleValue = output.split('=>')[1].trim().replace(/['",]/g, '');
             return singleValue;
         }
