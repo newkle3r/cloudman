@@ -241,44 +241,59 @@ class ncVARS {
     /**
  * Asynchronously fetch the available app updates and core updates.
  */
-async getAvailableUpdates() {
-    try {
-        const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
-        
-        let updateSummary = '';  
-        let coreUpdateText = ''; 
-
-        console.log('OCC update:check output:\n', output);
-
-        const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
-        if (coreUpdate) {
-            coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
-            updateSummary += `${coreUpdateText}\n`;
-        } else {
-            console.log('No core update found in the output.');
+    async getAvailableUpdates() {
+        try {
+            console.log("Running 'occ update:check' to check for core and app updates...");
+    
+            // Execute the Nextcloud update check command
+            const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
+    
+            // Log the full output of the command for inspection
+            console.log('OCC update:check output:\n', output);
+    
+            let updateSummary = '';  
+            let coreUpdateText = ''; 
+    
+            // Debugging Nextcloud Core version in the output
+            const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
+            if (coreUpdate) {
+                coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
+                console.log(`Nextcloud core update found: ${coreUpdateText}`);
+                updateSummary += `${coreUpdateText}\n`;
+            } else {
+                console.log('No core update found in the output. Skipping core update.');
+            }
+    
+            // Parse app update information
+            const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
+            if (appUpdates && appUpdates.length > 0) {
+                updateSummary += `${appUpdates.length} app update(s) available.\n`;
+    
+                // Log each app update found
+                appUpdates.forEach(appUpdate => {
+                    console.log('App Update Found:', appUpdate);
+                    updateSummary += appUpdate + '\n';  // Ensure that the app updates are shown in the final summary
+                });
+            } else {
+                console.log('No app updates found in the output.');
+            }
+    
+            // Final check: no updates found
+            if (!coreUpdateText && (!appUpdates || appUpdates.length === 0)) {
+                updateSummary = 'No apps or core updates available';
+                console.log('No apps or core updates available.');
+            }
+    
+            // Set the app update status for display
+            this.appUpdateStatus = GREEN(updateSummary.trim());
+            console.log('App update status set to:', this.appUpdateStatus);
+    
+        } catch (error) {
+            console.error('Error checking for app updates:', error);
+            this.appUpdateStatus = RED('Error checking for app updates.');
         }
-
-        const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
-        if (appUpdates && appUpdates.length > 0) {
-            updateSummary += `${appUpdates.length} app update(s) available.\n`;
-
-            appUpdates.forEach(appUpdate => {
-                console.log('App Update Found:', appUpdate);
-            });
-        } else {
-            console.log('No app updates found in the output.');
-        }
-
-        if (!coreUpdateText && (!appUpdates || appUpdates.length === 0)) {
-            updateSummary = 'No apps or core updates available';
-        }
-
-        this.appUpdateStatus = GREEN(updateSummary.trim()); 
-    } catch (error) {
-        console.error('Error checking for app updates:', error);
-        this.appUpdateStatus = RED('Error checking for app updates.');
     }
-}
+    
 
 
     /**
@@ -289,7 +304,9 @@ async getAvailableUpdates() {
     getServiceStatus(service) {
         let status;
         try {
+            console.log(`Checking status of ${service}...`);
             status = execSync(`systemctl is-active ${service}`).toString().trim();
+            console.log(`${service} service is ${status}`);
         } catch (error) {
             console.error(`${service} status check failed:`, error);
             status = 'inactive';

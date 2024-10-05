@@ -33,60 +33,50 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  * Initialize variables and statuses, fetch updates where necessary.
  */
 async function initializeVariables() {
-    // Initialize versions and lib
+    console.log('Initializing variables...');
     versions = new ncRedisServer();
-    const phpVersion = versions.getPHPVersion();  // Fetch PHP version once
- 
+    const phpVersion = versions.getPHPVersion();
+    console.log(`PHP Version: ${phpVersion}`);
+
     lib.loadVariables();
 
-    // Load service statuses
-    //lib.psqlStatus = lib.getServiceStatus('postgresql');
     lib.redisStatus = lib.getServiceStatus('redis-server');
     lib.apache2Status = lib.getServiceStatus('apache2');
-    //const dockerStatus = lib.getDockerStatus();
-    versions.phpVersion = phpVersion;  
+    versions.phpVersion = phpVersion;
     lib.phpfpmStatus = lib.getServiceStatus(`php${versions.phpVersion}-fpm.service`);
-    
-    // Fetch the Nextcloud state and version
+
+    console.log('Fetching Nextcloud state and version...');
     const ncStateAndVersion = await lib.getNCstate();
     lib.nextcloudState = ncStateAndVersion.state;
     lib.nextcloudVersion = ncStateAndVersion.version;
+    console.log(`Nextcloud state: ${lib.nextcloudState}, version: ${lib.nextcloudVersion}`);
 
-    // Fetch available app updates
+    console.log('Fetching available app updates...');
     await util.initialize(lib.getAvailableUpdates.bind(lib), 'lastAppUpdateCheck', lib, UPDATE_THRESHOLD);
 }
+
 /**
  * Main menu system from which all others branch.
  */
 async function mainMenu() {
-    // util.clearConsole(); <-- temp disable
+    console.log('Displaying main menu...');
     await ux.welcome();
 
-    // Fetch system status information
     const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = lib;
-    console.log(lib.getDockerStatus());
-
+    console.log(`Docker status: ${lib.getDockerStatus()}`);
 
     async function displaySystemStatus() {
-        const hostname = execSync('hostname -f').toString().trim(); 
-            // Fetch system status information
-        //const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name } = lib;
-        const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState  } = lib;
+        console.log('Displaying system status...');
+        const hostname = execSync('hostname -f').toString().trim();
+        const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState } = lib;
 
-    
-
- 
-    
-        // Create a new table instance with column widths and without headers
         const table = new Table({
-        colWidths: [40, 40],  
-    });
-    
-        const ncstatColor = nextcloudState === 'active' ? GREEN(nextcloudState) : RED(nextcloudState);
+            colWidths: [40, 40],  
+        });
+
         let bak = new ncBAK();
-     
-    
-        // Add rows to the table
+        console.log('Populating system status table...');
+
         table.push(
             [`${BLUE('Hostname:')} ${GREEN(hostname)}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
             [`${BLUE('Ubuntu:')} ${YELLOW(version)} ${YELLOW('{')} ${GREEN(name)} ${YELLOW('}')}`, `${BLUE('LAN:')} ${GREEN(address)}`],
@@ -95,14 +85,11 @@ async function mainMenu() {
             [`${BLUE('PHP-FPM:')} ${lib.phpfpmStatus}`, `${BLUE('redis-server:')} ${lib.redisStatus}`],
             [`${BLUE('App updates:')} ${lib.appUpdateStatus}`, `${BLUE('Last Backup:')} ${YELLOW(bak.timestamp)}`]
         );
-    
-        // Output the table
+
         console.log(table.toString());
     }
-    
-    // Call the function to display the status table
+
     await displaySystemStatus();
-    
 
     const answers = await inquirer.prompt([
         {
@@ -199,12 +186,12 @@ async function mainMenu() {
  * Clear any active prompts or actions before exiting.
  */
 function exitProgram() {
+    console.log('Exiting program...');
     lib.saveVariables('./variables.json');
     resetActiveMenu();  
     console.log('Goodbye!');
     process.exit(0);
 }
-
 
 /**
  * Reset the active menu state.
