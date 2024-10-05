@@ -32,39 +32,57 @@ class ncUTILS {
     }
 
     /**
- * Helper function to extract configuration values from the config.php file.
- * Handles both single values and arrays (like 'trusted_domains').
- * @param {string} key - The key to look for (e.g., 'trusted_domains', 'dbname')
- * @param {string} NCPATH - Nextcloud installation path (e.g., '/var/www/nextcloud')
- * @returns {string | array} - The value corresponding to the key, or an array if it's an array (e.g., trusted_domains).
+ * Asynchronously fetch the available app updates and core updates.
  */
-getConfigValue(key, NCPATH) {
-    try {
-        const configPath = `${NCPATH}/config/config.php`;
-
-        const command = `sudo sed -n "/['\\"]${key}['\\"] =>/,/),/p" ${configPath}`;
-        const output = execSync(command).toString().trim();
-
-
-        if (output.includes('array (')) {
-            const arrayValues = [];
-            const arrayMatch = output.match(/\d+\s*=>\s*['"]([^'"]+)['"]/g);
-            if (arrayMatch) {
-                arrayMatch.forEach(entry => {
-                    const domain = entry.split('=>')[1].trim().replace(/['",]/g, '');
-                    arrayValues.push(domain);
-                });
+    async getAvailableUpdates() {
+        try {
+            const currentVersionOutput = execSync(`sudo -u www-data php /var/www/nextcloud/occ status`, { encoding: 'utf8' });
+            const currentVersionMatch = currentVersionOutput.match(/version:\s*([\d.]+)/);
+            const currentVersion = currentVersionMatch ? currentVersionMatch[1] : null;
+    
+            if (!currentVersion) {
+                this.appUpdateStatus = RED('Error fetching current Nextcloud version.');
+                return;
             }
-            return arrayValues; 
-        } else {
-            const singleValue = output.split('=>')[1].trim().replace(/['",]/g, '');
-            return singleValue;
+    
+            const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
+            let updateSummary = '';
+            let coreUpdateText = '';
+    
+            const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
+            if (coreUpdate && this.isVersionHigher(coreUpdate[1], currentVersion)) {
+                coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
+                updateSummary += `${coreUpdateText}\n`;
+            }
+    
+            const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
+            if (appUpdates && appUpdates.length > 0) {
+                updateSummary += `${appUpdates.length} app update(s) available.\n`;
+            }
+    
+            if (!coreUpdateText && (!appUpdates || appUpdates.length === 0)) {
+                updateSummary = 'No apps or core updates available';
+            }
+    
+            this.appUpdateStatus = GREEN(updateSummary.trim());
+        } catch (error) {
+            this.appUpdateStatus = RED('Error checking for app updates.');
         }
-    } catch (error) {
-        console.error(`Error fetching config value for ${key}:`, error);
-        return null;
     }
-}
+    
+    isVersionHigher(newVersion, currentVersion) {
+        const newParts = newVersion.split('.').map(Number);
+        const currentParts = currentVersion.split('.').map(Number);
+    
+        for (let i = 0; i < newParts.length; i++) {
+            if (newParts[i] > currentParts[i]) {
+                return true;
+            } else if (newParts[i] < currentParts[i]) {
+                return false;
+            }
+        }
+        return false;
+    }
 
 
 
