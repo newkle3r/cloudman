@@ -20,7 +20,8 @@ class ncVARS {
         let ncredserv;
         this.getConfigValue = this.util.getConfigValue;
         ncredserv = new ncRedisServer();
-        this.phpversion = ncredserv.getPHPVersion();
+        //this.phpversion = ncredserv.getPHPVersion();
+        
         this.filePath = filePath;
         this.lastAppUpdateCheck = null;
         this.appUpdateStatus = null;
@@ -244,49 +245,50 @@ class ncVARS {
     async getAvailableUpdates() {
         try {
             console.log("Running 'occ update:check' to check for core and app updates...");
-    
-            // Execute the Nextcloud update check command
+            
+            // Run the occ update check command
             const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
     
-            // Log the full output of the command for inspection
+            // Log the output for debugging
             console.log('OCC update:check output:\n', output);
-    
+            
             let updateSummary = '';  
             let coreUpdateText = ''; 
     
-            // Debugging Nextcloud Core version in the output
+            // Fetch the currently installed Nextcloud version for debugging
+            const currentVersion = execSync("sudo -u www-data php /var/www/nextcloud/occ status | grep 'versionstring' | awk '{print $3}'").toString().trim();
+            console.log(`Current Nextcloud version installed: ${currentVersion}`);
+    
+            // Ensure parsing of core updates is correct
             const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
-            if (coreUpdate) {
+            if (coreUpdate && coreUpdate[1] !== currentVersion) {
                 coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
-                console.log(`Nextcloud core update found: ${coreUpdateText}`);
+                console.log(`Core update found: ${coreUpdateText}`);
                 updateSummary += `${coreUpdateText}\n`;
             } else {
-                console.log('No core update found in the output. Skipping core update.');
+                console.log(`No core update or already on the latest version: ${currentVersion}`);
             }
     
-            // Parse app update information
+            // Check for app updates
             const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
             if (appUpdates && appUpdates.length > 0) {
                 updateSummary += `${appUpdates.length} app update(s) available.\n`;
     
-                // Log each app update found
                 appUpdates.forEach(appUpdate => {
-                    console.log('App Update Found:', appUpdate);
-                    updateSummary += appUpdate + '\n';  // Ensure that the app updates are shown in the final summary
+                    console.log(`App update found: ${appUpdate}`);
+                    updateSummary += `${appUpdate}\n`;
                 });
             } else {
-                console.log('No app updates found in the output.');
+                console.log('No app updates found.');
             }
     
-            // Final check: no updates found
             if (!coreUpdateText && (!appUpdates || appUpdates.length === 0)) {
                 updateSummary = 'No apps or core updates available';
-                console.log('No apps or core updates available.');
             }
     
-            // Set the app update status for display
+            // Store the app update status for display
             this.appUpdateStatus = GREEN(updateSummary.trim());
-            console.log('App update status set to:', this.appUpdateStatus);
+            console.log(`App update status set to: ${this.appUpdateStatus}`);
     
         } catch (error) {
             console.error('Error checking for app updates:', error);

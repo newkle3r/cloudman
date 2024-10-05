@@ -35,7 +35,8 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
 async function initializeVariables() {
     console.log('Initializing variables...');
     versions = new ncRedisServer();
-    const phpVersion = versions.getPHPVersion();
+    //const phpVersion = versions.getPHPVersion();
+    const phpVersion = execSync("php -r 'echo PHP_MAJOR_VERSION.\".\".PHP_MINOR_VERSION;'").toString().trim();
     console.log(`PHP Version: ${phpVersion}`);
 
     lib.loadVariables();
@@ -43,7 +44,8 @@ async function initializeVariables() {
     lib.redisStatus = lib.getServiceStatus('redis-server');
     lib.apache2Status = lib.getServiceStatus('apache2');
     versions.phpVersion = phpVersion;
-    lib.phpfpmStatus = lib.getServiceStatus(`php${versions.phpVersion}-fpm.service`);
+    //lib.phpfpmStatus = lib.getServiceStatus(`php${versions.phpVersion}-fpm.service`);
+    lib.phpfpmStatus = lib.getServiceStatus(`php${phpVersion}-fpm.service`);
 
     console.log('Fetching Nextcloud state and version...');
     const ncStateAndVersion = await lib.getNCstate();
