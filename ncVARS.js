@@ -14,9 +14,10 @@ class ncVARS {
         this.util = new ncUTILS();
         this.run = this.util.runCommand;
         this.gen = this.util.genPasswd;
-        this.countFunc = 0;
-        // console.log('ncUTILS fuction counter:', this.countFunc);  // Log the instance
-        // console.log('ncUTILS runCommand:', this.util.runCommand);
+        this.PHPVER;
+
+
+
 
         let ncredserv;
         this.getConfigValue = this.util.getConfigValue;
@@ -185,7 +186,7 @@ class ncVARS {
         this.TURN_CONF = "/etc/turnserver.conf";
         this.TURN_PORT = 3478;
 
-        this.countApps = 0;
+   
 
     }
 
@@ -284,9 +285,6 @@ class ncVARS {
                     
                     updateSummary += `Update ${appUpdate.split(' ')[2]} to ${appUpdate.split(' ')[5]}\n`;
 
-                    this.countApps ++
-                    console.log(this.countApps);
-                    
                 });
             } else {
                 console.log('No app updates found.');
@@ -299,10 +297,8 @@ class ncVARS {
             // Store the app update status for display
             this.appUpdateStatus = GREEN(updateSummary.trim());
             
+            
           
-
-            this.countApps = 0;
-
 
     
         } catch (error) {
@@ -565,7 +561,7 @@ getPostgresVersion() {
      * Load variables from the JSON file and update class properties.
      */
     loadVariables() {
-        this.countFunc ++;
+
         if (fs.existsSync(this.filePath)) {
             try {
                 const data = fs.readFileSync(this.filePath, 'utf8');
@@ -592,8 +588,8 @@ getPostgresVersion() {
      */
     updateVariable(key, value) {
         if (typeof this[key] !== 'function') {
-            this[key] = value;  // Update the in-memory value
-            this.saveVariables();  // Save the updated variables back to the file
+            this[key] = value;  
+            this.saveVariables();  
             console.log(`Updated ${key} to ${value}`);
         } else {
             console.error(`Cannot update '${key}' because it is a method, not a variable.`);

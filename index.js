@@ -24,7 +24,7 @@ let versions;
 let util = new ncUTILS();
 let lib = new ncVARS();
 let ux = new ncUX();
-let initcounter = 0;
+
 const UPDATE_THRESHOLD = lib.UPDATE_THRESHOLD;
 let activeMenu = null;
 const linkText = 'Want a professional to just fix it for you? Click here!';
@@ -34,20 +34,23 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
  * Initialize variables and statuses, fetch updates where necessary.
  */
 async function initializeVariables() {
-    initcounter ++;
-    console.log('Initializing variables...');
+
+
     versions = new ncRedisServer();
-    //const phpVersion = versions.getPHPVersion();
-    const phpVersion = execSync("php -r 'echo PHP_MAJOR_VERSION.\".\".PHP_MINOR_VERSION;'").toString().trim();
+    const phpVersion = versions.getPHPVersion();
+    //const phpVersion = execSync("php -r 'echo PHP_MAJOR_VERSION.\".\".PHP_MINOR_VERSION;'").toString().trim();
     // console.log(`PHP Version: ${phpVersion}`);
 
     lib.loadVariables();
+    lib.updateVariable(lib.PHPVER,phpVersion)
+   
 
     lib.getAvailableUpdates()
 
+
     lib.redisStatus = lib.getServiceStatus('redis-server');
     lib.apache2Status = lib.getServiceStatus('apache2');
-    versions.phpVersion = phpVersion;
+    // versions.phpVersion = phpVersion;
     //lib.phpfpmStatus = lib.getServiceStatus(`php${versions.phpVersion}-fpm.service`);
     lib.phpfpmStatus = lib.getServiceStatus(`php${phpVersion}-fpm.service`);
 
@@ -69,7 +72,7 @@ async function mainMenu() {
     await ux.welcome();
 
     const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = lib;
-    console.log(`Docker status: ${lib.getDockerStatus()}`);
+    console.log(`${lib.getDockerStatus()}`);
 
     async function displaySystemStatus() {
 
@@ -83,17 +86,13 @@ async function mainMenu() {
         });
 
         let bak = new ncBAK();
-        // console.log('Populating system status table...');
-
-        lib.getAvailableUpdates()
-        console.log(`Numbers of times loadvariables has ran ${PURPLE(lib.countFunc)}`);
 
 
         table.push(
             [`${BLUE('Hostname:')} ${GREEN(hostname)}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
             [`${BLUE('Ubuntu:')} ${YELLOW(version)} ${YELLOW('{')} ${GREEN(name)} ${YELLOW('}')}`, `${BLUE('LAN:')} ${GREEN(address)}`],
             [`${BLUE('Nextcloud:')} ${YELLOW(lib.nextcloudVersion)} ${YELLOW('{')} ${GREEN(lib.nextcloudState)} ${YELLOW('}')}`, `${BLUE('apache2:')} ${lib.apache2Status}`],
-            [`${BLUE('PostgreSQL:')} ${YELLOW(`${lib.getPostgresVersion()}`)}`, `${BLUE('PHP:')} ${YELLOW(versions.phpVersion)}`],
+            [`${BLUE('PostgreSQL:')} ${YELLOW(`${lib.getPostgresVersion()}`)}`, `${BLUE('PHP:')} ${YELLOW(lib.phpVersion)}`],
             [`${BLUE('PHP-FPM:')} ${lib.phpfpmStatus}`, `${BLUE('redis-server:')} ${lib.redisStatus}`],
             [`${BLUE('App updates:')} ${lib.appUpdateStatus}`, `${BLUE('Last Backup:')} ${YELLOW(bak.timestamp)}`]
         );
@@ -198,7 +197,7 @@ async function mainMenu() {
  * Clear any active prompts or actions before exiting.
  */
 function exitProgram() {
-    lib.countFunc = 0;
+
     console.log('Exiting program...');
     lib.saveVariables('./variables.json');
     resetActiveMenu();  

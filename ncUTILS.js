@@ -126,8 +126,7 @@ class ncUTILS {
             await fetchFunction();
             context[lastCheckKey] = now;
         }
-        this.inits ++;
-        // console.log(`Numbers of times init has ran ${this.inits}`);
+
     }
 
     /**

@@ -1,9 +1,10 @@
 {
   "util": {},
-  "countFunc": 0,
   "filePath": "./variables.json",
   "lastAppUpdateCheck": 1727347728134,
   "appUpdateStatus": "\u001b[32mNextcloud >> 28.0.10\u001b[39m\n\u001b[32m1 app update(s) available.\u001b[39m\n\u001b[32mUpdate deck to 1.11.7\u001b[39m",
+  "PHPVER": "8.1.29",
+  "countFunc": 0,
   "phpversion": "8.1",
   "SCRIPTS": "/var/scripts",
   "HTML": "/var/www",
@@ -87,7 +88,6 @@
   "TLSDOMAIN": "cloud.hannesahlin.se",
   "TLS_CONF": "nextcloud_tls_domain_self_signed.conf",
   "HTTP_CONF": "nextcloud_http_domain_self_signed.conf",
-  "PHPVER": "8.1.29",
   "CERTFILES": "/etc/letsencrypt/live",
   "DHPARAMS_TLS": "/etc/letsencrypt/live/cloud.hannesahlin.se/dhparam.pem",
   "SETENVPROXY": "proxy-sendcl",
@@ -162,5 +162,6 @@
   "fts_node": "fts_os-node",
   "TURN_CONF": "/etc/turnserver.conf",
   "TURN_PORT": 3478,
-  "countApps": 0
+  "countApps": 0,
+  "8.1.29": "8.1"
 }
