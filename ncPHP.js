@@ -226,3 +226,5 @@ php_admin_value[cgi.fix_pathinfo] = 1
 }
 
 export default ncPHP;
+;
+        console.log(`Apache2 status: ${lib.apache2Status}`)

@@ -25,7 +25,8 @@ class ncBAK {
     constructor(mainMenu) {
         let util = new ncUTILS();
         let lib = new ncVARS();
-        this.ncdbVars = lib.ncdb(this.NCPATH);
+        lib.ncdb(this.NCPATH);
+        lib.loadVariables();
         this.user = lib.UNIXUSER;
         this.home = lib.UNIXUSER_PROFILE;
 
@@ -40,11 +41,11 @@ class ncBAK {
         this.redisConfDir = '/etc/redis'; 
         this.phpConfigDir = '/etc/php'; 
         
-        this.psqlDbName = this.ncdbVars.NCDB;
-        this.psqlPass = this.ncdbVars.NCDBPASS;
-        this.psqlUser = this.ncdbVars.NCDBUSER;
-        this.psqlType = this.ncdbVars.NCDBTYPE;
-        this.psqlHost = this.ncdbVars.NCDBHOST;
+        this.psqlDbName = lib.NCDB;
+        this.psqlPass = lib.NCDBPASS;
+        this.psqlUser = lib.NCDBUSER;
+        this.psqlType = lib.NCDBTYPE;
+        this.psqlHost = lib.NCDBHOST;
     }
 
     formatBackupTimestamp(backupTimestamp) {

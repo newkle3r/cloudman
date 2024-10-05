@@ -56,6 +56,9 @@ npm install chalk@^5.3.0 \
   gradient-string@^2.0.2 \
   inquirer@^10.2.2 \
   nanospinner@^1.1.0 \
-  readline-sync@^1.4.10
-
+  readline-sync@^1.4.10 \
+  cli-progress@^3.12.0 \
+  cli-table3@^0.6.5 \
+  node-fetch@^3.3.2 
+    
 echo "Setup complete."

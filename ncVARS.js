@@ -13,18 +13,18 @@ import ncREDIS from './ncREDIS.js';
  */
 class ncVARS {
     
-    constructor(filePath = './variables.json') {
+    constructor(filePath = './variables.json',variable) {
         this.util = new ncUTILS();
         this.run = this.util.runCommand;
         this.gen = this.util.genPasswd;
         let redisServ = new ncRedisServer();
-        let lib = new ncVARS();
-        this.upvar = lib.loadVariables(variable)
-        this.downvar = lib.saveVariables(variable)
-        this.updatevar = lib.updateVariable(variable)
-        this.printVar = lib.printVariables(variable)
+
+        this.upvar = this.loadVariables(variable);
+        this.downvar = this.saveVariables(variable);
+        this.updatevar = this.updateVariable(variable);
+        this.printVar = this.printVariables(variable);
         
-    
+        this.filePath = filePath;
 
 
 
@@ -32,7 +32,7 @@ class ncVARS {
         
         
         redisServ = new ncRedisServer();
-        this.getConfigValue = lib.get();
+        this.getConfigValue = this.util.getConfigValue();
         this.phpversion = redisServ.getPHPVersion();
         
         this.filePath = filePath;
@@ -176,7 +176,7 @@ class ncVARS {
         // Redis
         this.REDIS_CONF=`/etc/redis/redis.conf`;
         this.REDIS_SOCK=`/var/run/redis/redis-server.sock`;
-        this.REDIS_PASS=`${redisPass}`;
+        this.REDIS_PASS=`${this.loadVariables('REDIS_PASS')}`;
         // Extra security
         this.SPAMHAUS=`/etc/spamhaus.wl`;
         this.ENVASIVE=`/etc/apache2/mods-available/mod-evasive.load`;
@@ -206,12 +206,13 @@ class ncVARS {
     ncdb(NCPATH) {        
         this.NC_CONF=`${this.NCPATH}/config/config.php`
         console.log(`inside ncVARS ncdb() -> this.NC_CONF: ${this.NC_CONF}`)
+        let ncdbUtil = new ncUTILS(); 
 
-        this.NCDB=this.getConfigValue('dbname',this.NC_CONF)
-        this.NCDBPASS=this.getConfigValue('dbpassword',this.NC_CONF)
-        this.NCDBUSER=this.getConfigValue('dbuser',this.NC_CONF)
-        this.NCDBTYPE=this.getConfigValue('dbtype',this.NC_CONF)
-        this.NCDBHOST=this.getConfigValue('dbhost',this.NC_CONF)
+        this.NCDB=ncdbUtil.getConfigValue('dbname',this.NC_CONF)
+        this.NCDBPASS=ncdbUtil.getConfigValue('dbpassword',this.NC_CONF)
+        this.NCDBUSER=ncdbUtil.getConfigValue('dbuser',this.NC_CONF)
+        this.NCDBTYPE=ncdbUtil.getConfigValue('dbtype',this.NC_CONF)
+        this.NCDBHOST=ncdbUtil.getConfigValue('dbhost',this.NC_CONF)
     }
 
     // Nextcloud version
@@ -554,7 +555,7 @@ getPostgresVersion() {
     /**
      * Save the current variables to the JSON file.
      */
-    saveVariables() {
+    saveVariables(filePath) {
         try {
             const properties = Object.keys(this).reduce((acc, key) => {
                 if (typeof this[key] !== 'function') {
