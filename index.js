@@ -37,13 +37,13 @@ async function initializeVariables() {
     versions = new ncRedisServer();
     const phpVersion = versions.getPHPVersion();  // Fetch PHP version once
  
-    util.loadVariables();
+    lib.loadVariables();
 
     // Load service statuses
-    lib.psqlStatus = lib.getServiceStatus('postgresql');
+    //lib.psqlStatus = lib.getServiceStatus('postgresql');
     lib.redisStatus = lib.getServiceStatus('redis-server');
     lib.apache2Status = lib.getServiceStatus('apache2');
-    lib.dockerStatus = lib.getDockerStatus();
+    //const dockerStatus = lib.getDockerStatus();
     versions.phpVersion = phpVersion;  
     lib.phpfpmStatus = lib.getServiceStatus(`php${versions.phpVersion}-fpm.service`);
     
@@ -59,19 +59,18 @@ async function initializeVariables() {
  * Main menu system from which all others branch.
  */
 async function mainMenu() {
-    util.clearConsole();
+    // util.clearConsole(); <-- temp disable
     await ux.welcome();
 
     // Fetch system status information
-    //const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = lib;
-    const { dockerStatus } = lib;
-    console.log(dockerStatus);
+    const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = lib;
+    console.log(lib.getDockerStatus());
 
 
     async function displaySystemStatus() {
         const hostname = execSync('hostname -f').toString().trim(); 
             // Fetch system status information
-        const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name, PSQLVER: psql } = lib;
+        //const { DISTRO: version, WANIP4: ipv4, ADDRESS: address, CODENAME: name } = lib;
         const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState  } = lib;
 
     
@@ -84,15 +83,17 @@ async function mainMenu() {
     });
     
         const ncstatColor = nextcloudState === 'active' ? GREEN(nextcloudState) : RED(nextcloudState);
+        let bak = new ncBAK();
+     
     
         // Add rows to the table
         table.push(
-            [`${BLUE('Hostname:')} ${hostname}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
-            [`${BLUE('Ubuntu:')} ${YELLOW(version)} { ${name} }`, `${BLUE('LAN:')} ${GREEN(address)}`],
-            [`${BLUE('Nextcloud:')} ${YELLOW(lib.nextcloudVersion)} { ${lib.nextcloudState} }`, `${BLUE('apache2:')} ${lib.apache2Status}`],
-            [`${BLUE('PostgreSQL')} ${YELLOW(psql)}: ${psqlStatus}`, `${BLUE('PHP:')} ${YELLOW(versions.phpVersion)}`],
-            [`${BLUE('PHP-FPM:')} ${lib.phpFPMstatus}`,`${BLUE('redis-server:')} ${lib.redisStatus}`],
-            [`${BLUE('App updates:')} ${lib.appUpdateStatus}`,`${BLUE('Docker:')} ${lib.dockerStatus}`]
+            [`${BLUE('Hostname:')} ${GREEN(hostname)}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
+            [`${BLUE('Ubuntu:')} ${YELLOW(version)} ${YELLOW('{')} ${GREEN(name)} ${YELLOW('}')}`, `${BLUE('LAN:')} ${GREEN(address)}`],
+            [`${BLUE('Nextcloud:')} ${YELLOW(lib.nextcloudVersion)} ${YELLOW('{')} ${GREEN(lib.nextcloudState)} ${YELLOW('}')}`, `${BLUE('apache2:')} ${lib.apache2Status}`],
+            [`${BLUE('PostgreSQL:')} ${YELLOW(`${lib.getPostgresVersion()}`)}`, `${BLUE('PHP:')} ${YELLOW(versions.phpVersion)}`],
+            [`${BLUE('PHP-FPM:')} ${lib.phpfpmStatus}`, `${BLUE('redis-server:')} ${lib.redisStatus}`],
+            [`${BLUE('App updates:')} ${lib.appUpdateStatus}`, `${BLUE('Last Backup:')} ${YELLOW(bak.timestamp)}`]
         );
     
         // Output the table

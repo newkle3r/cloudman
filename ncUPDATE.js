@@ -1,9 +1,12 @@
 import { RED, GREEN,YELLOW,BLUE } from './color.js';
-import { execSync } from 'child_process';
+import { execSync,spawn } from 'child_process';
 import fs, { link } from 'fs';
 import inquirer from 'inquirer';
 import ncUTILS from './ncUTILS.js';
 import ncVARS from './ncVARS.js';
+import cliProgress from 'cli-progress';
+import readline from 'readline';
+
 
 /**
  * Class to handle the Nextcloud update process.
@@ -14,11 +17,10 @@ import ncVARS from './ncVARS.js';
 class ncUPDATE {
     constructor(mainMenu) {
         let lib = new ncVARS();
-        let util;
         lib.loadVariables();
         lib.ncdb();
         lib.nc_update();
-        util = new ncUTILS();
+        this.util = new ncUTILS();
         this.SCRIPTS = lib.SCRIPTS;
         this.BACKUP = lib.BACKUP;
         this.NCPATH = lib.NCPATH;
@@ -27,8 +29,9 @@ class ncUPDATE {
         this.DISTRO = lib.DISTRO; // this.runCommand('lsb_release -sr');
         this.mainMenu = mainMenu; 
         this.lastCheck = null;
-        this.awaitContinue = util.awaitContinue;
-        this.clearConsole = util.clearConsole;
+        this.awaitContinue = this.util.awaitContinue;
+        this.clearConsole = this.util.clearConsole;
+        this.runCommand = this.util.runCommand;
         
     }
 
@@ -43,7 +46,7 @@ class ncUPDATE {
       let continueMenu = true;
 
       while (continueMenu) {
-          util.clearConsole();
+          //this.util.clearConsole(); <-- temp disable
           const answers = await inquirer.prompt([
               {
                   type: 'list',
@@ -151,7 +154,7 @@ class ncUPDATE {
      * Displays the Maintenance Mode Management menu and allows the user to enable or disable maintenance mode.
      */
     async manageMaintenanceMode() {
-      util.clearConsole();
+      this.util.clearConsole();
       
 
       const maintenanceEnabled = this.isMaintenanceModeEnabled();
@@ -193,7 +196,7 @@ class ncUPDATE {
      * @param {boolean} enable - True to enable, false to disable.
      */
   async setMaintenanceMode(enable) {
-    util.clearConsole();
+    this.util.clearConsole();
     const command = enable
         ? `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --on`
         : `sudo -u www-data php ${this.NCPATH}/occ maintenance:mode --off`;
@@ -216,7 +219,7 @@ class ncUPDATE {
      * Checks if the server has enough free disk space for the update.
      */
     async checkFreeSpace() {
-        util.clearConsole();
+        this.util.clearConsole();
         const freeSpace = this.runCommand("df -h | grep -m 1 '/' | awk '{print $4}'");
         if (parseInt(freeSpace) < 50) {
             console.error(RED('Not enough disk space for backup. At least 50GB required.'));
@@ -226,66 +229,171 @@ class ncUPDATE {
         await this.awaitContinue();
     }
 
- /**
+/**
  * Creates a backup of Nextcloud's config and apps directories.
  */
-  async createBackup() {
-      util.clearConsole();
-      const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+async createBackup() {
+    this.util.clearConsole();
 
-      if (!fs.existsSync(this.BACKUP)) {
-          console.log(RED(`${this.BACKUP} does not exist. Creating backup directory...`));
-          this.runCommand(`sudo mkdir -p ${this.BACKUP}`);
-          console.log(GREEN('Backup directory created.'));
-      }
-
-      console.log('Creating a backup of Nextcloud files...');
-
-      try {
-          // Start the progress bar
-          progressBar.start(100, 0); 
-
-          // Capture rsync progress
-          util.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/config ${this.BACKUP}`, progressBar);
-          util.runCommandWithProgress(`sudo rsync -Aax --info=progress2 ${this.NCPATH}/apps ${this.BACKUP}`, progressBar);
-
-          progressBar.update(100);
-          progressBar.stop();
-
-          console.log(GREEN('Backup completed.'));
-      } catch (error) {
-          progressBar.stop();
-          console.error(RED('Failed to create a backup. Please check permissions and try again.'));
-          console.error(error.message);
-      }
-
-      await this.awaitContinue();
+    if (!fs.existsSync(this.BACKUP)) {
+        console.log(RED(`${this.BACKUP} does not exist. Creating backup directory...`));
+        await this.util.runCommandWithProgress('sudo', ['mkdir', '-p', this.BACKUP]);
+        console.log(GREEN('Backup directory created.'));
     }
 
-    async downloadNextcloud() {
-        util.clearConsole();
-        const homeDir = this.runCommand('echo $HOME');
-        console.log('Downloading the latest Nextcloud release to your home directory...');
-    
-        try {
-            // Use `spawn` to execute `curl` and show its progress
-            await util.runCommandWithProgress('curl', ['-o', `${homeDir}/nextcloud-latest.zip`, 'https://download.nextcloud.com/server/releases/latest.zip']);
-            console.log(GREEN('Nextcloud package downloaded to your home directory.'));
-        } catch (error) {
-            console.error(RED('Failed to download Nextcloud package.'));
-            console.error(error.message);
-        }
-    
-        await this.awaitContinue();
+    console.log('Creating a backup of Nextcloud files...');
+
+    try {
+        // Create and configure the progress bar
+        const progressBar = new cliProgress.SingleBar({
+            format: 'Progress |{bar}| {percentage}% | ETA: {eta}s | {value}/{total}',
+            barCompleteChar: '\u2588',
+            barIncompleteChar: '\u2591',
+            hideCursor: true
+        }, cliProgress.Presets.shades_classic);
+
+        // Start the progress bar at 0 with an estimated total of 100
+        progressBar.start(100, 0); 
+
+        // Run rsync for config directory
+        await this.runRsyncWithProgress('sudo', ['rsync', '-Aax', '--info=progress2', `${this.NCPATH}/config`, this.BACKUP], progressBar);
+
+        // Run rsync for apps directory
+        await this.runRsyncWithProgress('sudo', ['rsync', '-Aax', '--info=progress2', `${this.NCPATH}/apps`, this.BACKUP], progressBar);
+
+        // Ensure the progress bar is completed
+        progressBar.update(100);
+        progressBar.stop();
+
+        console.log(GREEN(`Backup to ${this.BACKUP} completed.`));
+    } catch (error) {
+        progressBar.stop();
+        console.error(RED('Failed to create a backup. Please check permissions and try again.'));
+        console.error(error.message);
     }
-  
+
+    await this.awaitContinue(); // Wait for user input before continuing
+}
+
+/**
+ * Helper function to run rsync with real-time progress tracking.
+ * @param {string} command - The command to run (e.g., 'sudo').
+ * @param {array} args - Arguments for the command (e.g., ['rsync', ...]).
+ * @param {cliProgress.SingleBar} progressBar - The progress bar to update.
+ */
+async runRsyncWithProgress(command, args, progressBar) {
+    return new Promise((resolve, reject) => {
+        const rsyncProcess = this.util.spawnCommandWithProgress(command, args);
+
+        // Use readline to capture and process the output from rsync
+        readline.createInterface({
+            input: rsyncProcess.stdout,
+            terminal: false
+        }).on('line', (line) => {
+            const progressMatch = line.match(/(\d+)%/); // Match lines with percentage
+            if (progressMatch) {
+                const progress = parseInt(progressMatch[1], 10);
+                progressBar.update(progress);
+            }
+        });
+
+        rsyncProcess.on('close', (code) => {
+            if (code === 0) {
+                resolve(); // Resolve on successful completion
+            } else {
+                reject(new Error(`rsync failed with exit code ${code}`)); // Reject if rsync fails
+            }
+        });
+
+        rsyncProcess.on('error', (error) => {
+            reject(error); // Reject if there's an error spawning the process
+        });
+    });
+}
+/**
+ * Downloads the latest Nextcloud release with progress tracking.
+ */
+async downloadNextcloud() {
+    this.util.clearConsole();
+    const homeDir = this.runCommand('echo $HOME');
+    console.log('Downloading the latest Nextcloud release to your home directory...');
+
+    const progressBar = new cliProgress.SingleBar({
+        format: 'Progress |{bar}| {percentage}% | ETA: {eta}s | {value}/{total}KB',
+        barCompleteChar: '\u2588',
+        barIncompleteChar: '\u2591',
+        hideCursor: true
+    }, cliProgress.Presets.shades_classic);
+
+    try {
+        const fileSize = await this.util.getFileSize('https://download.nextcloud.com/server/releases/latest.zip');
+        progressBar.start(fileSize, 0);
+        await this.runCurlWithProgress('curl', [
+            '--progress-bar', 
+            '--location',
+            '--output', `${homeDir}/nextcloud-latest.zip`,
+            'https://download.nextcloud.com/server/releases/latest.zip'
+        ], fileSize, progressBar);
+
+        progressBar.update(fileSize);
+        progressBar.stop();
+
+        console.log(GREEN('Nextcloud package downloaded to your home directory.'));
+    } catch (error) {
+        progressBar.stop();
+        console.error(RED('Failed to download Nextcloud package.'));
+        console.error(error.message);
+    }
+
+    await this.awaitContinue();
+}
+
+/**
+ * Helper function to run curl with real-time progress tracking from stderr.
+ * @param {string} command - The command to run (e.g., 'curl').
+ * @param {array} args - Arguments for the command (e.g., ['-o', ...]).
+ * @param {number} totalSize - Total size of the file in KB.
+ * @param {cliProgress.SingleBar} progressBar - The progress bar to update.
+ */
+async runCurlWithProgress(command, args, totalSize, progressBar) {
+    return new Promise((resolve, reject) => {
+        const curlProcess = spawn(command, args);
+
+        readline.createInterface({
+            input: curlProcess.stderr,
+            terminal: false
+        }).on('line', (line) => {
+            const progressMatch = line.match(/(\d{1,3})\.(\d)%/);
+
+            if (progressMatch) {
+                const percentage = parseFloat(`${progressMatch[1]}.${progressMatch[2]}`);
+                const sizeDownloaded = (percentage / 100) * totalSize;
+                progressBar.update(sizeDownloaded);
+            }
+        });
+
+        curlProcess.on('close', (code) => {
+            if (code === 0) {
+                resolve();
+            } else {
+                reject(new Error(`curl failed with exit code ${code}`));
+            }
+        });
+
+        curlProcess.on('error', (error) => {
+            reject(error);
+        });
+    });
+}
+
+
 
     /**
    * Extracts the downloaded Nextcloud package into the /var/www/nextcloud directory with www-data permissions.
    * Warns the user that this operation will overwrite all files in their Nextcloud installation and prompts for confirmation.
    */
   async extractNextcloud() {
-    util.clearConsole();
+    this.util.clearConsole();
     const homeDir = this.runCommand('echo $HOME');
     
     console.log(RED('WARNING: You are about to overwrite ALL files in your Nextcloud installation.'));
@@ -322,7 +430,7 @@ class ncUPDATE {
      * Runs the Nextcloud upgrade using the OCC command as www-data.
      */
     async upgradeNextcloud() {
-      util.clearConsole();
+      this.util.clearConsole();
       console.log('Running Nextcloud upgrade...');
       this.runCommand(`sudo -u www-data php ${this.NCPATH}/occ upgrade`);
       console.log(GREEN('Nextcloud upgrade completed.'));
@@ -333,7 +441,7 @@ class ncUPDATE {
      * Cleans up downloaded files and temporary files from the user's home directory.
      */
     async cleanup() {
-      util.clearConsole();
+      this.util.clearConsole();
       const homeDir = this.runCommand('echo $HOME');
       console.log('Cleaning up downloaded files...');
       if (fs.existsSync(`${homeDir}/nextcloud-latest.zip`)) {
@@ -355,7 +463,7 @@ class ncUPDATE {
             // Check if /etc/needrestart/needrestart.conf exists, if not install needrestart
             if (!fs.existsSync('/etc/needrestart/needrestart.conf')) {
                 console.log('needrestart configuration not found. Installing needrestart...');
-                this.util.installIfNot('needrestart');
+                this.this.util.installIfNot('needrestart');
             }
 
             // Check if the needrestart.conf contains the correct setting for automatic restarts
@@ -467,9 +575,9 @@ class ncUPDATE {
 
 
             if (this.isPHPExtensionInstalled('redis')) {
-                util.runOccCommand('config:system:set memcache.local --value="\\OC\\Memcache\\Redis"');
+                this.util.runOccCommand('config:system:set memcache.local --value="\\OC\\Memcache\\Redis"');
             } else {
-                util.runOccCommand('config:system:delete memcache.local');
+                this.util.runOccCommand('config:system:delete memcache.local');
             }
         }
     }

@@ -4,6 +4,8 @@ import inquirer from 'inquirer';
 import { createSpinner } from 'nanospinner';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
+import ncVARS from './ncVARS.js';
+import fs from 'fs';
 
 // Needs suitable splash
 
@@ -11,10 +13,15 @@ import chalk from 'chalk';
  * Class for managing DNS, FQDN, and ports using CLI commands.
  */
 class ncFQDN {
-    constructor() {
-        let util = ncUTILS();
-        util.checkComponent();
-        util.clearConsole();
+    constructor(mainMenu) {
+        this.mainMenu = mainMenu;
+        this.util = new ncUTILS();
+        this.vars = new ncVARS();
+        this.checkComponent = this.util.checkComponent;
+        this.clearConsole = this.util.clearConsole;
+        this.runCommand = this.util.runCommand;
+        this.trustedDomains = this.vars.DEDYNDOMAIN;
+
     }
 
     /**
@@ -23,7 +30,7 @@ class ncFQDN {
     async manageFQDN(mainMenu) {
 
         let continueMenu = true;
-        util.clearConsole();
+        this.clearConsole();
         while (continueMenu === true) {
 
         const answers = await inquirer.prompt([
@@ -59,9 +66,12 @@ class ncFQDN {
             case 'Check/Forward Ports':
                 await this.forwardPorts();
                 break;
+            case 'Apache Settings':
+                await this.apacheSettings();
+                break;
             case 'Go Back':
                 continueMenu = false;
-                mainMenu();
+                this.mainMenu();
                 break;
         }
     }
@@ -71,7 +81,7 @@ class ncFQDN {
      * Identifies the Fully Qualified Domain Name (FQDN) of the current Ubuntu system.
      */
     async identifyFQDN() {
-        util.clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Identifying Fully Qualified Domain Name...').start();
 
         try {
@@ -151,13 +161,12 @@ class ncFQDN {
      * Identifies the DNS settings of the current Ubuntu system.
      */
     async identifyDNS() {
-        util.clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Identifying DNS settings...').start();
     
         try {
-            // First, try using resolvectl (if available on the system)
             try {
-                const dnsSettings = util.checkComponent('resolvectl status | grep "DNS Servers"').toString().trim();
+                const dnsSettings = this.checkComponent('resolvectl status | grep "DNS Servers"').toString().trim();
                 spinner.success({ text: chalk.green('DNS settings identified via resolvectl:') });
                 console.log(dnsSettings);
             } catch {
@@ -186,7 +195,7 @@ class ncFQDN {
      * Updates DNS settings by modifying the Netplan configuration file.
      */
     async updateDNS() {
-        util.clearConsole();
+        this.clearConsole();
         const { newDNS } = await inquirer.prompt([
             {
                 type: 'input',
@@ -214,65 +223,205 @@ class ncFQDN {
         await this.manageFQDN();
     }
 
-    /**
-     * Checks and forwards ports 80 (HTTP) and 443 (HTTPS) using UFW or iptables.
-     */
-    async forwardPorts() {
-        util.clearConsole();
-        const spinner = createSpinner('Checking/forwarding ports...').start();
 
-        try {
-            // Check if port 80 and 443 are open with UFW
-            let useIptables = false;
-            try {
-                execSync('which ufw', { stdio: 'ignore' });
-            } catch {
+
+/**
+ * Checks and forwards ports 80 (HTTP) and 443 (HTTPS) using UFW or iptables.
+ * If netfilter-persistent is missing, it alerts the user or tries to install it.
+ */
+async forwardPorts() {
+    this.clearConsole();
+    const spinner = createSpinner('Checking/forwarding ports...').start();
+    const utils = new ncUTILS();
+    let useIptables = false;
+
+    try {
+        if (utils.isProgramInstalled('ufw')) {
+            const ufwStatus = this.vars.getServiceStatus('ufw');
+
+            if (ufwStatus === 'active') {
+                console.log(GREEN('UFW is active, managing ports using UFW...'));
+
+                try {
+                    const ufwStatus80 = this.runCommand('sudo ufw status | grep "80/tcp"');
+                    const ufwStatus443 = this.runCommand('sudo ufw status | grep "443/tcp"');
+
+                    if (ufwStatus80.includes('ALLOW')) {
+                        console.log(YELLOW('Port 80 already open via UFW'));
+                    } else {
+                        console.log(GREEN('Allowing port 80 for HTTP using UFW...'));
+                        this.runCommand('sudo ufw allow 80/tcp');
+                    }
+
+                    if (ufwStatus443.includes('ALLOW')) {
+                        console.log(YELLOW('Port 443 already open via UFW'));
+                    } else {
+                        console.log(GREEN('Allowing port 443 for HTTPS using UFW...'));
+                        this.runCommand('sudo ufw allow 443/tcp');
+                    }
+
+                    this.runCommand('sudo ufw reload');
+                } catch (error) {
+                    console.error(RED('Error managing UFW:'), error.message);
+                    useIptables = true; 
+                }
+            } else {
+                console.log(YELLOW('UFW is not active, falling back to iptables...'));
                 useIptables = true;
             }
-
-            if (!useIptables) {
-                const checkPort80 = execSync('sudo ufw status | grep "80/tcp"').toString().trim();
-                const checkPort443 = execSync('sudo ufw status | grep "443/tcp"').toString().trim();
-
-                if (!checkPort80) {
-                    console.log(GREEN('Opening port 80 for HTTP...'));
-                    execSync('sudo ufw allow 80/tcp');
-                }
-
-                if (!checkPort443) {
-                    console.log(GREEN('Opening port 443 for HTTPS...'));
-                    execSync('sudo ufw allow 443/tcp');
-                }
-            }
-
-            if (useIptables) {
-                console.log(chalk.yellow('Using iptables instead of UFW.'));
-                
-                const checkIptables80 = execSync('sudo iptables -L -n | grep ":80 "').toString().trim();
-                const checkIptables443 = execSync('sudo iptables -L -n | grep ":443 "').toString().trim();
-
-                if (!checkIptables80) {
-                    console.log(GREEN('Forwarding port 80 for HTTP in iptables...'));
-                    execSync('sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT');
-                }
-
-                if (!checkIptables443) {
-                    console.log(GREEN('Forwarding port 443 for HTTPS in iptables...'));
-                    execSync('sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT');
-                }
-
-                execSync('sudo netfilter-persistent save');
-            }
-
-            spinner.success({ text: `${GREEN('Ports forwarded: 80, 443')}` });
-        } catch (error) {
-            spinner.error({ text: `${RED('Failed to check/forward ports')}` });
-            console.error(error);
+        } else {
+            console.log(YELLOW('UFW is not installed, falling back to iptables...'));
+            useIptables = true;
         }
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
 
-        await this.manageFQDN();
+        if (useIptables) {
+          
+
+            console.log(GREEN('Managing ports using iptables...'));
+
+            const route80 = this.runCommand(`sudo iptables -L -n | grep ":80" | awk '{print $1,$7}'`);
+            const route443 = this.runCommand(`sudo iptables -L -n | grep ":443" | awk '{print $1,$7}'`);
+
+            if (route80.includes('ACCEPT') && route80.includes('dpt:80')) {
+                console.log(YELLOW('Port 80 already open via iptables'));
+            } else {
+                console.log(GREEN('Forwarding port 80 for HTTP using iptables...'));
+                this.runCommand('sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT');
+            }
+
+            if (route443.includes('ACCEPT') && route443.includes('dpt:443')) {
+                console.log(YELLOW('Port 443 already open via iptables'));
+            } else {
+                console.log(GREEN('Forwarding port 443 for HTTPS using iptables...'));
+                this.runCommand('sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT');
+            }
+
+            if (!utils.isProgramInstalled('netfilter-persistent')) {
+                console.log(RED('netfilter-persistent is not installed.'));
+                console.log(YELLOW('You can install it using: sudo apt install netfilter-persistent'));
+            } else {
+                this.runCommand('sudo netfilter-persistent save');
+            }
+        }
+
+        spinner.success({ text: `${GREEN('Ports forwarded: 80 (HTTP), 443 (HTTPS)')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to check/forward ports')}` });
+        console.error(RED('Error details:'), error.message);
     }
+
+    await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+    await this.manageFQDN();
+}
+async apacheSettings() {
+    this.util.clearConsole();
+    const spinner = createSpinner('Checking Apache settings...').start();
+    const requiredMods = [
+        'access_compat', 'alias', 'auth_basic', 'authn_core', 'authn_file',
+        'authz_core', 'authz_host', 'authz_user', 'autoindex', 'deflate',
+        'dir', 'env', 'filter', 'headers', 'http2', 'mime', 'mpm_event',
+        'negotiation', 'proxy', 'proxy_fcgi', 'reqtimeout', 'rewrite',
+        'setenvif', 'socache_shmcb', 'ssl', 'status'
+    ];
+
+    let missingMods = [];
+    let trustedDomains = [];
+
+    try {
+        for (let mod of requiredMods) {
+            try {
+                const modStatus = execSync(`sudo a2query -m ${mod}`, { stdio: 'pipe' }).toString();
+                if (!modStatus.includes('enabled')) {
+                    missingMods.push(mod);
+                }
+            } catch (error) {
+                console.error(RED(`Error checking status of mod ${mod}: ${error.message}`));
+                missingMods.push(mod);
+            }
+        }
+
+        if (missingMods.length === 0) {
+            spinner.success({ text: `${GREEN('All necessary Apache mods for Nextcloud are already enabled.')}` });
+        } else {
+            spinner.warn({ text: `${YELLOW('Some Apache mods needed for Nextcloud are not enabled.')}` });
+
+            console.log(YELLOW('Missing mods: '), RED(missingMods.join(', ')));
+
+            const { activateMods } = await inquirer.prompt([{
+                type: 'confirm',
+                name: 'activateMods',
+                message: `Do you want to activate the missing mods?`,
+                default: true
+            }]);
+
+            if (activateMods) {
+                for (let mod of missingMods) {
+                    try {
+                        console.log(GREEN(`Activating mod: ${mod}`));
+                        execSync(`sudo a2enmod ${mod}`, { stdio: 'inherit' });
+                    } catch (error) {
+                        console.error(RED(`Failed to activate mod ${mod}: ${error.message}`));
+                    }
+                }
+
+                console.log(GREEN('Restarting Apache...'));
+                execSync('sudo systemctl restart apache2', { stdio: 'inherit' });
+                spinner.success({ text: `${GREEN('Apache mods activated and Apache restarted successfully.')}` });
+            } else {
+                spinner.error({ text: `${RED('Apache mod activation canceled by the user.')}` });
+            }
+        }
+
+        const configPath = '/var/www/nextcloud';
+        trustedDomains = this.util.getConfigValue('trusted_domains', configPath);
+        trustedDomains = trustedDomains.filter(domain => domain !== 'localhost' && !domain.match(/^\d+\.\d+\.\d+\.\d+$/));  // Filter out localhost and IPs
+
+        console.log(`Trusted domains extracted: ${trustedDomains}`);
+
+        const availableSites = fs.readdirSync('/etc/apache2/sites-available')
+            .filter(file => file.endsWith('.conf') && !['000-default.conf', 'nextcloud_http_domain_self_signed.conf', 'nextcloud_tls_domain_self_signed.conf', 'default-ssl.conf'].includes(file))
+            .map(file => file.replace('.conf', ''));
+
+        console.log(`Available sites: ${availableSites}`);
+
+        for (let domain of trustedDomains) {
+            if (availableSites.includes(domain)) {
+                try {
+                    const siteStatus = execSync(`sudo a2query -s ${domain}`, { stdio: 'pipe' }).toString();
+                    if (!siteStatus.includes('enabled')) {
+                        console.log(GREEN(`Activating site: ${domain}`));
+                        execSync(`sudo a2ensite ${domain}.conf`, { stdio: 'inherit' });
+                    }
+                } catch (error) {
+                    console.error(RED(`Error activating site ${domain}: ${error.message}`));
+                }
+            } else {
+                console.log(YELLOW(`No available site configuration found for trusted domain: ${domain}`));
+            }
+        }
+
+        try {
+            const defaultConfStatus = execSync('sudo a2query -s 000-default', { stdio: 'pipe' }).toString();
+            if (defaultConfStatus.includes('enabled')) {
+                console.log(YELLOW('Deactivating 000-default.conf...'));
+                execSync('sudo a2dissite 000-default.conf', { stdio: 'inherit' });
+                execSync('sudo systemctl restart apache2', { stdio: 'inherit' });
+            }
+        } catch (error) {
+            console.error(RED(`Error deactivating 000-default.conf: ${error.message}`));
+        }
+
+        spinner.success({ text: `${GREEN('Apache settings configured successfully.')}` });
+    } catch (error) {
+        spinner.error({ text: `${RED('Failed to configure Apache settings')}` });
+        console.error(RED('Error details:'), error.message);
+    }
+
+    await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+    await this.mainMenu(); 
+}
+
+
 }
 
 export default ncFQDN;

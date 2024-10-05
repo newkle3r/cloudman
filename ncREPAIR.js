@@ -662,12 +662,7 @@ class ncREPAIR {
         return data;
     }
 
-    /**
-     * Prompts user to press Enter to continue.
-     */
-    async awaitContinue() {
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
-    }
+    
 }
 
 

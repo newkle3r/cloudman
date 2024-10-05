@@ -2,9 +2,14 @@ import fs from 'fs';
 import { execSync, spawn } from 'child_process';
 import path from 'path';
 import { GREEN, BLUE, YELLOW, PURPLE, CYAN, GRAY } from './color.js';
+import inquirer from 'inquirer';
+
 
 class ncUTILS {
-    constructor () {}
+    constructor () {
+
+        
+        }
     /**
      * Clears the console screen.
      */
@@ -27,20 +32,42 @@ class ncUTILS {
     }
 
     /**
-     * Helper function to extract configuration values from the config.php file
-     * @param {string} key - The key to look for (e.g., 'dbname')
-     * @returns {string} - The value corresponding to the key
-     */
-    getConfigValue(key, NCPATH) {
-        try {
-            const configPath = `${NCPATH}/config/config.php`;
-            const command = `sudo grep -Po "(?<=['\\"]${key}['\\"] => ['\\"]).*?(?=['\\"])" ${configPath}`;
-            return this.runCommand(command).trim();
-        } catch (error) {
-            console.error(`Error fetching config value for ${key}:`, error);
-            return null;
+ * Helper function to extract configuration values from the config.php file.
+ * Handles both single values and arrays (like 'trusted_domains').
+ * @param {string} key - The key to look for (e.g., 'trusted_domains', 'dbname')
+ * @param {string} NCPATH - Nextcloud installation path
+ * @returns {string | array} - The value corresponding to the key, or an array if it's an array (e.g., trusted_domains).
+ */
+getConfigValue(key, NCPATH) {
+    try {
+        const configPath = `${NCPATH}/config/config.php`;
+        // Extract the key-value block
+        const command = `sudo sed -n "/['\\"]${key}['\\"] =>/,/),/p" ${configPath}`;
+        const output = execSync(command).toString().trim();
+
+        // Check if it's an array (array block)
+        if (output.includes('array (')) {
+            const arrayValues = [];
+            const arrayMatch = output.match(/\d+\s*=>\s*['"]([^'"]+)['"]/g);
+            if (arrayMatch) {
+                arrayMatch.forEach(entry => {
+                    const domain = entry.split('=>')[1].trim().replace(/['",]/g, '');
+                    arrayValues.push(domain);
+                });
+            }
+            return arrayValues;  // Return the array of trusted domains
+        } else {
+            // For single key-value pairs
+            const singleValue = output.split('=>')[1].trim().replace(/['",]/g, '');
+            return singleValue;
         }
+    } catch (error) {
+        console.error(`Error fetching config value for ${key}:`, error);
+        return null;
     }
+}
+
+
 
     /**
      * Load variables from the JSON file.
@@ -69,7 +96,6 @@ class ncUTILS {
             return '';
         }
     }
-
     /**
      * Generalized initialization function to fetch updates/statuses.
      * @param {function} fetchFunction - The function to call for fetching updates.
@@ -110,6 +136,50 @@ class ncUTILS {
     }
 
     /**
+ * Gets the size of a file in kilobytes by sending a HEAD request to the server.
+ * @param {string} url - The URL of the file to check.
+ * @returns {Promise<number>} - The size of the file in kilobytes.
+ */
+async getFileSize(url) {
+    return new Promise((resolve, reject) => {
+        const curl = spawn('curl', ['-sI', url]);
+
+        let headers = '';
+        curl.stdout.on('data', (data) => {
+            headers += data.toString();
+        });
+
+        curl.on('close', (code) => {
+            if (code !== 0) {
+                return reject(new Error(`Failed to get file size. curl exited with code ${code}`));
+            }
+
+            const contentLength = headers.match(/Content-Length: (\d+)/i);
+            if (contentLength) {
+                const sizeInBytes = parseInt(contentLength[1], 10);
+                resolve(Math.ceil(sizeInBytes / 1024)); // Convert to kilobytes
+            } else {
+                reject(new Error('Content-Length header not found.'));
+            }
+        });
+
+        curl.on('error', (error) => {
+            reject(error);
+        });
+    });
+}
+
+    /**
+     * Spawns a command with real-time progress handling.
+     * @param {string} command - The command to run.
+     * @param {array} args - Arguments for the command.
+     * @returns {ChildProcess} - The spawned child process.
+     */
+    spawnCommandWithProgress(command, args = []) {
+        return spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    }
+
+    /**
      * Checks free space and returns the available space in GB.
      */
     checkFreeSpace() {
@@ -134,6 +204,13 @@ class ncUTILS {
         }
 
         return password;
+    }
+
+    /**
+     * Prompts user to press Enter to continue.
+     */
+    async awaitContinue() {
+        await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
     }
 
     /**
@@ -244,6 +321,19 @@ class ncUTILS {
             }
         } catch (error) {
             console.error(`Failed to check or install ${program}:`, error);
+        }
+    }
+    /**
+     * Checks if a program is installed.
+     * @param {string} program - The name of the program to check.
+     * @returns {boolean} - Returns true if the program is installed, false otherwise.
+     */
+    isProgramInstalled(program) {
+        try {
+            execSync(`dpkg-query -W -f='${Status}' ${program} | grep -q "ok installed"`, { stdio: 'ignore' });
+            return true; 
+        } catch (error) {
+            return false; 
         }
     }
 }

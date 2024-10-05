@@ -11,14 +11,20 @@ import ncRedisServer from './ncRedisServer.js';
 class ncVARS {
     
     constructor(filePath = './variables.json') {
-        let util = new ncUTILS();
+        this.util = new ncUTILS();
+        this.run = this.util.runCommand;
+        this.gen = this.util.genPasswd;
+        console.log('Initialized ncUTILS:', this.util);  // Log the instance
+        console.log('ncUTILS runCommand:', this.util.runCommand);
+        console.log('Inside ncVAR constructor defined this.run:', this.run);
         let ncredserv;
-        this.getConfigValue = util.getConfigValue;
+        this.getConfigValue = this.util.getConfigValue;
         ncredserv = new ncRedisServer();
         this.phpversion = ncredserv.getPHPVersion();
         this.filePath = filePath;
         this.lastAppUpdateCheck = null;
         this.appUpdateStatus = null;
+
 
 
         // Load variables from file during initialization
@@ -47,7 +53,7 @@ class ncVARS {
         this.BACKUP = '/mnt/NCBACKUP';
         this.NC_APPS_PATH = `${this.NCPATH}/apps`;
         this.VMLOGS = '/var/log/nextcloud';
-        this.PSQLVER = this.getCommandOutput('psql --version');
+        this.PSQLVER = this.getPostgresVersion();
 
         this.NEXTCLOUD_VERSION = null;
         this.NEXTCLOUD_STATUS =  null;
@@ -110,7 +116,10 @@ class ncVARS {
         // User information
         this.GUIUSER=`ncadmin`;
         this.GUIPASS=`nextcloud`;
-        this.UNIXUSER=util.runCommand(`echo $SUDO_USER`);
+        console.log('Util instance before runCommand:', this.util);
+        this.UNIXUSER = this.run('echo $SUDO_USER');
+        console.log(`UNIXUSER: ${this.UNIXUSER}`);
+        
         this.UNIXUSER_PROFILE=`/home/${this.UNIXUSER}/.bash_profile`;
         this.ROOT_PROFILE="/root/.bash_profile";
 
@@ -119,10 +128,10 @@ class ncVARS {
         this.BITWARDEN_HOME=`/home/${this.BITWARDEN_USER}`;
 
         // Database
-        this.SHUF=util.runCommand(`shuf -i 25-29 -n 1`);
+        this.SHUF=this.run(`shuf -i 25-29 -n 1`);
         this.PGDB_USER=`nextcloud_db_user`;
-        this.PGDB_PASS = util.genPasswd(this.SHUF, 'a-zA-Z0-9@#*');
-        this.NEWPGPASS = util.genPasswd(this.SHUF, 'a-zA-Z0-9@#*');
+        this.PGDB_PASS = this.gen(this.SHUF, 'a-zA-Z0-9@#*');
+        this.NEWPGPASS = this.gen(this.SHUF, 'a-zA-Z0-9@#*');
         
 
         // Path to specific files
@@ -151,7 +160,7 @@ class ncVARS {
         // Redis
         this.REDIS_CONF=`/etc/redis/redis.conf`;
         this.REDIS_SOCK=`/var/run/redis/redis-server.sock`;
-        this.REDIS_PASS=util.genPasswd(this.SHUF,`a-zA-Z0-9@#*`);
+        this.REDIS_PASS=this.gen(this.SHUF,`a-zA-Z0-9@#*`);
         // Extra security
         this.SPAMHAUS=`/etc/spamhaus.wl`;
         this.ENVASIVE=`/etc/apache2/mods-available/mod-evasive.load`;
@@ -159,8 +168,8 @@ class ncVARS {
 
         //Full text search
         this.FULLTEXTSEARCH_DIR = `${this.SCRIPTS}/fulltextsearch`;
-        this.NEXTCLOUD_INDEX = util.genPasswd(this.SHUF, '[:lower:]');
-        this.ELASTIC_USER_PASSWORD = util.genPasswd(this.SHUF, '[:lower:]');
+        this.NEXTCLOUD_INDEX = this.gen(this.SHUF, '[:lower:]');
+        this.ELASTIC_USER_PASSWORD = this.gen(this.SHUF, '[:lower:]');
         this.FULLTEXTSEARCH_IMAGE_NAME = 'fulltextsearch_es01';
         this.FULLTEXTSEARCH_SERVICE = 'nextcloud-fulltext-elasticsearch-worker.service';
         this.DOCKER_IMAGE_NAME = 'es01';
@@ -178,17 +187,20 @@ class ncVARS {
 
     ncdb() {        
         this.NC_CONF=`${this.NCPATH}/config/config.php`
-        this.NCDB=this.getConfigValue(this.NC_CONF,'dbname')
-        this.NCDBPASS=this.getConfigValue(this.NC_CONF,'dbpassword')
-        this.NCDBUSER=this.getConfigValue(this.NC_CONF,'dbuser')
-        this.NCDBTYPE=this.getConfigValue(this.NC_CONF,'dbtype')
-        this.NCDBHOST=this.getConfigValue(this.NC_CONF,'dbhost')
+        console.log(`inside ncVARS ncdb() -> this.NC_CONF: ${this.NC_CONF}`)
+
+        this.NCDB=this.getConfigValue('dbname',this.NC_CONF)
+        this.NCDBPASS=this.getConfigValue('dbpassword',this.NC_CONF)
+        this.NCDBUSER=this.getConfigValue('dbuser',this.NC_CONF)
+        this.NCDBTYPE=this.getConfigValue('dbtype',this.NC_CONF)
+        this.NCDBHOST=this.getConfigValue('dbhost',this.NC_CONF)
     }
 
     // Nextcloud version
     nc_update() {
-        this.CURRENTVERSION=util.runCommand(`sudo -u www-data php ${this.NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
-        this.NCVERSION=util.runCommand(`curl -s -m 900 ${this.NCREPO}/ | sed --silent 's/.*href="nextcloud-\([^"]\+\).zip.asc".*/\\1/p' | sort --version-sort | tail -1`);
+        
+        this.CURRENTVERSION= this.run(`sudo -u www-data php ${this.NCPATH}/occ status | grep "versionstring" | awk '{print $3}'`);
+        this.NCVERSION= this.run(`curl -s -m 900 ${this.NCREPO}/ | sed --silent 's/.*href="nextcloud-\([^"]\+\).zip.asc".*/\\1/p' | sort --version-sort | tail -1`);
         this.STABLEVERSION=`nextcloud-${this.NCVERSION}`;
         this.NCMAJOR=this.NCVERSION.split('.')[0];
         this.CURRENTMAJOR=this.CURRENTVERSION.split('.')[0];
@@ -201,18 +213,14 @@ class ncVARS {
 
     async getNCstate() {
         try {
-            // Execute the occ status command to get the Nextcloud status and version information
             const result = execSync('sudo -u www-data php /var/www/nextcloud/occ status').toString().trim();
     
-            // Extract the version string using regex or simple string matching
             const versionMatch = result.match(/versionstring:\s+(\S+)/);
             const version = versionMatch ? versionMatch[1] : 'Unknown';
-    
-            // Determine if Nextcloud is installed and active
+
             const installedMatch = result.match(/installed:\s+(true)/);
             const isActive = installedMatch ? 'active' : 'disabled';
-    
-            // Return the state and version
+
             return { state: isActive, version };
         } catch (error) {
             console.error(RED('Failed to fetch Nextcloud status.'), error);
@@ -221,8 +229,8 @@ class ncVARS {
     }
 
     async manageVars() {
-        // Initialize and fetch updates if necessary
-        await util.initialize(this.getAvailableUpdates, 'lastAppUpdateCheck', this);
+
+        await this.util.initialize(this.getAvailableUpdates, 'lastAppUpdateCheck', this);
        
     }
 
@@ -316,17 +324,17 @@ class ncVARS {
      */
     turnInstall() {
         try {
-            this.TURN_DOMAIN = util.util.runCommand(
+            this.TURN_DOMAIN = this.run(
                 `sudo -u www-data php /var/www/nextcloud/occ config:system:get overwrite.cli.url | sed 's|https://||;s|/||'`
             ).trim();
             
             // Generate random secrets
             
-            this.TURN_SECRET = util.genPasswd(this.SHUF, "a-zA-Z0-9");
-            this.JANUS_API_KEY = util.genPasswd(this.SHUF, "a-zA-Z0-9");
-            this.SIGNALING_SECRET = util.genPasswd(this.SHUF, "a-zA-Z0-9");
-            this.TURN_INTERNAL_SECRET = util.genPasswd(this.SHUF, "a-zA-Z0-9");
-            this.TURN_RECORDING_SECRET = util.genPasswd(this.SHUF, "a-zA-Z0-9");
+            this.TURN_SECRET = this.gen(this.SHUF, "a-zA-Z0-9");
+            this.JANUS_API_KEY = this.gen(this.SHUF, "a-zA-Z0-9");
+            this.SIGNALING_SECRET = this.gen(this.SHUF, "a-zA-Z0-9");
+            this.TURN_INTERNAL_SECRET = this.gen(this.SHUF, "a-zA-Z0-9");
+            this.TURN_RECORDING_SECRET = this.gen(this.SHUF, "a-zA-Z0-9");
             
             this.TURN_RECORDING_HOST = "127.0.0.1";
             this.TURN_RECORDING_HOST_PORT = 1234;
@@ -390,7 +398,7 @@ The minimum value is 8, and it is calculated based on available RAM.`));
             console.log(chalk.cyan('All PHP-FPM values were set back to default as pm.max_children was lower than the sum of all current values.'));
         }
 
-        util.util.runCommand(`sudo systemctl restart apache2 && sudo systemctl restart php${this.PHPVER}-fpm.service`)
+        this.run(`sudo systemctl restart apache2 && sudo systemctl restart php${this.PHPVER}-fpm.service`)
     }
 
     getPhpFpmValue(key) {
@@ -405,7 +413,7 @@ The minimum value is 8, and it is calculated based on available RAM.`));
 
     setPhpFpmValue(key, value) {
         try {
-            util.util.runCommand(`sed -i "s|${key}.*|${key} = ${value}|g" ${this.PHP_POOL_DIR}/nextcloud.conf`);
+            this.run(`sed -i "s|${key}.*|${key} = ${value}|g" ${this.PHP_POOL_DIR}/nextcloud.conf`);
         } catch (error) {
             console.error(RED(`Failed to set ${key} to ${value}`), error);
         }
@@ -474,6 +482,26 @@ The minimum value is 8, and it is calculated based on available RAM.`));
             return '';
         }
     }
+
+/**
+ * Helper function to get the PostgreSQL version number.
+ * @returns {string} - The major version number of PostgreSQL.
+ */
+getPostgresVersion() {
+    try {
+        const output = execSync('psql --version').toString().trim();
+        const cleanOutput = output.replace(/\s*\(.*?\)/g, ''); 
+        const versionMatch = cleanOutput.match(/\bpsql\s+(\d+\.\d+)/);
+        const version = versionMatch ? versionMatch[1].split('.')[0] : 'unknown';
+        const status = this.getServiceStatus('postgresql');
+
+        return `${version} { ${status} }`;
+
+    } catch (error) {
+        console.error('Error occurred while fetching PostgreSQL version:', error);
+        return 'unknown { unknown }';
+    }
+}
 
     /**
      * Save the current variables to the JSON file.
