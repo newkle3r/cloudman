@@ -17,7 +17,7 @@ import readline from 'readline';
 class ncUPDATE {
     constructor(mainMenu) {
         let lib = new ncVARS();
-        lib.loadVariables();
+        
         this.freshRedis = lib.updateRedis;
         lib.nc_update();
         this.util = new ncUTILS();

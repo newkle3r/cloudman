@@ -176,7 +176,7 @@ class ncVARS {
         // Redis
         this.REDIS_CONF=`/etc/redis/redis.conf`;
         this.REDIS_SOCK=`/var/run/redis/redis-server.sock`;
-        this.REDIS_PASS=this.gen(this.SHUF,`a-zA-Z0-9@#*`);
+        this.REDIS_PASS=`${redisPass}`;
         // Extra security
         this.SPAMHAUS=`/etc/spamhaus.wl`;
         this.ENVASIVE=`/etc/apache2/mods-available/mod-evasive.load`;
@@ -643,7 +643,7 @@ getPostgresVersion() {
      * @param {string} redisConf - The Redis configuration file location.
      * @param {string} redisPass - The password for Redis.
      */
-    updateRedis(redisSock, redisConf, redisPass) {
+    updateRedis() {
         this.ncdb();
         let bak = new ncBAK();
         let redisTools = new ncREDIS();

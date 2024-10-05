@@ -45,7 +45,7 @@ async function initializeVariables() {
     //const phpVersion = execSync("php -r 'echo PHP_MAJOR_VERSION.\".\".PHP_MINOR_VERSION;'").toString().trim();
     // console.log(`PHP Version: ${phpVersion}`);
 
-    lib.loadVariables();
+    lib.loadVariables(RED)
     lib.updateVariable(lib.PHPVER,phpVersion)
     lib.getAvailableUpdates()
 

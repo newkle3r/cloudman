@@ -7,7 +7,7 @@ import inquirer from 'inquirer';
 
 class ncUTILS {
     constructor () {
-        this.inits = 0;
+
         
         }
     /**
@@ -85,19 +85,6 @@ class ncUTILS {
     }
 
 
-
-    /**
-     * Load variables from the JSON file.
-     */
-    loadVariables() {
-        try {
-            const data = fs.readFileSync('./variables.json', 'utf8');
-            return JSON.parse(data);
-        } catch (error) {
-            console.error('Error reading variables.json:', error);
-            return {};
-        }
-    }
 
     /**
      * Executes a shell command and returns the output as a string.
@@ -354,6 +341,42 @@ async getFileSize(url) {
             return false; 
         }
     }
+
+    /**
+ * Helper function to extract configuration values from the config.php file.
+ * Handles both single values and arrays (like 'trusted_domains').
+ * @param {string} key - The key to look for (e.g., 'trusted_domains', 'dbname')
+ * @param {string} NCPATH - Nextcloud installation path (e.g., '/var/www/nextcloud')
+ * @returns {string | array} - The value corresponding to the key, or an array if it's an array (e.g., trusted_domains).
+ */
+getConfigValue(key, NCPATH) {
+    try {
+        const configPath = `${NCPATH}/config/config.php`;
+        // Extract the key-value block
+        const command = `sudo sed -n "/['\\"]${key}['\\"] =>/,/),/p" ${configPath}`;
+        const output = execSync(command).toString().trim();
+
+        // Check if it's an array (array block)
+        if (output.includes('array (')) {
+            const arrayValues = [];
+            const arrayMatch = output.match(/\d+\s*=>\s*['"]([^'"]+)['"]/g);
+            if (arrayMatch) {
+                arrayMatch.forEach(entry => {
+                    const domain = entry.split('=>')[1].trim().replace(/['",]/g, '');
+                    arrayValues.push(domain);
+                });
+            }
+            return arrayValues;  // Return the array of trusted domains
+        } else {
+            // For single key-value pairs
+            const singleValue = output.split('=>')[1].trim().replace(/['",]/g, '');
+            return singleValue;
+        }
+    } catch (error) {
+        console.error(`Error fetching config value for ${key}:`, error);
+        return null;
+    }
+}
 }
 
 export default ncUTILS;
