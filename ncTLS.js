@@ -5,6 +5,7 @@ import { RED, GREEN, YELLOW, BLUE } from './color.js';
 import ncUTILS from './ncUTILS.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
+import ncRedisServer from './ncRedisServer.js';
 
 // Needs clear screen, splash, and is not async yet.
 
@@ -15,6 +16,7 @@ import inquirer from 'inquirer';
 class ncTLS {
     constructor(mainMenu) {
         let util = new ncUTILS();
+        let redisServ = new ncRedisServer()
         this.mainMenu = mainMenu;
         this.clearConsole = util.clearConsole();
         this.runCommand =  util.runCommand();
@@ -24,7 +26,7 @@ class ncTLS {
         this.HTML = '/var/www';
         this.NCPATH = `${this.HTML}/nextcloud`;
         this.CERTFILES = '/etc/letsencrypt/live';
-        this.PHPVER = this.runCommand('php -v | grep "^PHP" | awk \'{print $2}\'');
+        this.PHPVER = redisServ.getPHPVersion();
         this.TLSDOMAIN = this.getTLSConfigDomain();
         this.TLS_CONF = this.getTLSConfPath();
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';

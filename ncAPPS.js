@@ -13,13 +13,14 @@ class ncAPPS {
         // lib.loadVariables();
         this.NCPATH = lib.NCPATH;
         this.appUpdateStatus = YELLOW('Checking for app updates...');
-        this.awaitContinue = awaitContinue;
+        this.awaitContinue = util.awaitContinue;
         this.mainMenu = typeof mainMenu === 'function' ? mainMenu : () => console.log('Main menu is not available.');
+        this.clearConsole = util.clearConsole;
     }
 
     async manageApps() {
         let continueMenu = true;
-        util.clearConsole();
+        this.clearConsole();
 
         while (continueMenu) {
             const answers = await inquirer.prompt([
