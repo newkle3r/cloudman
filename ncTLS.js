@@ -18,14 +18,14 @@ class ncTLS {
         let util = new ncUTILS();
         let redisServ = new ncRedisServer()
         this.mainMenu = mainMenu;
-        this.clearConsole = util.clearConsole();
-        this.runCommand =  util.runCommand();
-        this.awaitContinue = util.awaitContinue();
-        this.getConfigValue = util.getConfigValue();
+        this.clearConsole = util.clearConsole;
+        this.runCommand =  util.runCommand;
+        this.awaitContinue = util.awaitContinue;
+        this.getConfigValue = util.getConfigValue;
         this.SCRIPTS = '/var/scripts';
         this.HTML = '/var/www';
         this.NCPATH = `${this.HTML}/nextcloud`;
-        this.CERTFILES = '/etc/letsencrypt/live';
+        this.CERTFILES = lib.CERTFILES;
         this.PHPVER = redisServ.getPHPVersion();
         this.TLSDOMAIN = this.getTLSConfigDomain();
         this.TLS_CONF = this.getTLSConfPath();
@@ -35,7 +35,7 @@ class ncTLS {
          * @property {string} LETS_ENCRYPT_CERT - Path to the Let's Encrypt certificate.
          * @description Dynamically retrieves the Let's Encrypt certificate path.
          */
-        this.LETS_ENCRYPT_CERT = this.runCommand("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
+        this.LETS_ENCRYPT_CERT = this.CERTFILES;
 
         /**
          * @property {string} LETS_ENCRYPT_STATUS - Status of the Let's Encrypt certificate (Valid or Expired).

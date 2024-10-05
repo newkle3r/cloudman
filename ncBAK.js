@@ -24,22 +24,23 @@ function getTimestamp() {
 class ncBAK {
     constructor(mainMenu) {
         this.util = new ncUTILS();
-        this.lib = new ncVARS();
+        const lib = new ncVARS();
+        const { NCDB, NCDBUSER, NCDBPASS, NCDBHOST} = lib.ncdb();
         this.mainMenu = mainMenu;
 
         // Set paths based on Nextcloud installation path
-        this.ncDataDir = this.lib.NCPATH || '/var/www/nextcloud';  // Default to /var/www/nextcloud
+        this.ncDataDir = lib.NCPATH || '/var/www/nextcloud';  // Default to /var/www/nextcloud
         this.ncConfDir = `${this.ncDataDir}/config`;
-        this.backupDir = `/home/${this.lib.UNIXUSER}/backups`; 
+        this.backupDir = `/home/${lib.UNIXUSER}/backups`; 
         this.timestamp = getTimestamp();
         this.psqlBakFile = path.join(this.backupDir, `postgresql_backup.sql`);
 
         // Database configuration
-        this.ncdbVars = this.lib.ncdb(this.ncDataDir);  // Pass in the correct data path
-        this.psqlDbName = this.ncdbVars.NCDB;
-        this.psqlUser = this.ncdbVars.NCDBUSER;
-        this.psqlPass = this.ncdbVars.NCDBPASS;
-        this.psqlHost = this.ncdbVars.NCDBHOST;
+   
+        this.psqlDbName = NCDB;
+        this.psqlUser = NCDBUSER;
+        this.psqlPass = NCDBPASS;
+        this.psqlHost = NCDBHOST;
 
         // Other service configuration paths
         this.apacheConfDir = '/etc/apache2'; 
@@ -164,7 +165,7 @@ class ncBAK {
     // Run backups
     async runBackups() {
         let continueMenu = true;
-        util.clearConsole();
+        this.util.clearConsole();
         
     
         while (continueMenu) {

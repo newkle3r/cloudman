@@ -59,7 +59,7 @@ async function initializeVariables() {
         await util.initialize(lib.getAvailableUpdates.bind(lib), 'lastAppUpdateCheck', lib, UPDATE_THRESHOLD);
     } catch (error) {
         console.error('Error initializing variables:', error);
-        process.exit(1);  // Terminate if critical error occurs
+        process.exit(1);
     }
 }
 

@@ -6,6 +6,7 @@ import ncRedisServer from './ncRedisServer.js';
 import { throws } from 'assert';
 import ncBAK from './ncBAK.js';
 import ncREDIS from './ncREDIS.js';
+import { Certificate } from 'crypto';
 
 /**
  * Class to manage Nextcloud configuration variables.
@@ -89,7 +90,7 @@ class ncVARS {
         this.DEDYNDOMAIN = this.getCommandOutput("hostname -f");
         this.TLSDOMAIN = this.getCommandOutput("hostname -f");
         this.PHPVER = this.phpversion;
-        this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
+        // this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
         this.SETENVPROXY = 'proxy-sendcl';
         this.DEDYNPORT = '443';
@@ -101,6 +102,7 @@ class ncVARS {
         // Letsencrypt
         this.SITES_AVAILABLE="/etc/apache2/sites-available";
         this.LETSENCRYPTPATH="/etc/letsencrypt";
+        this.LETSENCRYPTFILE = `${this.LETSENCRYPTPATH}/cert.pem`;
         this.CERTFILES=`${this.LETSENCRYPTPATH}/live`;
         this.DHPARAMS_TLS=`${this.CERTFILES}/${this.TLSDOMAIN}/dhparam.pem`;
         this.DHPARAMS_SUB=`${this.CERTFILES}/${this.SUBDOMAIN}/dhparam.pem`;
@@ -139,10 +141,10 @@ class ncVARS {
         this.BITWARDEN_HOME=`/home/${this.BITWARDEN_USER}`;
 
         // Database
-        this.ncdb();
+     
         this.SHUF=this.run(`shuf -i 25-29 -n 1`);
         this.PGDB_USER=`${this.NCDBUSER}`; // <- nextcloud_db_user
-        this.PGDB_PASS = `${this.NCDBPASS}`; // from ncdb()
+        this.PGDB_PASS = this.getConfigValue('dbpassword'); // from ncdb()
         this.NEWPGPASS = this.gen(this.SHUF, 'a-zA-Z0-9@#*');
         
 
@@ -207,7 +209,7 @@ class ncVARS {
     ncdb(NCPATH) {
         let util = new ncUTILS();
         const dbName = util.getConfigValue('dbname');
-        console.log(`Database name: ${dbName}`);
+        //console.log(`Database name: ${dbName}`);
         const dbUser = util.getConfigValue('dbuser');
         const dbPass = util.getConfigValue('dbpassword');
         const dbHost = util.getConfigValue('dbhost');

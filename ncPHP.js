@@ -6,7 +6,8 @@ import ncRedisServer from './ncRedisServer.js';
 
 
 class ncPHP {
-    constructor() {
+    constructor(mainMenu) {
+        this.manageMenu = mainMenu;
         this.redis = new ncRedisServer();
         this.phpVersion = null;
         this.installRedis = this.redis.installRedis;
@@ -211,15 +212,15 @@ php_admin_value[cgi.fix_pathinfo] = 1
                 break;
 
             case 'Remove PHP':
-                await this.purgeOldPHPVersions();
+                await this.purgeOldPHPVersions(this.manageMenu());
                 break;
 
             case 'Exit Maintenance Mode':
-                this.exitMaintenanceMode();
+                this.exitMaintenanceMode(this.manageMenu());
                 break;
 
             case 'Go Back':
-                mainMenu();
+                this.mainMenu();
                 break;
         }
     }

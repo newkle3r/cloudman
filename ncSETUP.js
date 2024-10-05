@@ -6,6 +6,7 @@ import { createSpinner } from 'nanospinner';
 import ncUPDATE from './ncUPDATE';
 import ncFQDN from './ncFQDN';
 import ncVARS from './ncVARS.js';
+import ncUTILS from './ncUTILS.js';
 
 /**
  * @class ncSETUP
@@ -19,10 +20,10 @@ import ncVARS from './ncVARS.js';
 class ncSETUP extends ncREPAIR {
     constructor() {
         let lib = new ncVARS();
-        this.upvar = lib.loadVariables(variable)
-        this.downvar = lib.saveVariables(variable)
-        this.updatevar = lib.updateVariable(variable)
-        this.printVar = lib.printVariables(variable)
+        let util = new ncUTILS();
+        this.CERTFILES = lib.CERTFILES;
+        this.runCommand = util.runCommand;
+
     }
     /**
      * @function configureNextcloud
@@ -184,15 +185,15 @@ class ncSETUP extends ncREPAIR {
         execSync('chown www-data:www-data /var/log/');
         console.log(chalk.green('Logrotate enabled successfully!'));
     }
-}
+/*
 
 // Main entry point to run the configuration
 (async () => {
     const updater = new ncSETUP();
     await updater.configureNextcloud();
 })();
+*/
 
-export default ncSETUP;
 
 // ===================== LIB TRANSLATE ========================= //
 
@@ -201,7 +202,7 @@ export default ncSETUP;
  * @description Kontrollerar om "universe" repository är tillagt och lägger till det om det saknas.
  * @returns {void} Returnerar inget värde men utför kommandon för att lägga till "universe"-repo om det saknas.
  */
-function check_universe() {
+check_universe() {
     const universeRepo = execSync("apt-cache policy | grep http | awk '{print $3}' | grep universe | head -n 1 | cut -d '/' -f 2").toString().trim();
     if (universeRepo !== "universe") {
         console.log("Lägger till required repo (universe).");
@@ -214,7 +215,7 @@ function check_universe() {
  * @description Sätter maximalt antal virtuella minneskartor som stöds av Docker för Elasticsearch.
  * @returns {void} Utför sysctl-ändringar för att öka vm.max_map_count.
  */
-function set_max_count() {
+set_max_count() {
     const isMaxSet = execSync("grep -F 'vm.max_map_count=512000' /etc/sysctl.conf").toString().trim();
     if (!isMaxSet) {
         execSync("sysctl -w vm.max_map_count=512000");
@@ -233,12 +234,12 @@ function set_max_count() {
  * @description Avinstallerar Collabora-dockerkontainern och dess relaterade konfigurationer, inklusive SSL-certifikat och Apache-inställningar.
  * @returns {void} Utför borttagning av Collabora relaterade konfigurationer.
  */
-function remove_collabora_docker() {
+remove_collabora_docker() {
     dockerPrune('collabora/code');
     const subdomain = prompt("Ange subdomänen du använder för Collabora, t.ex: office.dindomän.com");
-    const certFile = `/etc/letsencrypt/live/${subdomain}/cert.pem`;
+    const certFile = this.CERTFILES;
     if (fs.existsSync(certFile)) {
-        execSync(`certbot revoke --cert-path ${certFile}`);
+        this.runCommand(`certbot revoke --cert-path ${certFile}`);
         fs.readdirSync('/etc/letsencrypt/live').forEach(file => {
             if (file.startsWith(subdomain)) fs.rmSync(file);
         });
@@ -261,7 +262,7 @@ function remove_collabora_docker() {
  * @description Hämtar och sätter den nuvarande PHP-versionen och exporterar den för vidare användning.
  * @returns {void} Sätter PHP-versionen i en miljövariabel som exporteras för andra processer.
  */
-function check_php() {
+check_php() {
     
     console.log("Hämtar nuvarande PHP-version...");
     const phpVersion = execSync('php -v | grep -m 1 PHP | awk \'{print $2}\' | cut -d \'-\' -f1').toString().trim();
@@ -290,7 +291,7 @@ function check_php() {
  * @param {string} listFile - Filen där repo-informationen lagras.
  * @returns {void} Lägger till ett repository och uppdaterar apt.
  */
-function add_trusted_key_and_repo(keyFile, keyUrl, repoUrl, codename, listFile) {
+add_trusted_key_and_repo(keyFile, keyUrl, repoUrl, codename, listFile) {
     const distroVersion = process.env.DISTRO_VERSION;
     if (distroVersion === '22.04') {
         console.log(`Lägger till pålitlig nyckel i /etc/apt/keyrings/${keyFile}...`);
@@ -304,4 +305,6 @@ function add_trusted_key_and_repo(keyFile, keyUrl, repoUrl, codename, listFile) 
         execSync('apt-get update');
     }
 }
+}
+export default ncSETUP;
 
