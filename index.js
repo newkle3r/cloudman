@@ -20,10 +20,14 @@ import ncREPAIR from './ncREPAIR.js';
 import ncRedisServer from './ncRedisServer.js';
 
 // Initialize global variables
-let versions;
+let redisServ = new ncRedisServer();
 let util = new ncUTILS();
 let lib = new ncVARS();
 let ux = new ncUX();
+let bak = new ncBAK();
+let modTime = bak.timestamp;
+let formattedTimestamp = bak.formatBackupTimestamp(modTime);
+const phpVersion = redisServ.getPHPVersion();
 
 const UPDATE_THRESHOLD = lib.UPDATE_THRESHOLD;
 let activeMenu = null;
@@ -36,22 +40,20 @@ const url = 'https://shop.hanssonit.se/product-category/support/';
 async function initializeVariables() {
 
 
-    versions = new ncRedisServer();
-    const phpVersion = versions.getPHPVersion();
+
+    
     //const phpVersion = execSync("php -r 'echo PHP_MAJOR_VERSION.\".\".PHP_MINOR_VERSION;'").toString().trim();
     // console.log(`PHP Version: ${phpVersion}`);
 
     lib.loadVariables();
     lib.updateVariable(lib.PHPVER,phpVersion)
-   
-
     lib.getAvailableUpdates()
 
 
     lib.redisStatus = lib.getServiceStatus('redis-server');
     lib.apache2Status = lib.getServiceStatus('apache2');
-    // versions.phpVersion = phpVersion;
-    //lib.phpfpmStatus = lib.getServiceStatus(`php${versions.phpVersion}-fpm.service`);
+    // redisServ.phpVersion = phpVersion;
+    //lib.phpfpmStatus = lib.getServiceStatus(`php${redisServ.phpVersion}-fpm.service`);
     lib.phpfpmStatus = lib.getServiceStatus(`php${phpVersion}-fpm.service`);
 
     // console.log('Fetching Nextcloud state and version...');
@@ -79,22 +81,24 @@ async function mainMenu() {
         // console.log(`The function counter in the beginning:${YELLOW(lib.countFunc)} `);
         // console.log('Displaying system status...');
         const hostname = execSync('hostname -f').toString().trim();
-        const { psqlStatus, redisStatus, apache2Status, phpFPMstatus, nextcloudVersion, nextcloudState } = lib;
+
 
         const table = new Table({
             colWidths: [40, 40],  
         });
 
-        let bak = new ncBAK();
+        
+   
+        
 
 
         table.push(
             [`${BLUE('Hostname:')} ${GREEN(hostname)}`, `${BLUE('WAN:')} ${GREEN(ipv4)}`],
             [`${BLUE('Ubuntu:')} ${YELLOW(version)} ${YELLOW('{')} ${GREEN(name)} ${YELLOW('}')}`, `${BLUE('LAN:')} ${GREEN(address)}`],
             [`${BLUE('Nextcloud:')} ${YELLOW(lib.nextcloudVersion)} ${YELLOW('{')} ${GREEN(lib.nextcloudState)} ${YELLOW('}')}`, `${BLUE('apache2:')} ${lib.apache2Status}`],
-            [`${BLUE('PostgreSQL:')} ${YELLOW(`${lib.getPostgresVersion()}`)}`, `${BLUE('PHP:')} ${YELLOW(lib.phpVersion)}`],
+            [`${BLUE('PostgreSQL:')} ${YELLOW(`${lib.getPostgresVersion()}`)}`, `${BLUE('PHP:')} ${YELLOW(phpVersion)}`],
             [`${BLUE('PHP-FPM:')} ${lib.phpfpmStatus}`, `${BLUE('redis-server:')} ${lib.redisStatus}`],
-            [`${BLUE('App updates:')} ${lib.appUpdateStatus}`, `${BLUE('Last Backup:')} ${YELLOW(bak.timestamp)}`]
+            [`${BLUE('App updates:')} ${lib.appUpdateStatus}`, `${BLUE('Last Backup:')} ${YELLOW(formattedTimestamp)}`]
         );
 
         console.log(table.toString());

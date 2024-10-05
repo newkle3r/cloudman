@@ -4,9 +4,11 @@ import fs from 'fs';
 import { createSpinner } from 'nanospinner';
 import chalk from 'chalk';
 import { RED, GREEN, YELLOW, CYAN } from './color.js';
+import ncVARS from './ncVARS.js';
 
 class ncRedisServer {
     constructor(mainMenu) {
+
         this.redisConf = '/etc/redis/redis.conf';
         this.redisSock = '/var/run/redis/redis-server.sock';
         this.phpModsDir = `/etc/php/${this.getPHPVersion()}/mods-available`;

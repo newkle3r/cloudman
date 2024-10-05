@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { createSpinner } from 'nanospinner';
 import ncUPDATE from './ncUPDATE';
 import ncFQDN from './ncFQDN';
+import ncVARS from './ncVARS.js';
 
 /**
  * @class ncSETUP
@@ -16,6 +17,13 @@ import ncFQDN from './ncFQDN';
  */
 
 class ncSETUP extends ncREPAIR {
+    constructor() {
+        let lib = new ncVARS();
+        this.upvar = lib.loadVariables(variable)
+        this.downvar = lib.saveVariables(variable)
+        this.updatevar = lib.updateVariable(variable)
+        this.printVar = lib.printVariables(variable)
+    }
     /**
      * @function configureNextcloud
      * @description Displays a configuration menu for Nextcloud settings and applies user choices.
@@ -254,6 +262,7 @@ function remove_collabora_docker() {
  * @returns {void} Sätter PHP-versionen i en miljövariabel som exporteras för andra processer.
  */
 function check_php() {
+    
     console.log("Hämtar nuvarande PHP-version...");
     const phpVersion = execSync('php -v | grep -m 1 PHP | awk \'{print $2}\' | cut -d \'-\' -f1').toString().trim();
     if (!phpVersion) {

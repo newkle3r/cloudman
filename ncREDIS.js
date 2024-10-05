@@ -4,9 +4,15 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { RED, GREEN, YELLOW } from './color.js';
 import fs from 'fs';
+import ncVARS from './ncVARS.js';
+
+
 
 class ncREDIS {
     constructor() {
+        let lib = new ncVARS();
+        freshRedis = lib.updateRedis();
+        
         this.redisServiceName = 'redis-server';
         this.redisConf = '/etc/redis/redis.conf';
         this.redisSock = '/var/run/redis/redis-server.sock';
@@ -22,6 +28,7 @@ class ncREDIS {
      */
     getPHPVersion() {
         try {
+
             const phpVersion = execSync('php -v').toString().match(/^PHP\s+(\d+\.\d+)/);
             return phpVersion ? phpVersion[1] : 'unknown';
         } catch {

@@ -374,7 +374,7 @@ async apacheSettings() {
 
         const configPath = '/var/www/nextcloud';
         trustedDomains = this.util.getConfigValue('trusted_domains', configPath);
-        trustedDomains = trustedDomains.filter(domain => domain !== 'localhost' && !domain.match(/^\d+\.\d+\.\d+\.\d+$/));  // Filter out localhost and IPs
+        trustedDomains = trustedDomains.filter(domain => domain !== 'localhost' && !domain.match(/^\d+\.\d+\.\d+\.\d+$/));  // <- Filter out localhost and IPs
 
         console.log(`Trusted domains extracted: ${trustedDomains}`);
 

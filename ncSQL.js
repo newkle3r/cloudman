@@ -21,7 +21,7 @@ const variablesPath = 'variables.json';
 class ncSQL {
     constructor(mainMenu) {
         this.util = new ncUTILS();
-        this.getConfigValue = this.getConfigValueFromConfigFile; // Updated method reference
+        this.getConfigValue = this.getConfigValue; 
         this.clearConsole = this.util.clearConsole;
         this.mainMenu = mainMenu;
         this.runCommand = this.util.runCommand;
@@ -53,7 +53,7 @@ class ncSQL {
      * @param {string} key - The key to extract (e.g., 'dbname', 'dbuser', 'dbpassword').
      * @returns {string|null} - The extracted value or null if not found.
      */
-    getConfigValueFromConfigFile(configContent, key) {
+    getConfigValue(configContent, key) {
         const regex = new RegExp(`'${key}'\\s*=>\\s*'(.*?)'`, 'i');
         const match = configContent.match(regex);
         return match ? match[1] : null;

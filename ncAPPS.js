@@ -10,7 +10,7 @@ class ncAPPS {
         let util = new ncUTILS();
         let lib = new ncVARS();
         util.clearConsole();
-        lib.loadVariables();
+        // lib.loadVariables();
         this.NCPATH = lib.NCPATH;
         this.appUpdateStatus = YELLOW('Checking for app updates...');
         this.awaitContinue = awaitContinue;
@@ -64,7 +64,6 @@ class ncAPPS {
             }
         }
 
-        // Once the loop finishes, go back to the main menu.
         await this.mainMenu();
     }
 
@@ -189,7 +188,7 @@ class ncAPPS {
             return this.manageApps();
         }
     
-        const appId = appName.split(':')[0];  // Extract only the app ID (e.g., sociallogin)
+        const appId = appName.split(':')[0]; 
     
         const spinner = createSpinner(`Removing app ${appId}...`).start();
         
@@ -362,7 +361,7 @@ class ncAPPS {
             const appUpdates = output.match(/Update for (.+?) to version (\d+\.\d+\.\d+) is available/g);
     
             if (appUpdates && appUpdates.length > 0) {
-                return appUpdates.map(update => update.match(/Update for (.+?) to/)[1]);  // Extract app names
+                return appUpdates.map(update => update.match(/Update for (.+?) to/)[1]);
             } else {
                 return [];
             }

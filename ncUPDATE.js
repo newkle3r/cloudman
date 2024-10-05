@@ -18,7 +18,7 @@ class ncUPDATE {
     constructor(mainMenu) {
         let lib = new ncVARS();
         lib.loadVariables();
-        lib.ncdb();
+        this.freshRedis = lib.updateRedis;
         lib.nc_update();
         this.util = new ncUTILS();
         this.SCRIPTS = lib.SCRIPTS;
@@ -32,6 +32,8 @@ class ncUPDATE {
         this.awaitContinue = this.util.awaitContinue;
         this.clearConsole = this.util.clearConsole;
         this.runCommand = this.util.runCommand;
+        
+  
         
     }
 

@@ -6,6 +6,7 @@ import path from 'path';
 import { createSpinner } from 'nanospinner';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import ncVARS from './ncVARS.js';
 
 // Menu needs clear function and suitable splash
 
@@ -13,23 +14,72 @@ function getTimestamp() {
     return new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15);
 }
 
+
+
+
+
+
+
 // Backup class
 class ncBAK {
     constructor(mainMenu) {
         let util = new ncUTILS();
+        let lib = new ncVARS();
+        this.ncdbVars = lib.ncdb(this.NCPATH);
+        this.user = lib.UNIXUSER;
+        this.home = lib.UNIXUSER_PROFILE;
+
 
         this.mainMenu = mainMenu;
-        this.backupDir = '/mnt/backup'; 
+        this.backupDir = `/home/${this.user}/backups`; 
         this.timestamp = getTimestamp();
-        this.postgresBackupFile = path.join(this.backupDir, `postgresql_backup.sql`);
-        this.nextcloudDataDir = '/var/www/nextcloud';
-        this.nextcloudConfigDir = '/var/www/nextcloud/config';
-        this.apacheConfigDir = '/etc/apache2'; 
-        this.redisConfigDir = '/etc/redis'; 
+        this.psqlBakFile = path.join(this.backupDir, `postgresql_backup.sql`);
+        this.ncDataDir = `${this.NCPATH}`;
+        this.ncConfDir = `/${this.ncDataDir}/config`;
+        this.apacheConfDir = '/etc/apache2'; 
+        this.redisConfDir = '/etc/redis'; 
         this.phpConfigDir = '/etc/php'; 
+        
+        this.psqlDbName = this.ncdbVars.NCDB;
+        this.psqlPass = this.ncdbVars.NCDBPASS;
+        this.psqlUser = this.ncdbVars.NCDBUSER;
+        this.psqlType = this.ncdbVars.NCDBTYPE;
+        this.psqlHost = this.ncdbVars.NCDBHOST;
     }
 
-    // Ensure backup directory exists  
+    formatBackupTimestamp(backupTimestamp) {
+        if (!backupTimestamp || !/^\d{8}T\d{6}$/.test(backupTimestamp)) {
+            return "Invalid timestamp";  
+        }
+
+        const year = backupTimestamp.slice(0, 4);
+        const month = backupTimestamp.slice(4, 6);
+        const day = backupTimestamp.slice(6, 8);
+        const hour = backupTimestamp.slice(9, 11);
+        const minute = backupTimestamp.slice(11, 13);
+        const second = backupTimestamp.slice(13, 15);
+    
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+
+        const dayWithSuffix = (day) => {
+            const j = day % 10, k = day % 100;
+            if (j == 1 && k != 11) return `${day}st`;
+            if (j == 2 && k != 12) return `${day}nd`;
+            if (j == 3 && k != 13) return `${day}rd`;
+            return `${day}th`;
+        };
+
+        const monthName = monthNames[parseInt(month, 10) - 1];
+
+        const greenText = GREEN(`${dayWithSuffix(parseInt(day, 10))} ${monthName}`);
+        const purpleTimeYear = PURPLE(`${hour}:${minute}:${second} | ${year}`);
+        const yellowBrackets = YELLOW(`{ `) + purpleTimeYear + YELLOW(` }`);
+
+        return `\n${greenText}${yellowBrackets}`;
+    }
+
+
     ensureBackupDir() {
         if (!fs.existsSync(this.backupDir)) {
             console.log(chalk.yellow('Creating backup directory...'));
@@ -43,14 +93,14 @@ class ncBAK {
                 console.log(chalk.green(`Created backup directory at ${this.backupDir}`));
             }
         }
-        return true; // Indicate success
+        return true;
     }
 
     // PostgreSQL backup  
     backupPostgreSQL() {
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
         try {
-            execSync(`sudo -u postgres pg_dump nextcloud_db > ${this.postgresBackupFile}`);
+            execSync(`sudo -u postgres pg_dump ${this.psqlDbName} > ${this.psqlBakFile}`);
             spinner.success({ text: chalk.green('PostgreSQL backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup PostgreSQL!') });
@@ -63,7 +113,7 @@ class ncBAK {
         const spinner = createSpinner('Backing up Nextcloud data and configuration...').start();
         try {
             const nextcloudBackupFile = path.join(this.backupDir, `nextcloud_backup_${this.timestamp}.tar.gz`);
-            execSync(`sudo tar -czf ${nextcloudBackupFile} ${this.nextcloudDataDir}`);
+            execSync(`sudo tar -czf ${nextcloudBackupFile} ${this.ncDataDir}`);
             spinner.success({ text: chalk.green('Nextcloud data and config backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup Nextcloud data and config!') });
@@ -76,7 +126,7 @@ class ncBAK {
         const spinner = createSpinner('Backing up Redis configuration...').start();
         try {
             const redisBackupFile = path.join(this.backupDir, `redis_backup_${this.timestamp}.tar.gz`);
-            execSync(`sudo tar -czf ${redisBackupFile} ${this.redisConfigDir}`);
+            execSync(`sudo tar -czf ${redisBackupFile} ${this.redisConfDir}`);
             spinner.success({ text: chalk.green('Redis configuration backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup Redis configuration!') });
@@ -89,7 +139,7 @@ class ncBAK {
         const spinner = createSpinner('Backing up Apache configuration...').start();
         try {
             const apacheBackupFile = path.join(this.backupDir, `apache_backup_${this.timestamp}.tar.gz`);
-            execSync(`sudo tar -czf ${apacheBackupFile} ${this.apacheConfigDir}`);
+            execSync(`sudo tar -czf ${apacheBackupFile} ${this.apacheConfDir}`);
             spinner.success({ text: chalk.green('Apache configuration backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup Apache configuration!') });
@@ -187,6 +237,7 @@ class ncBAK {
 
 // Restore PostgreSQL database
 restorePostgreSQL() {
+
     const backupFile = `/mnt/backups/postgresql_backup.sql`;
     const spinner = createSpinner('Restoring PostgreSQL database...').start();
 
@@ -196,9 +247,9 @@ restorePostgreSQL() {
     }
 
     try {
-        execSync('sudo -u postgres psql -c "DROP DATABASE IF EXISTS nextcloud_db;"');
-        execSync('sudo -u postgres psql -c "CREATE DATABASE nextcloud_db OWNER ncadmin;"');
-        execSync(`sudo -u postgres psql nextcloud_db < ${backupFile}`);
+        execSync(`sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${this.psqlDbName};"`);
+        execSync(`sudo -u postgres psql -c "CREATE DATABASE ${this.psqlDbName} OWNER ${this.psqlUser};")`);
+        execSync(`sudo -u postgres psql ${this.psqlDbName} < ${backupFile}`);
         spinner.success({ text: chalk.green('PostgreSQL database restored successfully!') });
     } catch (error) {
         spinner.error({ text: chalk.red('Failed to restore PostgreSQL database!') });

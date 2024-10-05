@@ -3,6 +3,9 @@ import { execSync } from 'child_process';
 import { RED, GREEN, BLUE, YELLOW, PURPLE } from './color.js';
 import ncUTILS from './ncUTILS.js';
 import ncRedisServer from './ncRedisServer.js';
+import { throws } from 'assert';
+import ncBAK from './ncBAK.js';
+import ncREDIS from './ncREDIS.js';
 
 /**
  * Class to manage Nextcloud configuration variables.
@@ -14,24 +17,32 @@ class ncVARS {
         this.util = new ncUTILS();
         this.run = this.util.runCommand;
         this.gen = this.util.genPasswd;
-        this.PHPVER;
+        let redisServ = new ncRedisServer();
+        let lib = new ncVARS();
+        this.upvar = lib.loadVariables(variable)
+        this.downvar = lib.saveVariables(variable)
+        this.updatevar = lib.updateVariable(variable)
+        this.printVar = lib.printVariables(variable)
+        
+    
 
 
 
 
-        let ncredserv;
-        this.getConfigValue = this.util.getConfigValue;
-        ncredserv = new ncRedisServer();
-        //this.phpversion = ncredserv.getPHPVersion();
+        
+        
+        redisServ = new ncRedisServer();
+        this.getConfigValue = lib.get();
+        this.phpversion = redisServ.getPHPVersion();
         
         this.filePath = filePath;
         this.lastAppUpdateCheck = null;
         this.appUpdateStatus = null;
 
-
+        
 
         // Load variables from file during initialization
-        this.loadVariables();
+        //this.loadVariables();
 
         // Fetch statuses
         this.psqlStatus = this.getServiceStatus('postgresql');
@@ -81,7 +92,7 @@ class ncVARS {
         // Domain and TLS configuration
         this.DEDYNDOMAIN = this.getCommandOutput("hostname -f");
         this.TLSDOMAIN = this.getCommandOutput("hostname -f");
-        this.PHPVER = this.getCommandOutput("php -v | grep '^PHP' | awk '{print $2}'");
+        this.PHPVER = redisServ.getPHPVersion();
         this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
         this.SETENVPROXY = 'proxy-sendcl';
@@ -117,12 +128,13 @@ class ncVARS {
         this.ISSUES=`https://github.com/nextcloud/vm/issues`;
 
         // User information
+        this.REDISUSER = `sudo -u redis `;
+        this.WWWDATA = `sudo -u www-data`;
+        this.ROOTUSER = `sudo -u root`;
         this.GUIUSER=`ncadmin`;
         this.GUIPASS=`nextcloud`;
-        // console.log('Util instance before runCommand:', this.util);
         this.UNIXUSER = this.run('echo $SUDO_USER');
-        // console.log(`UNIXUSER: ${this.UNIXUSER}`);
-        
+
         this.UNIXUSER_PROFILE=`/home/${this.UNIXUSER}/.bash_profile`;
         this.ROOT_PROFILE="/root/.bash_profile";
 
@@ -131,9 +143,10 @@ class ncVARS {
         this.BITWARDEN_HOME=`/home/${this.BITWARDEN_USER}`;
 
         // Database
+        this.ncdb();
         this.SHUF=this.run(`shuf -i 25-29 -n 1`);
-        this.PGDB_USER=`nextcloud_db_user`;
-        this.PGDB_PASS = this.gen(this.SHUF, 'a-zA-Z0-9@#*');
+        this.PGDB_USER=`${this.NCDBUSER}`; // <- nextcloud_db_user
+        this.PGDB_PASS = `${this.NCDBPASS}`; // from ncdb()
         this.NEWPGPASS = this.gen(this.SHUF, 'a-zA-Z0-9@#*');
         
 
@@ -190,9 +203,9 @@ class ncVARS {
 
     }
 
-    ncdb() {        
+    ncdb(NCPATH) {        
         this.NC_CONF=`${this.NCPATH}/config/config.php`
-        // console.log(`inside ncVARS ncdb() -> this.NC_CONF: ${this.NC_CONF}`)
+        console.log(`inside ncVARS ncdb() -> this.NC_CONF: ${this.NC_CONF}`)
 
         this.NCDB=this.getConfigValue('dbname',this.NC_CONF)
         this.NCDBPASS=this.getConfigValue('dbpassword',this.NC_CONF)
@@ -561,7 +574,6 @@ getPostgresVersion() {
      * Load variables from the JSON file and update class properties.
      */
     loadVariables() {
-
         if (fs.existsSync(this.filePath)) {
             try {
                 const data = fs.readFileSync(this.filePath, 'utf8');
@@ -603,8 +615,8 @@ getPostgresVersion() {
     /**
      * Print the current variables to the console.
      */
-    printVariables() {
-        console.log('Current Nextcloud Variables:', this);
+    printVariables(variable) {
+        console.log(`printVariables() <-- ncVARS: ${variable} `);
     }
 
     /**
@@ -632,9 +644,25 @@ getPostgresVersion() {
      * @param {string} redisPass - The password for Redis.
      */
     updateRedis(redisSock, redisConf, redisPass) {
-        this.updateVariable('REDIS_SOCK', redisSock);
-        this.updateVariable('REDIS_CONF', redisConf);
-        this.updateVariable('REDIS_PASS', redisPass);
+        this.ncdb();
+        let bak = new ncBAK();
+        let redisTools = new ncREDIS();
+        let redisServ =new ncRedisServer();
+        let redisPASS = redisServ.generateRedisPassword();
+
+        redisTools.updateRedisPasswordInVariables()
+        
+        
+
+
+        this.updateVariable(`'REDIS_HOST', ${redisTools.redisSock}`);
+
+        this.updateVariable(`'REDIS_SOCK', ${redisTools.redisSock}`);
+        this.updateVariable(`'REDIS_CONF', ${redisTools.redisConf}`)
+        execSync(`sudo sed -i "s|# requirepass .*|requirepass ${redisPASS}|g" ${this.REDIS_CONF}`);
+        execSync(`sudo -u www-data php /var/www/nextcloud/occ config:system:set redis password --value="${redisPASS}"`);
+        this.updateVariable(`'REDIS_PASS', ${redisPASS}`);
+        
     }
 
     /**
