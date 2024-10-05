@@ -14,9 +14,10 @@ class ncVARS {
         this.util = new ncUTILS();
         this.run = this.util.runCommand;
         this.gen = this.util.genPasswd;
-        console.log('Initialized ncUTILS:', this.util);  // Log the instance
-        console.log('ncUTILS runCommand:', this.util.runCommand);
-        console.log('Inside ncVAR constructor defined this.run:', this.run);
+        this.countFunc = 0;
+        // console.log('ncUTILS fuction counter:', this.countFunc);  // Log the instance
+        // console.log('ncUTILS runCommand:', this.util.runCommand);
+
         let ncredserv;
         this.getConfigValue = this.util.getConfigValue;
         ncredserv = new ncRedisServer();
@@ -117,9 +118,9 @@ class ncVARS {
         // User information
         this.GUIUSER=`ncadmin`;
         this.GUIPASS=`nextcloud`;
-        console.log('Util instance before runCommand:', this.util);
+        // console.log('Util instance before runCommand:', this.util);
         this.UNIXUSER = this.run('echo $SUDO_USER');
-        console.log(`UNIXUSER: ${this.UNIXUSER}`);
+        // console.log(`UNIXUSER: ${this.UNIXUSER}`);
         
         this.UNIXUSER_PROFILE=`/home/${this.UNIXUSER}/.bash_profile`;
         this.ROOT_PROFILE="/root/.bash_profile";
@@ -184,11 +185,13 @@ class ncVARS {
         this.TURN_CONF = "/etc/turnserver.conf";
         this.TURN_PORT = 3478;
 
+        this.countApps = 0;
+
     }
 
     ncdb() {        
         this.NC_CONF=`${this.NCPATH}/config/config.php`
-        console.log(`inside ncVARS ncdb() -> this.NC_CONF: ${this.NC_CONF}`)
+        // console.log(`inside ncVARS ncdb() -> this.NC_CONF: ${this.NC_CONF}`)
 
         this.NCDB=this.getConfigValue('dbname',this.NC_CONF)
         this.NCDBPASS=this.getConfigValue('dbpassword',this.NC_CONF)
@@ -208,6 +211,7 @@ class ncVARS {
         this.NCBAD=parseInt(this.CURRENTMAJOR, 10) - 2;
         this.NCNEXT=this.NCNEXT = parseInt(this.CURRENTMAJOR, 10) + 1;
     }
+    
         
 
 
@@ -243,30 +247,32 @@ class ncVARS {
  * Asynchronously fetch the available app updates and core updates.
  */
     async getAvailableUpdates() {
+        
         try {
-            console.log("Running 'occ update:check' to check for core and app updates...");
+            // console.log("Running 'occ update:check' to check for core and app updates...");
             
             // Run the occ update check command
             const output = execSync(`sudo -u www-data php /var/www/nextcloud/occ update:check`, { encoding: 'utf8' });
     
             // Log the output for debugging
-            console.log('OCC update:check output:\n', output);
+            // console.log('OCC update:check output:\n', output);
             
             let updateSummary = '';  
             let coreUpdateText = ''; 
     
             // Fetch the currently installed Nextcloud version for debugging
             const currentVersion = execSync("sudo -u www-data php /var/www/nextcloud/occ status | grep 'versionstring' | awk '{print $3}'").toString().trim();
-            console.log(`Current Nextcloud version installed: ${currentVersion}`);
+            // console.log(`Current Nextcloud version installed: ${currentVersion}`);
     
             // Ensure parsing of core updates is correct
             const coreUpdate = output.match(/Nextcloud\s+(\d+\.\d+\.\d+)\s+is available/);
             if (coreUpdate && coreUpdate[1] !== currentVersion) {
                 coreUpdateText = `Nextcloud >> ${coreUpdate[1]}`;
-                console.log(`Core update found: ${coreUpdateText}`);
+
                 updateSummary += `${coreUpdateText}\n`;
+
             } else {
-                console.log(`No core update or already on the latest version: ${currentVersion}`);
+                // console.log(`No core update or already on the latest version: ${currentVersion}`);
             }
     
             // Check for app updates
@@ -275,8 +281,12 @@ class ncVARS {
                 updateSummary += `${appUpdates.length} app update(s) available.\n`;
     
                 appUpdates.forEach(appUpdate => {
-                    console.log(`App update found: ${appUpdate}`);
-                    updateSummary += `${appUpdate}\n`;
+                    
+                    updateSummary += `Update ${appUpdate.split(' ')[2]} to ${appUpdate.split(' ')[5]}\n`;
+
+                    this.countApps ++
+                    console.log(this.countApps);
+                    
                 });
             } else {
                 console.log('No app updates found.');
@@ -288,7 +298,12 @@ class ncVARS {
     
             // Store the app update status for display
             this.appUpdateStatus = GREEN(updateSummary.trim());
-            console.log(`App update status set to: ${this.appUpdateStatus}`);
+            
+          
+
+            this.countApps = 0;
+
+
     
         } catch (error) {
             console.error('Error checking for app updates:', error);
@@ -306,9 +321,9 @@ class ncVARS {
     getServiceStatus(service) {
         let status;
         try {
-            console.log(`Checking status of ${service}...`);
+
             status = execSync(`systemctl is-active ${service}`).toString().trim();
-            console.log(`${service} service is ${status}`);
+
         } catch (error) {
             console.error(`${service} status check failed:`, error);
             status = 'inactive';
@@ -540,7 +555,7 @@ getPostgresVersion() {
             }, {});
             const data = JSON.stringify(properties, null, 2);
             fs.writeFileSync(this.filePath, data, 'utf8');
-            console.log(`Variables saved to ${this.filePath}`);
+            //console.log(`Variables saved to ${this.filePath}`);
         } catch (error) {
             console.error(`Error saving variables to ${this.filePath}:`, error);
         }
@@ -550,6 +565,7 @@ getPostgresVersion() {
      * Load variables from the JSON file and update class properties.
      */
     loadVariables() {
+        this.countFunc ++;
         if (fs.existsSync(this.filePath)) {
             try {
                 const data = fs.readFileSync(this.filePath, 'utf8');
@@ -559,7 +575,7 @@ getPostgresVersion() {
                         this[key] = loadedVars[key];
                     }
                 });
-                console.log(`Variables loaded from ${this.filePath}`);
+                // console.log(`Variables loaded from ${this.filePath}`);
             } catch (error) {
                 console.error(`Error loading variables from ${this.filePath}:`, error);
             }

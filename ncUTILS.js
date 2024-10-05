@@ -7,7 +7,7 @@ import inquirer from 'inquirer';
 
 class ncUTILS {
     constructor () {
-
+        this.inits = 0;
         
         }
     /**
@@ -106,7 +106,7 @@ class ncUTILS {
      */
     runCommand(command) {
         try {
-            console.log(`Executing command: ${command}`);
+            // console.log(`Executing command: ${command}`);
             return execSync(command, { shell: '/bin/bash' }).toString().trim();
         } catch (error) {
             console.error(`Error executing command: ${command}`, error);
@@ -126,6 +126,8 @@ class ncUTILS {
             await fetchFunction();
             context[lastCheckKey] = now;
         }
+        this.inits ++;
+        // console.log(`Numbers of times init has ran ${this.inits}`);
     }
 
     /**
