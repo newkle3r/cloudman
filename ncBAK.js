@@ -23,31 +23,31 @@ function getTimestamp() {
 // Backup class
 class ncBAK {
     constructor(mainMenu) {
-        let util = new ncUTILS();
-        let lib = new ncVARS();
-        lib.ncdb(this.NCPATH);
-        lib.loadVariables();
-        this.user = lib.UNIXUSER;
-        this.home = lib.UNIXUSER_PROFILE;
-
-
+        this.util = new ncUTILS();
+        this.lib = new ncVARS();
         this.mainMenu = mainMenu;
-        this.backupDir = `/home/${this.user}/backups`; 
+
+        // Set paths based on Nextcloud installation path
+        this.ncDataDir = this.lib.NCPATH || '/var/www/nextcloud';  // Default to /var/www/nextcloud
+        this.ncConfDir = `${this.ncDataDir}/config`;
+        this.backupDir = `/home/${this.lib.UNIXUSER}/backups`; 
         this.timestamp = getTimestamp();
         this.psqlBakFile = path.join(this.backupDir, `postgresql_backup.sql`);
-        this.ncDataDir = `${this.NCPATH}`;
-        this.ncConfDir = `/${this.ncDataDir}/config`;
+
+        // Database configuration
+        this.ncdbVars = this.lib.ncdb(this.ncDataDir);  // Pass in the correct data path
+        this.psqlDbName = this.ncdbVars.NCDB;
+        this.psqlUser = this.ncdbVars.NCDBUSER;
+        this.psqlPass = this.ncdbVars.NCDBPASS;
+        this.psqlHost = this.ncdbVars.NCDBHOST;
+
+        // Other service configuration paths
         this.apacheConfDir = '/etc/apache2'; 
         this.redisConfDir = '/etc/redis'; 
         this.phpConfigDir = '/etc/php'; 
-        
-        this.psqlDbName = lib.NCDB;
-        this.psqlPass = lib.NCDBPASS;
-        this.psqlUser = lib.NCDBUSER;
-        this.psqlType = lib.NCDBTYPE;
-        this.psqlHost = lib.NCDBHOST;
-    }
 
+        
+    }
     formatBackupTimestamp(backupTimestamp) {
         if (!backupTimestamp || !/^\d{8}T\d{6}$/.test(backupTimestamp)) {
             return "Invalid timestamp";  

@@ -13,31 +13,27 @@ import ncREDIS from './ncREDIS.js';
  */
 class ncVARS {
     
-    constructor(filePath = './variables.json',variable) {
+    constructor(filePath = './variables.json') {
         this.util = new ncUTILS();
         this.run = this.util.runCommand;
         this.gen = this.util.genPasswd;
-        let redisServ = new ncRedisServer();
-
-        this.upvar = this.loadVariables(variable);
-        this.downvar = this.saveVariables(variable);
-        this.updatevar = this.updateVariable(variable);
-        this.printVar = this.printVariables(variable);
+        this.redisServ = new ncRedisServer();
         
+        // Load variables
         this.filePath = filePath;
+        this.variables = this.loadVariables() || {}; // Fallback to an empty object if loading fails
 
-
-
-
+        // Fetch PHP version from Redis server
+        this.phpversion = this.redisServ.getPHPVersion();
         
+        // Initialize system statuses
+        this.psqlStatus = this.getServiceStatus('postgresql');
+        this.redisStatus = this.getServiceStatus('redis-server');
+        this.apache2Status = this.getServiceStatus('apache2');
+        this.dockerStatus = this.getDockerStatus();
+        this.phpfpmStatus = this.getServiceStatus(`php${this.phpversion}-fpm.service`);
         
-        redisServ = new ncRedisServer();
-        this.getConfigValue = this.util.getConfigValue();
-        this.phpversion = redisServ.getPHPVersion();
-        
-        this.filePath = filePath;
-        this.lastAppUpdateCheck = null;
-        this.appUpdateStatus = null;
+    
 
         
 
@@ -92,7 +88,7 @@ class ncVARS {
         // Domain and TLS configuration
         this.DEDYNDOMAIN = this.getCommandOutput("hostname -f");
         this.TLSDOMAIN = this.getCommandOutput("hostname -f");
-        this.PHPVER = redisServ.getPHPVersion();
+        this.PHPVER = this.phpversion;
         this.CERTFILES = this.getCommandOutput("sudo certbot certificates | grep -i 'Certificate Path' | awk '{print $3}'");
         this.DHPARAMS_TLS = '/etc/ssl/certs/dhparam.pem';
         this.SETENVPROXY = 'proxy-sendcl';
@@ -202,18 +198,30 @@ class ncVARS {
    
 
     }
+   
+    
 
-    ncdb(NCPATH) {        
-        this.NC_CONF=`${this.NCPATH}/config/config.php`
-        console.log(`inside ncVARS ncdb() -> this.NC_CONF: ${this.NC_CONF}`)
-        let ncdbUtil = new ncUTILS(); 
+    
+    
 
-        this.NCDB=ncdbUtil.getConfigValue('dbname',this.NC_CONF)
-        this.NCDBPASS=ncdbUtil.getConfigValue('dbpassword',this.NC_CONF)
-        this.NCDBUSER=ncdbUtil.getConfigValue('dbuser',this.NC_CONF)
-        this.NCDBTYPE=ncdbUtil.getConfigValue('dbtype',this.NC_CONF)
-        this.NCDBHOST=ncdbUtil.getConfigValue('dbhost',this.NC_CONF)
-    }
+    ncdb(NCPATH) {
+        let util = new ncUTILS();
+        const dbName = util.getConfigValue('dbname');
+        console.log(`Database name: ${dbName}`);
+        const dbUser = util.getConfigValue('dbuser');
+        const dbPass = util.getConfigValue('dbpassword');
+        const dbHost = util.getConfigValue('dbhost');
+        const dbType = util.getConfigValue('dbtype');
+      
+        return {
+          NCDB: dbName,
+          NCDBUSER: dbUser,
+          NCDBPASS: dbPass,
+          NCDBHOST: dbHost,
+          NCDBTYPE: dbType
+        };
+      }
+      
 
     // Nextcloud version
     nc_update() {
@@ -323,24 +331,7 @@ class ncVARS {
     
 
 
-    /**
-     * Fetch the status of a system service like PostgreSQL, Redis, or Apache.
-     * @param {string} service - The name of the service (e.g., 'postgresql', 'redis-server').
-     * @returns {string} - Formatted service status.
-     */
-    getServiceStatus(service) {
-        let status;
-        try {
 
-            status = execSync(`systemctl is-active ${service}`).toString().trim();
-
-        } catch (error) {
-            console.error(`${service} status check failed:`, error);
-            status = 'inactive';
-        }
-    
-        return status === 'active' ? GREEN('active') : RED('inactive');
-    }
 
     /**
      * Fetch Docker container status and format the output.
@@ -552,73 +543,86 @@ getPostgresVersion() {
     }
 }
 
-    /**
-     * Save the current variables to the JSON file.
-     */
-    saveVariables(filePath) {
+    // Load variables from the JSON file
+    loadVariables() {
+        if (fs.existsSync(this.filePath)) {
+            try {
+                const data = fs.readFileSync(this.filePath, 'utf8');
+                return JSON.parse(data);
+            } catch (error) {
+                console.error(`Error loading variables from ${this.filePath}:`, error);
+                return null;
+            }
+        } else {
+            console.error(`File not found: ${this.filePath}`);
+            return null;
+        }
+    }
+
+    // Save variables to the JSON file
+    saveVariables() {
+        if (!this.variables) {
+            console.error("No variables to save.");
+            return;
+        }
         try {
-            const properties = Object.keys(this).reduce((acc, key) => {
-                if (typeof this[key] !== 'function') {
-                    acc[key] = this[key];
-                }
-                return acc;
-            }, {});
-            const data = JSON.stringify(properties, null, 2);
-            fs.writeFileSync(this.filePath, data, 'utf8');
-            //console.log(`Variables saved to ${this.filePath}`);
+            fs.writeFileSync(this.filePath, JSON.stringify(this.variables, null, 2));
+            console.log(`Variables saved to ${this.filePath}`);
         } catch (error) {
             console.error(`Error saving variables to ${this.filePath}:`, error);
         }
     }
 
-    /**
-     * Load variables from the JSON file and update class properties.
-     */
-    loadVariables() {
-        if (fs.existsSync(this.filePath)) {
-            try {
-                const data = fs.readFileSync(this.filePath, 'utf8');
-                const loadedVars = JSON.parse(data);
-                Object.keys(loadedVars).forEach(key => {
-                    if (typeof loadedVars[key] !== 'function') {
-                        this[key] = loadedVars[key];
-                    }
-                });
-                // console.log(`Variables loaded from ${this.filePath}`);
-            } catch (error) {
-                console.error(`Error loading variables from ${this.filePath}:`, error);
-            }
-        } else {
-            console.error(`File not found: ${this.filePath}`);
-        }
-    }
-
-    /**
-     * Update a specific variable in the JSON and class property.
-     * Only data properties will be updated, excluding functions.
-     * @param {string} key - The variable name to update.
-     * @param {any} value - The new value to set for the variable.
-     */
+    // Update a specific variable and save
     updateVariable(key, value) {
         if (typeof this[key] !== 'function') {
-            this[key] = value;  
-            this.saveVariables();  
+            this.variables[key] = value;
+            this.saveVariables();
             console.log(`Updated ${key} to ${value}`);
         } else {
             console.error(`Cannot update '${key}' because it is a method, not a variable.`);
         }
     }
 
-
-
-
-
-    /**
-     * Print the current variables to the console.
-     */
-    printVariables(variable) {
-        console.log(`printVariables() <-- ncVARS: ${variable} `);
+    // Fetch configuration values from config.php
+    getConfigValue(key, NCPATH = this.NCPATH) {
+        try {
+            const configPath = `${NCPATH}/config/config.php`;
+            const command = `sudo sed -n "/['\\"]${key}['\\"] =>/,/),/p" ${configPath}`;
+            const output = execSync(command).toString().trim();
+            if (!output) return null;
+            
+            // Handle array or single value
+            if (output.includes('array (')) {
+                const arrayValues = [];
+                const arrayMatch = output.match(/\d+\s*=>\s*['"]([^'"]+)['"]/g);
+                if (arrayMatch) {
+                    arrayMatch.forEach(entry => {
+                        const value = entry.split('=>')[1].trim().replace(/['",]/g, '');
+                        arrayValues.push(value);
+                    });
+                }
+                return arrayValues;
+            } else {
+                return output.split('=>')[1].trim().replace(/['",]/g, '');
+            }
+        } catch (error) {
+            console.error(`Error fetching config value for ${key}:`, error);
+            return null;
+        }
     }
+
+    // Service status checking methods
+    getServiceStatus(service) {
+        try {
+            const status = execSync(`systemctl is-active ${service}`).toString().trim();
+            return status === 'active' ? GREEN('active') : RED('inactive');
+        } catch (error) {
+            console.error(`${service} status check failed:`, error);
+            return 'inactive';
+        }
+    }
+
 
     /**
      * Update the SMTP configuration in variables.json.

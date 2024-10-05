@@ -283,7 +283,7 @@ async getFileSize(url) {
         const nextcloudAlias = "alias nextcloud_occ='sudo -u www-data php /var/www/nextcloud/occ'";
         const updateAlias = "alias run_update_nextcloud='bash /var/scripts/update.sh'";
 
-        try {
+        try {   
             if (fs.existsSync(aliasFile)) {
                 const aliases = fs.readFileSync(aliasFile, 'utf8');
 
@@ -347,36 +347,45 @@ async getFileSize(url) {
  * Handles both single values and arrays (like 'trusted_domains').
  * @param {string} key - The key to look for (e.g., 'trusted_domains', 'dbname')
  * @param {string} NCPATH - Nextcloud installation path (e.g., '/var/www/nextcloud')
- * @returns {string | array} - The value corresponding to the key, or an array if it's an array (e.g., trusted_domains).
+ * @returns {string | array | null} - The value corresponding to the key, or an array if it's an array (e.g., trusted_domains), or null on error.
  */
 getConfigValue(key, NCPATH) {
     try {
-        const configPath = `${NCPATH}/config/config.php`;
-        // Extract the key-value block
+        // Define the path to config.php
+        const configPath = NCPATH ? `${NCPATH}/config/config.php` : this.NC_CONF || '/var/www/nextcloud/config/config.php';
+
+        // Construct the sed command to extract the key-value block
         const command = `sudo sed -n "/['\\"]${key}['\\"] =>/,/),/p" ${configPath}`;
+        
+        // Execute the command and ensure the output is in string format
         const output = execSync(command).toString().trim();
 
-        // Check if it's an array (array block)
+        // If the output contains 'array', it's an array block
         if (output.includes('array (')) {
             const arrayValues = [];
-            const arrayMatch = output.match(/\d+\s*=>\s*['"]([^'"]+)['"]/g);
+            const arrayMatch = output.match(/\d+\s*=>\s*['"]([^'"]+)['"]/g);  // Match all array elements
+            
             if (arrayMatch) {
                 arrayMatch.forEach(entry => {
-                    const domain = entry.split('=>')[1].trim().replace(/['",]/g, '');
-                    arrayValues.push(domain);
+                    const value = entry.split('=>')[1].trim().replace(/['",]/g, ''); // Clean up the array values
+                    arrayValues.push(value);
                 });
             }
-            return arrayValues;  // Return the array of trusted domains
+            return arrayValues;  // Return the array (e.g., trusted_domains)
         } else {
-            // For single key-value pairs
+            // For single key-value pairs, extract and clean the value
             const singleValue = output.split('=>')[1].trim().replace(/['",]/g, '');
             return singleValue;
         }
     } catch (error) {
-        console.error(`Error fetching config value for ${key}:`, error);
-        return null;
+        console.error(`Error fetching config value for ${key}:`, error.message);
+        return null;  // Return null on failure
     }
 }
+
+
+
+
 }
 
 export default ncUTILS;

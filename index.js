@@ -42,8 +42,10 @@ async function initializeVariables() {
 
 
     try {
-        lib.loadVariables(RED);
-        lib.updateVariable(lib.PHPVER, phpVersion);
+        let redisServ = new ncRedisServer();
+        let phpVersion = redisServ.getPHPVersion();
+        lib.loadVariables(lib.filePath);
+        
         lib.getAvailableUpdates();
     
         lib.redisStatus = lib.getServiceStatus('redis-server');
@@ -198,7 +200,7 @@ async function mainMenu() {
 function exitProgram() {
 
     console.log('Exiting program...');
-    lib.saveVariables('./variables.json');
+    lib.saveVariables();
     resetActiveMenu();  
     
     
