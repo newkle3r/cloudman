@@ -41,29 +41,24 @@ async function initializeVariables() {
 
 
 
+    try {
+        lib.loadVariables(RED);
+        lib.updateVariable(lib.PHPVER, phpVersion);
+        lib.getAvailableUpdates();
     
-    //const phpVersion = execSync("php -r 'echo PHP_MAJOR_VERSION.\".\".PHP_MINOR_VERSION;'").toString().trim();
-    // console.log(`PHP Version: ${phpVersion}`);
-
-    lib.loadVariables(RED)
-    lib.updateVariable(lib.PHPVER,phpVersion)
-    lib.getAvailableUpdates()
-
-
-    lib.redisStatus = lib.getServiceStatus('redis-server');
-    lib.apache2Status = lib.getServiceStatus('apache2');
-    // redisServ.phpVersion = phpVersion;
-    //lib.phpfpmStatus = lib.getServiceStatus(`php${redisServ.phpVersion}-fpm.service`);
-    lib.phpfpmStatus = lib.getServiceStatus(`php${phpVersion}-fpm.service`);
-
-    // console.log('Fetching Nextcloud state and version...');
-    const ncStateAndVersion = await lib.getNCstate();
-    lib.nextcloudState = ncStateAndVersion.state;
-    lib.nextcloudVersion = ncStateAndVersion.version;
-    // console.log(`Nextcloud state: ${lib.nextcloudState}, version: ${lib.nextcloudVersion}`);
-
-    // console.log('Fetching available app updates...');
-    await util.initialize(lib.getAvailableUpdates.bind(lib), 'lastAppUpdateCheck', lib, UPDATE_THRESHOLD);
+        lib.redisStatus = lib.getServiceStatus('redis-server');
+        lib.apache2Status = lib.getServiceStatus('apache2');
+        lib.phpfpmStatus = lib.getServiceStatus(`php${phpVersion}-fpm.service`);
+    
+        const ncStateAndVersion = await lib.getNCstate();
+        lib.nextcloudState = ncStateAndVersion.state;
+        lib.nextcloudVersion = ncStateAndVersion.version;
+    
+        await util.initialize(lib.getAvailableUpdates.bind(lib), 'lastAppUpdateCheck', lib, UPDATE_THRESHOLD);
+    } catch (error) {
+        console.error('Error initializing variables:', error);
+        process.exit(1);  // Terminate if critical error occurs
+    }
 }
 
 /**
