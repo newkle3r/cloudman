@@ -9,13 +9,14 @@ class ncAPPS {
     constructor(mainMenu) {
         let util = new ncUTILS();
         let lib = new ncVARS();
-        util.clearConsole();
+
         // lib.loadVariables();
         this.NCPATH = lib.NCPATH;
         this.appUpdateStatus = YELLOW('Checking for app updates...');
         this.awaitContinue = util.awaitContinue;
         this.mainMenu = typeof mainMenu === 'function' ? mainMenu : () => console.log('Main menu is not available.');
         this.clearConsole = util.clearConsole;
+        this.runCommand = util.runCommand;
     }
 
     async manageApps() {
@@ -70,10 +71,10 @@ class ncAPPS {
 
 
     async listInstalledApps() {
-        util.clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Fetching installed Nextcloud apps...').start();
 
-        const output = runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:list --shipped=true`);
+        const output = this.runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:list --shipped=true`);
         if (output) {
             spinner.success({ text: `${GREEN('Installed Nextcloud apps:')}` });
             console.log(output);
@@ -86,7 +87,7 @@ class ncAPPS {
     }
 
     async enableApp() {
-        util.clearConsole();
+        this.clearConsole();
         const availableApps = await this.getAvailableApps();
     
         if (availableApps.length === 0) {
@@ -115,7 +116,7 @@ class ncAPPS {
         const spinner = createSpinner(`Enabling app ${appId}...`).start();
     
         try {
-            runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:enable ${appId}`);
+            this.runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:enable ${appId}`);
             spinner.success({ text: `${GREEN(`App '${appId}' has been enabled!`)}` });
         } catch (error) {
             spinner.error({ text: `${RED(`Failed to enable app '${appId}'.`)}` });
@@ -127,7 +128,7 @@ class ncAPPS {
     }
     
     async disableApp() {
-        util.clearConsole();
+        this.clearConsole();
         const installedApps = await this.getInstalledApps();
     
         if (installedApps.length === 0) {
@@ -152,7 +153,7 @@ class ncAPPS {
         }
     
         const spinner = createSpinner(`Disabling app ${appName}...`).start();
-        const output = runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:disable ${appName}`);
+        const output = this.runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:disable ${appName}`);
     
         if (output) {
             spinner.success({ text: `${GREEN(`App '${appName}' has been disabled!`)}` });
@@ -165,7 +166,7 @@ class ncAPPS {
     }
     
     async removeApp() {
-        util.clearConsole();
+        this.clearConsole();
         const installedApps = await this.getInstalledApps();
     
         if (installedApps.length === 0) {
@@ -194,7 +195,7 @@ class ncAPPS {
         const spinner = createSpinner(`Removing app ${appId}...`).start();
         
         try {
-            runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:remove ${appId}`);
+            this.runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:remove ${appId}`);
             spinner.success({ text: `${GREEN(`App '${appId}' has been removed!`)}` });
         } catch (error) {
             spinner.error({ text: `${RED(`Failed to remove app '${appId}'.`)}` });
@@ -206,7 +207,7 @@ class ncAPPS {
     }
 
     async getInstalledApps() {
-        const output = runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:list`);
+        const output = this.runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:list`);
         if (output) {
             const appList = output.match(/- (.*?)$/gm);
             return appList ? appList.map(app => app.replace('- ', '')) : [];
@@ -216,7 +217,7 @@ class ncAPPS {
     }
 
     async getAvailableApps() {
-        const output = runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:list --shipped=true`);
+        const output = this.runCommand(`sudo -u www-data php /var/www/nextcloud/occ app:list --shipped=true`);
         if (output) {
             const appList = output.match(/- (.*?)$/gm);
             if (appList && appList.length > 0) {
@@ -232,7 +233,7 @@ class ncAPPS {
     }
 
     async listUpdates() {
-        util.clearConsole();
+        this.clearConsole();
         const spinner = createSpinner('Checking for available Nextcloud updates...').start();
         
         try {
@@ -272,7 +273,7 @@ class ncAPPS {
     
     
     async updateApps() {
-        util.clearConsole();
+        this.clearConsole();
     
         // Prompt the user to update all apps or a specific app
         const { updateChoice } = await inquirer.prompt([

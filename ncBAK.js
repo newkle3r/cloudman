@@ -26,6 +26,10 @@ class ncBAK {
         this.util = new ncUTILS();
         const lib = new ncVARS();
         const { NCDB, NCDBUSER, NCDBPASS, NCDBHOST} = lib.ncdb();
+        this.NCDB = NCDB;
+        this.NCDBUSER = NCDBUSER;
+        this.NCDBPASS = NCDBPASS;
+        this.NCDBHOST = NCDBHOST;
         this.mainMenu = mainMenu;
 
         // Set paths based on Nextcloud installation path
@@ -100,9 +104,10 @@ class ncBAK {
 
     // PostgreSQL backup  
     backupPostgreSQL() {
+
         const spinner = createSpinner('Backing up PostgreSQL database...').start();
         try {
-            execSync(`sudo -u postgres pg_dump ${this.psqlDbName} > ${this.psqlBakFile}`);
+            this.util.runCommand(`sudo -u postgres pg_dump ${this.NCDBUSER} > ${this.psqlBakFile}`);
             spinner.success({ text: chalk.green('PostgreSQL backup completed successfully!') });
         } catch (error) {
             spinner.error({ text: chalk.red('Failed to backup PostgreSQL!') });

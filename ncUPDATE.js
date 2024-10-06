@@ -418,7 +418,11 @@ async runCurlWithProgress(command, args, totalSize, progressBar) {
 
     console.log('Extracting Nextcloud package into /var/www/nextcloud...');
     try {
-        this.runCommand(`sudo -u www-data unzip ${homeDir}/nextcloud-latest.zip -d /var/www`);
+        let lib = new ncVARS();
+        this.user = lib.UNIXUSER;
+        this.rootuser = lib.ROOTUSER;
+        this.NCPATH = lib.HTML;
+        this.runCommand(`yes yes | sudo -u www-data unzip ${homeDir}/nextcloud-latest.zip -d /var/www`);
         console.log(GREEN('Extraction completed into /var/www/nextcloud.'));
     } catch (error) {
         console.error(RED('Failed to extract Nextcloud package.'));

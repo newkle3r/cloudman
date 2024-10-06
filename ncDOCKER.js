@@ -12,8 +12,8 @@ class ncDOCKER {
     constructor(mainMenu) {
         let util = new ncUTILS();
         this.mainMenu = mainMenu;
-        this.clearConsole = util.clearConsole();
-        this.awaitContinue = util.awaitContinue();
+        this.clearConsole = util.clearConsole;
+        this.awaitContinue = util.awaitContinue;
     }
 
     /**

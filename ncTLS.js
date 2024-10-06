@@ -6,6 +6,7 @@ import ncUTILS from './ncUTILS.js';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 import ncRedisServer from './ncRedisServer.js';
+import ncVARS from './ncVARS.js';
 
 // Needs clear screen, splash, and is not async yet.
 
@@ -16,7 +17,9 @@ import ncRedisServer from './ncRedisServer.js';
 class ncTLS {
     constructor(mainMenu) {
         let util = new ncUTILS();
-        let redisServ = new ncRedisServer()
+        let lib = new ncVARS();
+        let redisServ = new ncRedisServer();
+    
         this.mainMenu = mainMenu;
         this.clearConsole = util.clearConsole;
         this.runCommand =  util.runCommand;
@@ -391,7 +394,7 @@ newkleer@nextcloud:~/cloudman$ git push
      */
     async certMenu(mainMenu) {
         let continueMenu = true;
-        clearConsole();
+        util.clearConsole();
 
         while (continueMenu) {
             const { action } = await inquirer.prompt([

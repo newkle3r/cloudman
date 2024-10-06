@@ -15,15 +15,15 @@ import { createSpinner } from 'nanospinner';
 class ncREPAIR {
     constructor(mainMenu) {
         let util = new ncUTILS();
-        this.clearConsole = util.clearConsole();
-        this.runCommand = util.runCommand();
+        this.clearConsole = util.clearConsole;
+        this.runCommand = util.runCommand;
         this.SCRIPTS_PATH = '/var/scripts';
         this.VARIABLES_JSON_PATH = '/mnt/data/variables.json';
         this.INDEX_JSON_PATH = '/mnt/data/index_json/nc_data.json';
         this.NC_OCC = 'sudo -u www-data php /var/www/nextcloud/occ';  // Fixed path for Nextcloud OCC
         this.mainMenu = mainMenu;
         this.versionNumber = this.extractVersionNumber();
-        this.homeDir = this.runCommand('echo $HOME')
+        this.homeDir = util.runCommand('echo $HOME')
         this.NC_PATH = '/var/www/nextcloud';
         this.BACKUP_PATH = `${this.homeDir}/backup`;
     }
