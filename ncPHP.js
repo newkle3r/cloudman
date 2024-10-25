@@ -117,7 +117,7 @@ class ncPHP {
         } catch (error) {
             spinner.error({ text: chalk.red(`Failed to install PHP ${phpVersion}.`) });
             console.error(error);
-        }redisSock, redisConf, redisPass
+        }
     }
 
     /**
